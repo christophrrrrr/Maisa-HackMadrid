@@ -1,0 +1,35 @@
+# Secrets — never commit
+.env
+.env.*
+*.key
+credentials*.json
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Node (in case we go TS)
+node_modules/
+dist/
+*.log
+
+# Local state / caches (regenerable — keep out of git)
+*.sqlite
+*.sqlite3
+*.db
+cache/
+.cache/
+outputs/*.tmp
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
