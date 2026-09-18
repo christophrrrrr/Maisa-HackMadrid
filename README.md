@@ -54,6 +54,45 @@ curl -s -X POST http://127.0.0.1:8009/erp/login -d "usuario=alberto" -d "clave=F
 
 Or open <http://127.0.0.1:8009/> in a browser (user `alberto`, pass `FACTURAS2009`).
 
+### Extract invoices
+
+```bash
+uv venv
+uv pip install -r requirements.txt
+source .venv/bin/activate
+
+# Digital PDFs only; image-only documents are marked for review.
+python -m src.invoice_extractor --no-vision
+
+# Full batch through Vercel AI Gateway. Only the 29 image-only PDFs call a model.
+export AI_GATEWAY_API_KEY="..."
+python -m src.invoice_extractor
+```
+
+Alternatively, place the variables in a local `.env` file (ignored by Git); the extractor
+loads it automatically. Use `.env.example` as the template.
+
+The command writes `outputs/extracted_invoices.jsonl`. Vision results are cached by PDF
+content hash under `.cache/invoice_extraction/`, so interrupted or repeated runs do not pay
+for the same document twice. The default route is `google/gemini-3-flash`, with
+`anthropic/claude-sonnet-4.6` and `openai/gpt-5.4` as Gateway fallbacks. Override them with
+`--model`, repeated `--fallback-model`, `AI_GATEWAY_MODEL` or
+`AI_GATEWAY_FALLBACK_MODELS`.
+
+#### Share the Gateway key safely
+
+Do not commit the real key. Add `AI_GATEWAY_API_KEY` to the linked Vercel project's
+**Development** environment. Every team member can then run:
+
+```bash
+vercel link
+vercel env run -- .venv/bin/python -m src.invoice_extractor
+```
+
+`vercel link` is needed once per clone. `vercel env run` injects the shared variables for
+that process without writing the secret into the repository. `.env.example` documents the
+expected variable names; `.env` and `.env.*` remain ignored.
+
 ## Team
 
 | teamId | (fill in — provided by the org) |

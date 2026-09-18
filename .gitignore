@@ -1,6 +1,7 @@
 # Secrets — never commit
 .env
 .env.*
+!.env.example
 *.key
 credentials*.json
 
@@ -27,6 +28,7 @@ dist/
 cache/
 .cache/
 outputs/*.tmp
+tmp/
 
 # OS / editor
 .DS_Store
