@@ -12,8 +12,11 @@ from __future__ import annotations
 
 from datetime import date
 from decimal import Decimal
+from typing import Literal
 
 from pydantic import BaseModel
+
+Result = Literal["PAGAR", "NO_PAGAR", "ESCALAR"]
 
 
 class ERPEntry(BaseModel):
@@ -60,5 +63,25 @@ class InvoiceData(BaseModel):
     issue_date: date | None = None
     base: Decimal | None = None             # rule 3
     iva_amount: Decimal | None = None       # rule 3
-    iva_rate: Decimal | None = None
+    iva_rate: Decimal | None = None         # percent, e.g. 21 for "IVA (21%)"
     total: Decimal | None = None            # rule 2 (matches pedido amount)
+    # A's extractor may set this when a scan can't be read confidently:
+    extraction_ok: bool = True
+    extraction_note: str | None = None
+
+
+class Outcome(BaseModel):
+    """Final decision for one invoice. `file_id` + `result` are the delivery
+    contract; the rest is trace (judges reward it, the verifier ignores it)."""
+
+    file_id: str
+    result: Result
+    reason: str                             # primary reason code, e.g. "iban_mismatch"
+    detail: str | None = None               # human-readable, may list several findings
+    findings: list[str] = []                # every rule that fired
+    evidence: dict = {}                     # matched pedido / erp asiento / supplier id ...
+    rules_version: str = "norma-v3"
+
+    def to_contract_line(self) -> dict:
+        """Minimal object for outcomes.jsonl (what the private verifier reads)."""
+        return {"file_id": self.file_id, "result": self.result}
