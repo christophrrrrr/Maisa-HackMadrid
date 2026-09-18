@@ -20,8 +20,9 @@ from pathlib import Path
 from . import state
 from .business_data import load_business_data
 from .erp_snapshot import index_by_pedido, load_snapshot
-from .extractor import Extractor
+from .extractor import AutoExtractor
 from .models import InvoiceData
+from .policy import load_policy
 from .rules_engine import decide_batch
 
 REPO = Path(__file__).resolve().parents[1]
@@ -36,31 +37,25 @@ def _emit(stream: bool, obj: dict) -> None:
         sys.stdout.flush()
 
 
-def get_extractor(name: str) -> Extractor:
-    """Pick the extractor. A's real one plugs in here; baseline is the fallback."""
-    if name == "baseline":
-        from .extract_baseline import BaselineExtractor
-        return BaselineExtractor()
-    # when A ships: if name == "llm": from .extract_llm import LLMExtractor; return LLMExtractor()
-    raise SystemExit(f"unknown extractor '{name}' (available: baseline)")
-
-
 def run(
     *,
     facturas_dir: Path = FACTURAS_DIR,
-    extractor_name: str = "baseline",
     batch: str = "lote1",
     today: date | None = None,
     stream: bool = False,
     db_path: Path = state.DEFAULT_DB,
     limit: int | None = None,
 ) -> dict:
+    # reference date falls back to the editable policy (settings page)
+    cfg = load_policy()
+    if today is None and cfg.get("today"):
+        today = date.fromisoformat(cfg["today"])
     today = today or date.today()
-    extractor = get_extractor(extractor_name)
+    extractor = AutoExtractor()
     biz = load_business_data()
     erp = index_by_pedido(load_snapshot())
 
-    files = sorted(facturas_dir.glob("*.pdf"))
+    files = sorted(facturas_dir.glob("*.pdf")) if facturas_dir.is_dir() else []
     if limit:
         files = files[:limit]
     run_id = datetime.now(timezone.utc).isoformat()
@@ -124,7 +119,7 @@ def run(
 
 def _main() -> int:
     ap = argparse.ArgumentParser(description="Run the invoice-decision batch pipeline.")
-    ap.add_argument("--extractor", default="baseline", help="baseline (default) | llm (when A ships)")
+    ap.add_argument("--dir", help="directory of invoice PDFs (default: challenge/facturas)")
     ap.add_argument("--batch", default="lote1", choices=["lote1", "lote2"])
     ap.add_argument("--stream", action="store_true", help="emit JSON progress lines (for the webapp SSE)")
     ap.add_argument("--today", help="reference date YYYY-MM-DD for rule 4 (default: today)")
@@ -132,7 +127,8 @@ def _main() -> int:
     args = ap.parse_args()
 
     today = date.fromisoformat(args.today) if args.today else None
-    result = run(extractor_name=args.extractor, batch=args.batch, stream=args.stream,
+    facturas_dir = Path(args.dir) if args.dir else FACTURAS_DIR
+    result = run(facturas_dir=facturas_dir, batch=args.batch, stream=args.stream,
                  today=today, limit=args.limit)
     if not args.stream:
         print(f"run {result['run_id']}: {result['summary']} in {result['elapsed_s']:.2f}s -> {result['outcomes']}")

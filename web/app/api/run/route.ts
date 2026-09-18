@@ -1,18 +1,19 @@
+import path from "node:path";
 import { spawn } from "node:child_process";
 import { pythonCmd, repoRoot } from "@/lib/python";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-// GET /api/run?today=YYYY-MM-DD&extractor=baseline&limit=N
-// Streams the pipeline's per-file JSON progress as Server-Sent Events.
+// GET /api/run?today=YYYY-MM-DD&limit=N
+// streams pipeline progress. extractor is chosen automatically per file.
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const today = url.searchParams.get("today") || "";
-  const extractor = url.searchParams.get("extractor") || "baseline";
   const limit = url.searchParams.get("limit") || "";
+  const inbox = path.join(repoRoot(), "outputs", "inbox");
 
-  const args = ["-m", "src.pipeline", "--stream", "--extractor", extractor];
+  const args = ["-m", "src.pipeline", "--stream", "--dir", inbox];
   if (today) args.push("--today", today);
   if (limit) args.push("--limit", limit);
 

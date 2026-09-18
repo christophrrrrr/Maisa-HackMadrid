@@ -29,28 +29,14 @@ from decimal import Decimal
 
 from .business_data import BusinessData, normalize_iban
 from .models import ERPEntry, InvoiceData, Outcome, Result
+from .policy import RULES_VERSION, load_policy
 
-TOLERANCE = Decimal("0.01")
-RULES_VERSION = "norma-v3"
-
-# reason code -> outcome when that check FAILS. Change policy here, not in logic.
-POLICY: dict[str, Result] = {
-    "incomplete_extraction": "ESCALAR",   # A couldn't read enough fields (e.g. scan)
-    "supplier_not_in_master": "ESCALAR",  # rule 1
-    "iban_mismatch": "ESCALAR",           # rule 1 — classic fraud signal
-    "pedido_not_found": "ESCALAR",        # rule 2
-    "pedido_supplier_mismatch": "ESCALAR",# rule 2
-    "amount_mismatch": "ESCALAR",         # rule 2
-    "total_not_base_plus_iva": "ESCALAR", # rule 3
-    "iva_miscalculated": "ESCALAR",       # rule 3
-    "invalid_date": "ESCALAR",            # rule 4
-    "future_date": "ESCALAR",             # rule 4
-    "pedido_not_in_erp": "ESCALAR",       # rule 5 — can't reconcile
-    "erp_amount_mismatch": "ESCALAR",     # rule 5 — ledger disagrees with pedido/invoice
-    "erp_status_unexpected": "ESCALAR",   # rule 5 — status neither PENDIENTE nor PAGADA
-    "already_paid": "NO_PAGAR",           # rule 5 — ERP says PAGADA
-    "duplicate_pedido": "NO_PAGAR",       # rule 5 — 2nd+ invoice for same pedido in batch
-}
+# policy is editable from the console's settings page (outputs/policy.json). it's
+# read once per process at import — every run is a fresh process, so edits apply
+# on the next batch. reason code -> outcome when that check FAILS.
+_cfg = load_policy()
+TOLERANCE = Decimal(str(_cfg["tolerance"]))
+POLICY: dict[str, Result] = _cfg["reason_outcomes"]  # type: ignore[assignment]
 
 _PRECEDENCE = {"ESCALAR": 2, "NO_PAGAR": 1, "PAGAR": 0}
 

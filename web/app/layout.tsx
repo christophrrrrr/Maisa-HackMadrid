@@ -1,24 +1,21 @@
 import "./globals.css";
 import type { Metadata } from "next";
-import Link from "next/link";
+import { Inter } from "next/font/google";
+import Nav from "@/components/Nav";
+
+const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "swap" });
 
 export const metadata: Metadata = {
-  title: "Alberto · Decision Console",
-  description: "Observability & review console for the invoice-decision pipeline",
+  title: "Consola de decisiones",
+  description: "Consola de revisi\u00f3n del pipeline de facturas",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="es" className={inter.variable}>
       <body>
         <div className="topbar">
-          <div className="brand">
-            Alberto <span>· Decision Console</span>
-          </div>
-          <nav className="nav">
-            <Link href="/">Dashboard</Link>
-            <Link href="/decisions">Decisions</Link>
-          </nav>
+          <Nav />
         </div>
         <main className="wrap">{children}</main>
       </body>

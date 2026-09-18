@@ -25,3 +25,25 @@ class Extractor(Protocol):
         rules engine escalates instead of guessing.
         """
         ...
+
+
+class AutoExtractor:
+    """baseline for digital PDFs; vision/LLM only when there is no usable text layer."""
+
+    name = "auto"
+
+    def __init__(self) -> None:
+        from .extract_baseline import BaselineExtractor
+        self._baseline = BaselineExtractor()
+        self._vision = None
+        try:
+            from .extract_llm import LLMExtractor  # type: ignore
+            self._vision = LLMExtractor()
+        except Exception:
+            self._vision = None
+
+    def extract(self, pdf_path: Path) -> InvoiceData:
+        inv = self._baseline.extract(pdf_path)
+        if inv.extraction_ok or self._vision is None:
+            return inv
+        return self._vision.extract(pdf_path)

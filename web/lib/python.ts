@@ -1,6 +1,6 @@
 import { execFileSync } from "node:child_process";
 import path from "node:path";
-import type { StateSnapshot, Decision } from "./types";
+import type { StateSnapshot, Decision, Policy } from "./types";
 
 // The Python backend lives in the repo root (parent of web/). `next dev` runs
 // with cwd = web/, so the repo root is one level up. Override with REPO_ROOT.
@@ -26,7 +26,7 @@ export function getState(): StateSnapshot {
   try {
     return pyJson<StateSnapshot>(["-m", "src.state", "json"]);
   } catch {
-    // no run yet / DB missing — return an empty shell so the UI still renders
+    // no run yet / DB missing - return an empty shell so the UI still renders
     return { latest_run: null, summary: { total: 0, PAGAR: 0, NO_PAGAR: 0, ESCALAR: 0 }, decisions: [] };
   }
 }
@@ -37,4 +37,21 @@ export function getDecision(fileId: string): Decision | null {
   } catch {
     return null;
   }
+}
+
+export function getPolicy(): Policy {
+  return pyJson<Policy>(["-m", "src.policy", "get"]);
+}
+
+/** persist a (partial) policy update by piping json to `python -m src.policy set`. */
+export function savePolicy(patch: Partial<Policy>): Policy {
+  const out = execFileSync(pythonCmd(), ["-m", "src.policy", "set"], {
+    cwd: repoRoot(),
+    encoding: "utf-8",
+    input: JSON.stringify(patch),
+    maxBuffer: 8 * 1024 * 1024,
+  });
+  // set echoes the merged config (without ui metadata) - re-read for the full payload
+  JSON.parse(out);
+  return getPolicy();
 }
