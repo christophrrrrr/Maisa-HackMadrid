@@ -9,6 +9,8 @@ from __future__ import annotations
 
 import os
 
+from pydantic import BaseModel
+
 
 def default_model() -> str:
     return os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
@@ -19,12 +21,33 @@ def gemini_available() -> str | None:
     return os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
 
 
-def call_gemini_json(images: list[bytes], prompt: str, *, model: str | None = None, api_key: str) -> str:
-    """Send page images + prompt to Gemini and return the raw JSON text.
+class GeminiInvoice(BaseModel):
+    """Response schema forced on Gemini so it uses the EXACT canonical field names
+    (all strings, nullable — the caller coerces to Decimal/date). Without this,
+    the model invents keys like `total_amount`."""
 
-    Requests strict JSON (response_mime_type) at temperature 0 for determinism;
-    the caller parses it into the canonical schema.
-    """
+    invoice_number: str | None = None
+    purchase_order: str | None = None
+    supplier_name: str | None = None
+    supplier_tax_id: str | None = None
+    supplier_iban: str | None = None
+    issue_date: str | None = None   # YYYY-MM-DD
+    base: str | None = None
+    iva_amount: str | None = None
+    iva_rate: str | None = None     # percentage number, e.g. "21"
+    total: str | None = None
+
+
+def call_gemini_json(images: list[bytes], prompt: str, *, model: str | None = None, api_key: str) -> str:
+    """Send page images + prompt to Gemini and return raw JSON text matching the
+    canonical field names. Uses OS trust store (Norton/corporate MITM safe),
+    a forced response schema, and temperature 0 for determinism."""
+    try:  # trust the OS cert store (handles Norton/corporate TLS interception)
+        import truststore
+        truststore.inject_into_ssl()
+    except Exception:
+        pass
+
     from google import genai
     from google.genai import types
 
@@ -38,6 +61,7 @@ def call_gemini_json(images: list[bytes], prompt: str, *, model: str | None = No
         contents=parts,
         config=types.GenerateContentConfig(
             response_mime_type="application/json",
+            response_schema=GeminiInvoice,
             temperature=0,
         ),
     )
