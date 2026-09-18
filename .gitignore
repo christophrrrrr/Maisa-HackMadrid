@@ -36,3 +36,7 @@ Thumbs.db
 
 # Excel lock/temp files
 ~$*
+
+# generated pipeline outputs
+outputs/*
+!outputs/.gitkeep

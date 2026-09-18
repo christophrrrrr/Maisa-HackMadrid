@@ -96,6 +96,7 @@ def evaluate(
     if not invoice.extraction_ok:
         findings.append(Finding("incomplete_extraction",
                                 invoice.extraction_note or "extractor flagged low confidence"))
+        return _aggregate(invoice, findings, evidence)  # trust A's flag; don't guess
     required = {"purchase_order": invoice.purchase_order,
                 "supplier_tax_id": invoice.supplier_tax_id,
                 "total": invoice.total}
