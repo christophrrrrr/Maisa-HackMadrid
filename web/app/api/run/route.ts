@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const today = url.searchParams.get("today") || "";
-  const extractor = url.searchParams.get("extractor") || "baseline";
+  const extractor = url.searchParams.get("extractor") || "hybrid";
   const limit = url.searchParams.get("limit") || "";
 
   const args = ["-m", "src.pipeline", "--stream", "--extractor", extractor];

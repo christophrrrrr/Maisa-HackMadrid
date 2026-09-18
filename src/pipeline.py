@@ -36,27 +36,31 @@ def _emit(stream: bool, obj: dict) -> None:
         sys.stdout.flush()
 
 
-def get_extractor(name: str) -> Extractor:
-    """Pick the extractor. A's real one plugs in here; baseline is the fallback."""
+def get_extractor(name: str, *, use_vision: bool = True) -> Extractor:
+    """Pick the extractor. 'hybrid' = A's digital+vision extractor (default);
+    'baseline' = the deterministic regex fallback (offline, free)."""
+    if name in ("hybrid", "llm"):
+        from .extract_hybrid import HybridExtractor
+        return HybridExtractor(use_vision=use_vision)
     if name == "baseline":
         from .extract_baseline import BaselineExtractor
         return BaselineExtractor()
-    # when A ships: if name == "llm": from .extract_llm import LLMExtractor; return LLMExtractor()
-    raise SystemExit(f"unknown extractor '{name}' (available: baseline)")
+    raise SystemExit(f"unknown extractor '{name}' (available: hybrid, baseline)")
 
 
 def run(
     *,
     facturas_dir: Path = FACTURAS_DIR,
-    extractor_name: str = "baseline",
+    extractor_name: str = "hybrid",
     batch: str = "lote1",
     today: date | None = None,
     stream: bool = False,
     db_path: Path = state.DEFAULT_DB,
     limit: int | None = None,
+    use_vision: bool = True,
 ) -> dict:
     today = today or date.today()
-    extractor = get_extractor(extractor_name)
+    extractor = get_extractor(extractor_name, use_vision=use_vision)
     biz = load_business_data()
     erp = index_by_pedido(load_snapshot())
 
@@ -81,7 +85,9 @@ def run(
         ms = (time.monotonic() - s) * 1000
         invoices.append(inv)
         latencies[inv.file_id] = ms
-        method[inv.file_id] = extractor.name if inv.extraction_ok else f"{extractor.name}(low-conf)"
+        # prefer the per-file method the extractor actually took (embedded_text/vision/...)
+        method[inv.file_id] = getattr(extractor, "last_method", None) or (
+            extractor.name if inv.extraction_ok else f"{extractor.name}(low-conf)")
         _emit(stream, {"event": "extracted", "i": i, "total": len(files),
                        "file_id": inv.file_id, "ok": inv.extraction_ok, "latency_ms": round(ms, 1)})
 
@@ -124,16 +130,17 @@ def run(
 
 def _main() -> int:
     ap = argparse.ArgumentParser(description="Run the invoice-decision batch pipeline.")
-    ap.add_argument("--extractor", default="baseline", help="baseline (default) | llm (when A ships)")
+    ap.add_argument("--extractor", default="hybrid", help="hybrid (default, A's digital+vision) | baseline")
     ap.add_argument("--batch", default="lote1", choices=["lote1", "lote2"])
     ap.add_argument("--stream", action="store_true", help="emit JSON progress lines (for the webapp SSE)")
     ap.add_argument("--today", help="reference date YYYY-MM-DD for rule 4 (default: today)")
     ap.add_argument("--limit", type=int, help="process only the first N files (dev)")
+    ap.add_argument("--no-vision", action="store_true", help="skip the vision model for scans (digital only)")
     args = ap.parse_args()
 
     today = date.fromisoformat(args.today) if args.today else None
     result = run(extractor_name=args.extractor, batch=args.batch, stream=args.stream,
-                 today=today, limit=args.limit)
+                 today=today, limit=args.limit, use_vision=not args.no_vision)
     if not args.stream:
         print(f"run {result['run_id']}: {result['summary']} in {result['elapsed_s']:.2f}s -> {result['outcomes']}")
     return 0
