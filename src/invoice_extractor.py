@@ -40,12 +40,12 @@ DEFAULT_INPUT = ROOT / "challenge" / "facturas"
 DEFAULT_OUTPUT = ROOT / "outputs" / "extracted_invoices.jsonl"
 DEFAULT_CACHE = ROOT / ".cache" / "invoice_extraction"
 GATEWAY_BASE_URL = os.getenv("AI_GATEWAY_BASE_URL", "https://ai-gateway.vercel.sh/v1")
-DEFAULT_MODEL = os.getenv("AI_GATEWAY_MODEL", "google/gemini-3-flash")
+DEFAULT_MODEL = os.getenv("AI_GATEWAY_MODEL", "google/gemini-2.5-flash")
 DEFAULT_FALLBACK_MODELS = [
     model.strip()
     for model in os.getenv(
         "AI_GATEWAY_FALLBACK_MODELS",
-        "anthropic/claude-sonnet-4.6,openai/gpt-5.4",
+        "anthropic/claude-sonnet-4-5,openai/gpt-4o",
     ).split(",")
     if model.strip()
 ]
@@ -354,6 +354,41 @@ def _invoice_from_vision(file_id: str, parsed: VisionInvoice) -> tuple[InvoiceDa
     ), warnings
 
 
+def _call_gateway_vision(
+    images: list[bytes], model: str, fallback_models: list[str], gateway_key: str
+) -> VisionInvoice:
+    """Vercel AI Gateway path (OpenAI-compatible), used when no GOOGLE_API_KEY is set."""
+    from openai import OpenAI
+
+    content: list[dict[str, Any]] = [{"type": "text", "text": _vision_prompt()}]
+    for image in images:
+        encoded = base64.b64encode(image).decode("ascii")
+        content.append({
+            "type": "image_url",
+            "image_url": {"url": f"data:image/png;base64,{encoded}", "detail": "high"},
+        })
+    client = OpenAI(api_key=gateway_key, base_url=GATEWAY_BASE_URL)
+    response_format = {
+        "type": "json_schema",
+        "json_schema": {
+            "name": "invoice_extraction",
+            "strict": True,
+            "schema": VisionInvoice.model_json_schema(),
+        },
+    }
+    extra_body = {"providerOptions": {"gateway": {"models": fallback_models}}} if fallback_models else None
+    response = client.chat.completions.create(
+        model=model,
+        messages=[{"role": "user", "content": content}],
+        response_format=response_format,
+        extra_body=extra_body,
+    )
+    response_text = response.choices[0].message.content
+    if not response_text:
+        raise ValueError("AI Gateway returned no response content")
+    return VisionInvoice.model_validate_json(response_text)
+
+
 def _extract_with_vision(
     path: Path,
     document: fitz.Document,
@@ -370,49 +405,25 @@ def _extract_with_vision(
         invoice, warnings = _invoice_from_vision(path.name, cached)
         return invoice, "vision_cache", warnings
 
+    from . import vision_gemini as vg
+
+    google_key = vg.gemini_available()
     gateway_key = os.getenv("AI_GATEWAY_API_KEY") or os.getenv("VERCEL_OIDC_TOKEN")
-    if not gateway_key:
-        note = "image-only PDF; set AI_GATEWAY_API_KEY (or VERCEL_OIDC_TOKEN) and rerun with --force"
+    if not google_key and not gateway_key:
+        note = ("image-only PDF; set GOOGLE_API_KEY (free Gemini) or AI_GATEWAY_API_KEY "
+                "in .env and rerun with --force")
         return InvoiceData(file_id=path.name, extraction_ok=False, extraction_note=note), "unavailable", [note]
 
-    from openai import OpenAI
-
-    content: list[dict[str, Any]] = [{"type": "text", "text": _vision_prompt()}]
-    for image in _render_pages(document):
-        encoded = base64.b64encode(image).decode("ascii")
-        content.append({
-            "type": "image_url",
-            "image_url": {"url": f"data:image/png;base64,{encoded}", "detail": "high"},
-        })
-
-    client = OpenAI(api_key=gateway_key, base_url=GATEWAY_BASE_URL)
-    response_format = {
-        "type": "json_schema",
-        "json_schema": {
-            "name": "invoice_extraction",
-            "strict": True,
-            "schema": VisionInvoice.model_json_schema(),
-        },
-    }
-    extra_body = (
-        {"providerOptions": {"gateway": {"models": fallback_models}}}
-        if fallback_models
-        else None
-    )
+    images = _render_pages(document)
     last_error: Exception | None = None
     parsed: VisionInvoice | None = None
     for attempt in range(3):
         try:
-            response = client.chat.completions.create(
-                model=model,
-                messages=[{"role": "user", "content": content}],
-                response_format=response_format,
-                extra_body=extra_body,
-            )
-            response_text = response.choices[0].message.content
-            if not response_text:
-                raise ValueError("AI Gateway returned no response content")
-            parsed = VisionInvoice.model_validate_json(response_text)
+            if google_key:  # preferred: free direct Gemini
+                text = vg.call_gemini_json(images, _vision_prompt(), api_key=google_key)
+                parsed = VisionInvoice.model_validate_json(text)
+            else:
+                parsed = _call_gateway_vision(images, model, fallback_models, gateway_key)
             break
         except Exception as exc:  # provider errors are retried, then made explicit
             last_error = exc
