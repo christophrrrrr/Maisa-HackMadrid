@@ -33,3 +33,6 @@ outputs/*.tmp
 Thumbs.db
 .idea/
 .vscode/
+
+# Excel lock/temp files
+~$*
