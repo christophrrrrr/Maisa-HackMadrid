@@ -4,15 +4,16 @@ import { pythonCmd, repoRoot } from "@/lib/python";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-// GET /api/run?today=YYYY-MM-DD&extractor=baseline&limit=N
+// GET /api/run?today=YYYY-MM-DD&limit=N
 // Streams the pipeline's per-file JSON progress as Server-Sent Events.
+// Processes the challenge facturas plus anything uploaded to outputs/inbox.
+// The extractor (hybrid + Gemini vision) is chosen by the pipeline from policy.
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const today = url.searchParams.get("today") || "";
-  const extractor = url.searchParams.get("extractor") || "hybrid";
   const limit = url.searchParams.get("limit") || "";
 
-  const args = ["-m", "src.pipeline", "--stream", "--extractor", extractor];
+  const args = ["-m", "src.pipeline", "--stream"];
   if (today) args.push("--today", today);
   if (limit) args.push("--limit", limit);
 

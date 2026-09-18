@@ -22,10 +22,12 @@ from .business_data import load_business_data
 from .erp_snapshot import index_by_pedido, load_snapshot
 from .extractor import Extractor
 from .models import InvoiceData
+from .policy import load_policy
 from .rules_engine import decide_batch
 
 REPO = Path(__file__).resolve().parents[1]
 FACTURAS_DIR = REPO / "challenge" / "facturas"
+INBOX_DIR = REPO / "outputs" / "inbox"          # PDFs uploaded from the console
 OUTCOMES = REPO / "outputs" / "outcomes.jsonl"
 
 
@@ -39,7 +41,7 @@ def _emit(stream: bool, obj: dict) -> None:
 def get_extractor(name: str, *, use_vision: bool = True) -> Extractor:
     """Pick the extractor. 'hybrid' = A's digital+vision extractor (default);
     'baseline' = the deterministic regex fallback (offline, free)."""
-    if name in ("hybrid", "llm"):
+    if name in ("hybrid", "llm", "auto"):
         from .extract_hybrid import HybridExtractor
         return HybridExtractor(use_vision=use_vision)
     if name == "baseline":
@@ -48,10 +50,19 @@ def get_extractor(name: str, *, use_vision: bool = True) -> Extractor:
     raise SystemExit(f"unknown extractor '{name}' (available: hybrid, baseline)")
 
 
+def _collect_files(facturas_dir: Path, limit: int | None) -> list[Path]:
+    files = sorted(facturas_dir.glob("*.pdf")) if facturas_dir.is_dir() else []
+    # also include anything uploaded from the console (additive, de-duped by name)
+    if INBOX_DIR.is_dir() and facturas_dir.resolve() != INBOX_DIR.resolve():
+        seen = {f.name for f in files}
+        files += [f for f in sorted(INBOX_DIR.glob("*.pdf")) if f.name not in seen]
+    return files[:limit] if limit else files
+
+
 def run(
     *,
     facturas_dir: Path = FACTURAS_DIR,
-    extractor_name: str = "hybrid",
+    extractor_name: str | None = None,
     batch: str = "lote1",
     today: date | None = None,
     stream: bool = False,
@@ -59,14 +70,16 @@ def run(
     limit: int | None = None,
     use_vision: bool = True,
 ) -> dict:
+    # reference date + extractor fall back to the editable policy (settings page)
+    cfg = load_policy()
+    if today is None and cfg.get("today"):
+        today = date.fromisoformat(cfg["today"])
     today = today or date.today()
-    extractor = get_extractor(extractor_name, use_vision=use_vision)
+    extractor = get_extractor(extractor_name or cfg.get("extractor") or "hybrid", use_vision=use_vision)
     biz = load_business_data()
     erp = index_by_pedido(load_snapshot())
 
-    files = sorted(facturas_dir.glob("*.pdf"))
-    if limit:
-        files = files[:limit]
+    files = _collect_files(facturas_dir, limit)
     run_id = datetime.now(timezone.utc).isoformat()
 
     conn = state.connect(db_path)
@@ -130,7 +143,8 @@ def run(
 
 def _main() -> int:
     ap = argparse.ArgumentParser(description="Run the invoice-decision batch pipeline.")
-    ap.add_argument("--extractor", default="hybrid", help="hybrid (default, A's digital+vision) | baseline")
+    ap.add_argument("--extractor", default=None, help="hybrid (default) | baseline; overrides policy")
+    ap.add_argument("--dir", help="directory of invoice PDFs (default: challenge/facturas)")
     ap.add_argument("--batch", default="lote1", choices=["lote1", "lote2"])
     ap.add_argument("--stream", action="store_true", help="emit JSON progress lines (for the webapp SSE)")
     ap.add_argument("--today", help="reference date YYYY-MM-DD for rule 4 (default: today)")
@@ -139,8 +153,9 @@ def _main() -> int:
     args = ap.parse_args()
 
     today = date.fromisoformat(args.today) if args.today else None
-    result = run(extractor_name=args.extractor, batch=args.batch, stream=args.stream,
-                 today=today, limit=args.limit, use_vision=not args.no_vision)
+    facturas_dir = Path(args.dir) if args.dir else FACTURAS_DIR
+    result = run(facturas_dir=facturas_dir, extractor_name=args.extractor, batch=args.batch,
+                 stream=args.stream, today=today, limit=args.limit, use_vision=not args.no_vision)
     if not args.stream:
         print(f"run {result['run_id']}: {result['summary']} in {result['elapsed_s']:.2f}s -> {result['outcomes']}")
     return 0

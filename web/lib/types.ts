@@ -38,3 +38,13 @@ export interface StateSnapshot {
   summary: { total: number; PAGAR: number; NO_PAGAR: number; ESCALAR: number };
   decisions: Decision[];
 }
+
+export interface Policy {
+  rules_version: string;
+  tolerance: string;
+  extractor: string;
+  today: string | null;
+  reason_outcomes: Record<string, Result>;
+  reasons: Record<string, { label: string; rule: string; help: string }>;
+  results: Result[];
+}
