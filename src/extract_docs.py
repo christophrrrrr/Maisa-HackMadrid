@@ -260,15 +260,15 @@ def _llm_over_text(text: str, images: list[bytes]) -> tuple[InvoiceData | None, 
             inv, _ = ax._invoice_from_vision("", parsed)
             return inv, 0.0
         if gateway_key:
-            parsed = _gateway_text(prompt, images, gateway_key)
+            parsed, cost = _gateway_text(prompt, images, gateway_key)
             inv, _ = ax._invoice_from_vision("", parsed)
-            return inv, ax._last_vision_cost
+            return inv, cost
     except Exception:
         return None, 0.0
     return None, 0.0
 
 
-def _gateway_text(prompt: str, images: list[bytes], gateway_key: str) -> "ax.VisionInvoice":
+def _gateway_text(prompt: str, images: list[bytes], gateway_key: str) -> "tuple[ax.VisionInvoice, float]":
     import base64
     from openai import OpenAI
 
@@ -285,11 +285,11 @@ def _gateway_text(prompt: str, images: list[bytes], gateway_key: str) -> "ax.Vis
             "name": "invoice_extraction", "strict": True,
             "schema": ax.VisionInvoice.model_json_schema()}},
     )
-    ax._last_vision_cost = ax._usd_from_usage(ax.DEFAULT_MODEL, getattr(resp, "usage", None))
+    cost = ax._usd_from_usage(ax.DEFAULT_MODEL, getattr(resp, "usage", None))
     txt = resp.choices[0].message.content
     if not txt:
         raise ValueError("gateway returned no content")
-    return ax.VisionInvoice.model_validate_json(txt)
+    return ax.VisionInvoice.model_validate_json(txt), cost
 
 
 def extract_document(

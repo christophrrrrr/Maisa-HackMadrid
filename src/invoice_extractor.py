@@ -51,8 +51,6 @@ DEFAULT_FALLBACK_MODELS = [
 ]
 MIN_TEXT_CHARS = 100
 MONEY_TOLERANCE = Decimal("0.01")
-# last paid vision call (gateway). digital / cache / free Gemini stay 0.
-_last_vision_cost = 0.0
 
 ExtractionMethod = Literal["embedded_text", "vision", "vision_cache", "unavailable"]
 
@@ -403,8 +401,12 @@ def _usd_from_usage(model: str, usage: Any) -> float:
 
 def _call_gateway_vision(
     images: list[bytes], model: str, fallback_models: list[str], gateway_key: str
-) -> VisionInvoice:
-    """Vercel AI Gateway path (OpenAI-compatible), used when no GOOGLE_API_KEY is set."""
+) -> tuple[VisionInvoice, float]:
+    """Vercel AI Gateway path (OpenAI-compatible), used when no GOOGLE_API_KEY is set.
+
+    Returns the parsed invoice plus the USD cost of this call (thread-safe: the
+    cost is returned rather than stashed in a module global, so parallel workers
+    never clobber each other's cost)."""
     from openai import OpenAI
 
     content: list[dict[str, Any]] = [{"type": "text", "text": _vision_prompt()}]
@@ -430,12 +432,11 @@ def _call_gateway_vision(
         response_format=response_format,
         extra_body=extra_body,
     )
-    global _last_vision_cost
-    _last_vision_cost = _usd_from_usage(model, getattr(response, "usage", None))
+    cost = _usd_from_usage(model, getattr(response, "usage", None))
     response_text = response.choices[0].message.content
     if not response_text:
         raise ValueError("AI Gateway returned no response content")
-    return VisionInvoice.model_validate_json(response_text)
+    return VisionInvoice.model_validate_json(response_text), cost
 
 
 def _extract_with_vision(
@@ -447,14 +448,12 @@ def _extract_with_vision(
     model: str,
     fallback_models: list[str],
     force: bool,
-) -> tuple[InvoiceData, ExtractionMethod, list[str]]:
+) -> tuple[InvoiceData, ExtractionMethod, list[str], float]:
     cache_path = cache_dir / f"{digest}.json"
-    global _last_vision_cost
-    _last_vision_cost = 0.0
     if cache_path.exists() and not force:
         cached = VisionInvoice.model_validate_json(cache_path.read_text(encoding="utf-8"))
         invoice, warnings = _invoice_from_vision(path.name, cached)
-        return invoice, "vision_cache", warnings
+        return invoice, "vision_cache", warnings, 0.0
 
     from . import vision_gemini as vg
 
@@ -463,18 +462,20 @@ def _extract_with_vision(
     if not google_key and not gateway_key:
         note = ("image-only PDF; set GOOGLE_API_KEY (free Gemini) or AI_GATEWAY_API_KEY "
                 "in .env and rerun with --force")
-        return InvoiceData(file_id=path.name, extraction_ok=False, extraction_note=note), "unavailable", [note]
+        return InvoiceData(file_id=path.name, extraction_ok=False, extraction_note=note), "unavailable", [note], 0.0
 
     images = _render_pages(document)
     last_error: Exception | None = None
     parsed: VisionInvoice | None = None
+    cost = 0.0
     for attempt in range(3):
         try:
             if google_key:  # preferred: free direct Gemini
                 text = vg.call_gemini_json(images, _vision_prompt(), api_key=google_key)
                 parsed = VisionInvoice.model_validate_json(text)
+                cost = 0.0
             else:
-                parsed = _call_gateway_vision(images, model, fallback_models, gateway_key)
+                parsed, cost = _call_gateway_vision(images, model, fallback_models, gateway_key)
             break
         except Exception as exc:  # provider errors are retried, then made explicit
             last_error = exc
@@ -482,12 +483,12 @@ def _extract_with_vision(
                 time.sleep(2**attempt)
     if parsed is None:
         note = f"vision extraction failed after 3 attempts: {last_error}"
-        return InvoiceData(file_id=path.name, extraction_ok=False, extraction_note=note), "unavailable", [note]
+        return InvoiceData(file_id=path.name, extraction_ok=False, extraction_note=note), "unavailable", [note], 0.0
 
     invoice, warnings = _invoice_from_vision(path.name, parsed)
     cache_dir.mkdir(parents=True, exist_ok=True)
     cache_path.write_text(parsed.model_dump_json(indent=2), encoding="utf-8")
-    return invoice, "vision", warnings
+    return invoice, "vision", warnings, cost
 
 
 # canonical fields used to compare two reads of the same document (digital vs
@@ -523,8 +524,7 @@ def extract_pdf(
     force: bool = False,
 ) -> ExtractionRecord:
     started = time.perf_counter()
-    global _last_vision_cost
-    _last_vision_cost = 0.0
+    vision_cost = 0.0
     digest = _sha256(path)
     document = fitz.open(path)
     try:
@@ -541,7 +541,7 @@ def extract_pdf(
             # escalate to the format-agnostic vision model. This is what makes a
             # brand-new invoice format need NO code change: the LLM covers it.
             if not invoice.extraction_ok and use_vision:
-                v_invoice, v_method, v_warnings = _extract_with_vision(
+                v_invoice, v_method, v_warnings, v_cost = _extract_with_vision(
                     path,
                     document,
                     digest=digest,
@@ -561,11 +561,12 @@ def extract_pdf(
                     template = None
                     evidence = {}
                     used_model = model if v_method in {"vision", "vision_cache"} else None
+                    vision_cost = v_cost
                     warnings = list(v_warnings) + [
                         "texto digital incompleto; reprocesado con visión"
                     ]
         elif use_vision:
-            invoice, method, warnings = _extract_with_vision(
+            invoice, method, warnings, vision_cost = _extract_with_vision(
                 path,
                 document,
                 digest=digest,
@@ -596,7 +597,7 @@ def extract_pdf(
             warnings=warnings,
             latency_ms=round((time.perf_counter() - started) * 1000),
             model=used_model,
-            cost_usd=_last_vision_cost if method == "vision" else 0.0,
+            cost_usd=vision_cost if method == "vision" else 0.0,
         )
     finally:
         document.close()

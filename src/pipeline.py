@@ -13,8 +13,11 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import sys
+import threading
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import date, datetime, timezone
 from pathlib import Path
 
@@ -32,6 +35,23 @@ from .manual_overrides import apply_override, load_overrides
 from .models import InvoiceData
 from .policy import accepted_suffixes, load_policy
 from .rules_engine import decide_batch
+
+def _default_workers() -> int:
+    """How many invoices to extract concurrently. Extraction is I/O-bound (vision
+    waits on the model), so a small pool overlaps those waits. Override with the
+    MAISA_EXTRACT_WORKERS env var or the --workers flag. Lower it (e.g. 2-3) when
+    using a rate-limited free model tier to avoid HTTP 429 bursts."""
+    raw = os.getenv("MAISA_EXTRACT_WORKERS", "")
+    try:
+        value = int(raw)
+        if value >= 1:
+            return value
+    except (TypeError, ValueError):
+        pass
+    return 8
+
+
+DEFAULT_EXTRACT_WORKERS = _default_workers()
 
 REPO = Path(__file__).resolve().parents[1]
 FACTURAS_DIR = REPO / "challenge" / "facturas"
@@ -182,6 +202,7 @@ def run(
     erp_db_path: Path = DEFAULT_ERP_DB,
     extra_supplier_csvs: list[Path] | None = None,
     extra_order_csvs: list[Path] | None = None,
+    max_workers: int | None = None,
 ) -> dict:
     # reference date + extractor fall back to the editable policy (settings page)
     cfg = load_policy()
@@ -232,40 +253,77 @@ def run(
     if biz.warnings:
         _emit(stream, {"event": "data_warnings", "scope": "business_data", "warnings": biz.warnings})
 
-    # 1) extract (the slow, probabilistic part) — measure per file
-    invoices: list[InvoiceData] = []
+    # 1) extract (the slow, probabilistic part) — measure per file.
+    # Extraction is I/O-bound (vision calls wait on the model), so we fan the
+    # files out across a thread pool. Each worker uses its OWN extractor instance
+    # (thread-local), so the per-file method/cost/evidence it reads right after
+    # extract() never races with another worker's extraction.
     latencies: dict[str, float] = {}
     method: dict[str, str] = {}
     costs: dict[str, float] = {}
     manual_override_count = 0
     extraction_evidence: dict[str, dict] = {}
-    t0 = time.monotonic()
-    for i, f in enumerate(files, 1):
-        s = time.monotonic()
-        inv = extractor.extract(f)
+    invoices_by_index: dict[int, InvoiceData] = {}
+
+    extractor_kind = extractor_name or cfg.get("extractor") or "hybrid"
+    worker_local = threading.local()
+
+    def _worker_extractor() -> Extractor:
+        existing = getattr(worker_local, "extractor", None)
+        if existing is None:
+            existing = get_extractor(extractor_kind, use_vision=use_vision)
+            worker_local.extractor = existing
+        return existing
+
+    def _extract_one(index: int, path: Path) -> dict:
+        ex = _worker_extractor()
+        started = time.monotonic()
+        inv = ex.extract(path)
+        taken = getattr(ex, "last_method", None) or (
+            ex.name if inv.extraction_ok else f"{ex.name}(low-conf)")
+        cost = float(getattr(ex, "last_cost", 0.0) or 0.0)
+        evidence = dict(getattr(ex, "last_evidence", {}) or {})
+        override_error: str | None = None
         try:
-            inv, manually_corrected = apply_override(inv, f, manual_overrides)
+            inv, corrected = apply_override(inv, path, manual_overrides)
         except ValueError as override_err:
             # a stale or malformed manual override must never kill the whole
             # batch; skip it, keep the auto-extracted invoice, and surface it.
-            manually_corrected = False
-            _emit(stream, {"event": "override_skipped",
-                           "file_id": inv.file_id, "error": str(override_err)})
-        ms = (time.monotonic() - s) * 1000
-        invoices.append(inv)
-        latencies[inv.file_id] = ms
-        # prefer the per-file method the extractor actually took (embedded_text/vision/...)
-        method[inv.file_id] = getattr(extractor, "last_method", None) or (
-            extractor.name if inv.extraction_ok else f"{extractor.name}(low-conf)")
-        if manually_corrected:
-            method[inv.file_id] = f"{method[inv.file_id]}+human-override"
-            manual_override_count += 1
-        costs[inv.file_id] = float(getattr(extractor, "last_cost", 0.0) or 0.0)
-        extraction_evidence[inv.file_id] = dict(
-            getattr(extractor, "last_evidence", {}) or {}
-        )
-        _emit(stream, {"event": "extracted", "i": i, "total": len(files),
-                       "file_id": inv.file_id, "ok": inv.extraction_ok, "latency_ms": round(ms, 1)})
+            corrected = False
+            override_error = str(override_err)
+        return {
+            "index": index, "invoice": inv, "method": taken, "cost": cost,
+            "evidence": evidence, "latency_ms": (time.monotonic() - started) * 1000,
+            "corrected": corrected, "override_error": override_error,
+        }
+
+    workers = max(1, min(max_workers or DEFAULT_EXTRACT_WORKERS, len(files)))
+    t0 = time.monotonic()
+    done = 0
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        futures = [pool.submit(_extract_one, i, f) for i, f in enumerate(files)]
+        for future in as_completed(futures):
+            res = future.result()
+            done += 1
+            inv = res["invoice"]
+            invoices_by_index[res["index"]] = inv
+            latencies[inv.file_id] = res["latency_ms"]
+            taken = res["method"]
+            if res["corrected"]:
+                taken = f"{taken}+human-override"
+                manual_override_count += 1
+            method[inv.file_id] = taken
+            costs[inv.file_id] = res["cost"]
+            extraction_evidence[inv.file_id] = res["evidence"]
+            if res["override_error"]:
+                _emit(stream, {"event": "override_skipped",
+                               "file_id": inv.file_id, "error": res["override_error"]})
+            _emit(stream, {"event": "extracted", "i": done, "total": len(files),
+                           "file_id": inv.file_id, "ok": inv.extraction_ok,
+                           "latency_ms": round(res["latency_ms"], 1)})
+
+    # preserve original file order for stable, reproducible outcomes
+    invoices: list[InvoiceData] = [invoices_by_index[i] for i in range(len(files))]
 
     # 2) decide (deterministic, cheap) — needs the whole batch for duplicate detection
     previous_purchase_orders = state.purchase_orders_from_other_batches(batch_id, db_path)
@@ -346,6 +404,11 @@ def _main() -> int:
     ap.add_argument("--stream", action="store_true", help="emit JSON progress lines (for the webapp SSE)")
     ap.add_argument("--today", help="reference date YYYY-MM-DD for rule 4 (default: today)")
     ap.add_argument("--limit", type=int, help="process only the first N files (dev)")
+    ap.add_argument(
+        "--workers", type=int, default=None,
+        help=f"parallel extraction workers (default {DEFAULT_EXTRACT_WORKERS}; "
+             "lower to ~2-3 for rate-limited free model tiers)",
+    )
     ap.add_argument("--no-vision", action="store_true", help="skip the vision model for scans (digital only)")
     ap.add_argument(
         "--replace-state", action="store_true",
@@ -364,7 +427,8 @@ def _main() -> int:
                  replace_state=args.replace_state, outcomes_path=outcomes_path,
                  rules_version=args.rules_version, xlsx_path=Path(args.xlsx),
                  erp_db_path=Path(args.erp_db),
-                 extra_supplier_csvs=extra_supplier_csvs, extra_order_csvs=extra_order_csvs)
+                 extra_supplier_csvs=extra_supplier_csvs, extra_order_csvs=extra_order_csvs,
+                 max_workers=args.workers)
     if not args.stream:
         print(f"run {result['run_id']}: {result['summary']} in {result['elapsed_s']:.2f}s -> {result['outcomes']}")
     return 0
