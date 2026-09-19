@@ -72,6 +72,23 @@ python -m src.invoice_extractor
 Alternatively, place the variables in a local `.env` file (ignored by Git); the extractor
 loads it automatically. Use `.env.example` as the template.
 
+### Run the web console
+
+After creating `.venv` and installing the Python dependencies as shown above:
+
+```bash
+cd web
+npm ci
+npm run dev
+```
+
+Open <http://localhost:3000>. The console detects the repository's `.venv`
+automatically, so no `PYTHON` override is needed. This avoids the former `ENOENT`
+failure caused by passing a relative interpreter path to backend processes.
+`npm run dev` also starts the local ERP, waits for it, refreshes its snapshot and
+then starts Next.js. Stopping the command also stops the ERP process it created.
+See [`web/README.md`](web/README.md) for state initialization and overrides.
+
 The command writes `outputs/extracted_invoices.jsonl`. Vision results are cached by PDF
 content hash under `.cache/invoice_extraction/`, so interrupted or repeated runs do not pay
 for the same document twice. The default route is `google/gemini-3-flash`, with
