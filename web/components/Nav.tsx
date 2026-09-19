@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-function IconDecisions() {
+function IconFacturas() {
   return (
     <svg className="tab-icon" viewBox="0 0 24 24" aria-hidden="true">
       <rect x="3" y="4" width="5" height="16" rx="1.4" fill="none" stroke="currentColor" strokeWidth="1.7" />
@@ -26,16 +26,33 @@ function IconInsights() {
 }
 
 function IconSettings() {
+  const teeth = [0, 45, 90, 135, 180, 225, 270, 315];
   return (
     <svg className="tab-icon" viewBox="0 0 24 24" aria-hidden="true">
-      <circle cx="12" cy="12" r="3.1" fill="none" stroke="currentColor" strokeWidth="1.7" />
-      <path d="M12 3.6v1.8M12 18.6v1.8M3.6 12h1.8M18.6 12h1.8M6.1 6.1l1.3 1.3M16.6 16.6l1.3 1.3M17.9 6.1l-1.3 1.3M7.4 16.6l-1.3 1.3" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+      <mask id="gear-hole">
+        <rect width="24" height="24" fill="#fff" />
+        <circle cx="12" cy="12" r="2.5" fill="#000" />
+      </mask>
+      <g fill="currentColor" mask="url(#gear-hole)">
+        {teeth.map((deg) => (
+          <rect
+            key={deg}
+            x="10.2"
+            y="1.4"
+            width="3.6"
+            height="5.4"
+            rx="0.7"
+            transform={`rotate(${deg} 12 12)`}
+          />
+        ))}
+        <circle cx="12" cy="12" r="6.15" />
+      </g>
     </svg>
   );
 }
 
 const TABS = [
-  { href: "/", label: "Decisiones", Icon: IconDecisions },
+  { href: "/", label: "Facturas", Icon: IconFacturas },
   { href: "/insights", label: "An\u00e1lisis", Icon: IconInsights },
   { href: "/settings", label: "Configuraci\u00f3n", Icon: IconSettings },
 ];

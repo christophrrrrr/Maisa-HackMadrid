@@ -2,10 +2,11 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Decision, Result, StateSnapshot } from "@/lib/types";
-import DecisionTrace from "./DecisionTrace";
+import DecisionModal from "./DecisionModal";
 
 type Ongoing = { file_id: string; latency_ms: number | null; ok: boolean };
 type Progress = { done: number; total: number; running: boolean };
+type Conf = "ALL" | "OK" | "LOW";
 
 function partial(file_id: string, result: Result, reason: string): Decision {
   return {
@@ -15,18 +16,26 @@ function partial(file_id: string, result: Result, reason: string): Decision {
   };
 }
 
-function DecisionCard({ d, open, onToggle }: { d: Decision; open: boolean; onToggle: () => void }) {
+function haystack(d: Decision): string {
+  const ex = (d.extracted ?? {}) as Record<string, unknown>;
+  const ev = (d.evidence ?? {}) as Record<string, unknown>;
+  return [
+    d.file_id, d.reason, d.result, ...(d.findings || []),
+    ex.invoice_number, ex.purchase_order, ex.supplier_tax_id, ex.supplier_iban, ex.total,
+    ev.pedido, ev.supplier_id, ev.erp_asiento, ev.erp_status,
+  ].map((x) => (x == null ? "" : String(x))).join(" ").toLowerCase();
+}
+
+function DecisionCard({ d, onOpen }: { d: Decision; onOpen: () => void }) {
   return (
-    <div className={`dcard ${open ? "open" : ""}`}>
-      <div className="dcard-head" onClick={onToggle}>
+    <div className="dcard">
+      <div className="dcard-head" onClick={onOpen}>
         <span className={`pill ${d.result}`}>{d.result}</span>
         <div className="dcard-main">
           <div className="dcard-file">{d.file_id}</div>
           <div className="dcard-sub">{d.reason}</div>
         </div>
-        <span className="dcard-caret">&#9656;</span>
       </div>
-      {open && <DecisionTrace d={d} />}
     </div>
   );
 }
@@ -36,9 +45,12 @@ export default function DecisionBoard() {
   const [queued, setQueued] = useState<File[]>([]);
   const [ongoing, setOngoing] = useState<Ongoing[]>([]);
   const [p, setP] = useState<Progress>({ done: 0, total: 0, running: false });
-  const [open, setOpen] = useState<Set<string>>(new Set());
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [q, setQ] = useState("");
+  const [reason, setReason] = useState("ALL");
+  const [conf, setConf] = useState<Conf>("ALL");
   const [err, setErr] = useState("");
+  const [clearing, setClearing] = useState(false);
   const esRef = useRef<EventSource | null>(null);
   const pickRef = useRef<HTMLInputElement | null>(null);
 
@@ -132,29 +144,55 @@ export default function DecisionBoard() {
     };
   }
 
-  const toggle = (id: string) => setOpen((s) => {
-    const n = new Set(s);
-    n.has(id) ? n.delete(id) : n.add(id);
-    return n;
-  });
+  async function clearAll() {
+    if (p.running || clearing) return;
+    const ok = window.confirm("Se eliminaran todas las decisiones y ejecuciones. Esta accion no se puede deshacer.");
+    if (!ok) return;
+    setClearing(true);
+    setErr("");
+    const res = await fetch("/api/state", { method: "DELETE" });
+    setClearing(false);
+    if (!res.ok) {
+      setErr("No se pudo vaciar la base de datos.");
+      return;
+    }
+    setDecisions(new Map());
+    setQueued([]);
+    setOngoing([]);
+    setSelectedId(null);
+  }
 
   const all = useMemo(() => [...decisions.values()], [decisions]);
-  const needle = q.trim().toLowerCase();
-  const match = (d: Decision) => !needle ||
-    d.file_id.toLowerCase().includes(needle) || d.reason.toLowerCase().includes(needle);
+  const reasons = useMemo(() => {
+    const s = new Set(all.map((d) => d.reason).filter(Boolean));
+    return [...s].sort();
+  }, [all]);
 
-  const done = all.filter((d) => (d.result === "PAGAR" || d.result === "NO_PAGAR") && match(d))
+  const needle = q.trim().toLowerCase();
+  const match = (d: Decision) => {
+    if (reason !== "ALL" && d.reason !== reason) return false;
+    if (conf === "OK" && !d.extraction_ok) return false;
+    if (conf === "LOW" && d.extraction_ok) return false;
+    if (needle && !haystack(d).includes(needle)) return false;
+    return true;
+  };
+
+  const pagar = all.filter((d) => d.result === "PAGAR" && match(d))
+    .sort((a, b) => a.file_id.localeCompare(b.file_id));
+  const nopagar = all.filter((d) => d.result === "NO_PAGAR" && match(d))
     .sort((a, b) => a.file_id.localeCompare(b.file_id));
   const revise = all.filter((d) => d.result === "ESCALAR" && match(d))
     .sort((a, b) => a.file_id.localeCompare(b.file_id));
   const ongoingShown = ongoing.filter((o) => !needle || o.file_id.toLowerCase().includes(needle));
+  const selected = selectedId ? decisions.get(selectedId) ?? null : null;
+  const filtered = pagar.length + nopagar.length + revise.length;
+  const filtersOn = Boolean(needle || reason !== "ALL" || conf !== "ALL");
 
   return (
     <>
       <div className="board-head">
-        <h1 style={{ margin: 0 }}>Decisiones</h1>
+        <h1 style={{ margin: 0 }}>Facturas</h1>
         <div className="progress-wrap">
-          <input className="search" placeholder="Buscar archivo o motivo..." value={q} onChange={(e) => setQ(e.target.value)} />
           <input
             ref={pickRef}
             type="file"
@@ -169,71 +207,92 @@ export default function DecisionBoard() {
           <button className="btn" onClick={run} disabled={p.running || queued.length === 0}>
             {p.running ? `Procesando ${p.done}/${p.total}` : "Ejecutar lote"}
           </button>
+          <button className="btn ghost danger" onClick={clearAll} disabled={p.running || clearing || all.length === 0}>
+            {clearing ? "Vaciando..." : "Vaciar"}
+          </button>
         </div>
+      </div>
+
+      <div className="filters">
+        <input
+          className="search"
+          placeholder="Buscar archivo, pedido, NIF, IBAN, motivo..."
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+        />
+        <select className="field" value={reason} onChange={(e) => setReason(e.target.value)}>
+          <option value="ALL">Todos los motivos</option>
+          {reasons.map((r) => <option key={r} value={r}>{r}</option>)}
+        </select>
+        <select className="field" value={conf} onChange={(e) => setConf(e.target.value as Conf)}>
+          <option value="ALL">{"Toda extracci\u00f3n"}</option>
+          <option value="OK">{"Extracci\u00f3n correcta"}</option>
+          <option value="LOW">Baja confianza</option>
+        </select>
+        {filtersOn && (
+          <span className="muted" style={{ fontSize: 13 }}>
+            {filtered} de {all.length}
+          </span>
+        )}
       </div>
 
       {err && <div className="errline">{err}</div>}
 
       <div className="queue">
-        {queued.length === 0 ? (
+        {p.running ? (
+          ongoingShown.length === 0
+            ? <div className="queue-empty">Preparando lote...</div>
+            : ongoingShown.map((o) => (
+                <div key={o.file_id} className="qchip live">
+                  <span className="spin" />
+                  <span className="qname">{o.file_id}</span>
+                </div>
+              ))
+        ) : queued.length === 0 ? (
           <div className="queue-empty">Seleccione las facturas que desea analizar.</div>
         ) : (
           queued.map((f) => (
             <div key={f.name} className="qchip">
               <span className="qname">{f.name}</span>
-              {!p.running && (
-                <button className="qrm" onClick={() => removeQueued(f.name)} aria-label="Quitar">x</button>
-              )}
+              <button className="qrm" onClick={() => removeQueued(f.name)} aria-label="Quitar">x</button>
             </div>
           ))
         )}
       </div>
 
       <div className="board">
-        <Column title="En curso" dot="ongoing" count={ongoingShown.length}>
-          {ongoingShown.length === 0
-            ? <div className="col-empty">{p.running ? "Preparando..." : "Sin archivos en proceso"}</div>
-            : ongoingShown.map((o) => (
-                <div key={o.file_id} className="dcard">
-                  <div className="dcard-head" style={{ cursor: "default" }}>
-                    <span className="spin" />
-                    <div className="dcard-main">
-                      <div className="dcard-file">{o.file_id}</div>
-                      <div className="dcard-sub">
-                        {o.ok ? "Analizando" : "Baja confianza"}
-                        {o.latency_ms != null ? `  - ${o.latency_ms} ms` : ""}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
+        <Column title="Pagar" dot="pagar" count={pagar.length}>
+          {pagar.length === 0
+            ? <div className="col-empty">Sin facturas</div>
+            : pagar.map((d) => <DecisionCard key={d.file_id} d={d} onOpen={() => setSelectedId(d.file_id)} />)}
         </Column>
 
-        <Column title="Resuelto" dot="done" count={done.length} sub="pagar / no pagar">
-          {done.length === 0
-            ? <div className="col-empty">Sin decisiones</div>
-            : done.map((d) => <DecisionCard key={d.file_id} d={d} open={open.has(d.file_id)} onToggle={() => toggle(d.file_id)} />)}
+        <Column title="No pagar" dot="nopagar" count={nopagar.length}>
+          {nopagar.length === 0
+            ? <div className="col-empty">Sin facturas</div>
+            : nopagar.map((d) => <DecisionCard key={d.file_id} d={d} onOpen={() => setSelectedId(d.file_id)} />)}
         </Column>
 
-        <Column title="Revisar" dot="revise" count={revise.length} sub="escalar">
+        <Column title="Revisar" dot="revise" count={revise.length}>
           {revise.length === 0
             ? <div className="col-empty">Sin incidencias</div>
-            : revise.map((d) => <DecisionCard key={d.file_id} d={d} open={open.has(d.file_id)} onToggle={() => toggle(d.file_id)} />)}
+            : revise.map((d) => <DecisionCard key={d.file_id} d={d} onOpen={() => setSelectedId(d.file_id)} />)}
         </Column>
       </div>
+
+      {selected && <DecisionModal d={selected} onClose={() => setSelectedId(null)} />}
     </>
   );
 }
 
-function Column({ title, dot, count, sub, children }: {
-  title: string; dot: string; count: number; sub?: string; children: React.ReactNode;
+function Column({ title, dot, count, children }: {
+  title: string; dot: string; count: number; children: React.ReactNode;
 }) {
   return (
     <div className="col">
       <div className="col-head">
         <div className="col-title">
           <span className={`dot ${dot}`} /> {title}
-          {sub && <span className="faint" style={{ fontWeight: 400, fontSize: 11 }}>{sub}</span>}
         </div>
         <span className="count">{count}</span>
       </div>

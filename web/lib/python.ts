@@ -51,7 +51,10 @@ export function savePolicy(patch: Partial<Policy>): Policy {
     input: JSON.stringify(patch),
     maxBuffer: 8 * 1024 * 1024,
   });
-  // set echoes the merged config (without ui metadata) - re-read for the full payload
   JSON.parse(out);
   return getPolicy();
+}
+
+export function clearState(): { ok: boolean } {
+  return pyJson<{ ok: boolean }>(["-m", "src.state", "clear"]);
 }

@@ -1,10 +1,35 @@
-import { getState } from "@/lib/python";
+import { getPolicy, getState } from "@/lib/python";
+import { buildInsights, euros, pctBar, type CountRow, type Tone } from "@/lib/insights";
+import type { Policy } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
-function pct(n: number, total: number) {
-  return total ? `${Math.round((n / total) * 100)}%` : "0%";
-}
+const L = {
+  title: "An\u00e1lisis",
+  last: "\u00daltima ejecuci\u00f3n ",
+  none: "A\u00fan no hay ejecuciones registradas.",
+  stp: "Paso autom\u00e1tico",
+  reviewOf: " sin revisi\u00f3n",
+  pay: "A pagar",
+  blocked: "Bloqueado",
+  reviewing: "En revisi\u00f3n",
+  invoices: " facturas",
+  reasons: "Motivos",
+  reasonsSub: "raz\u00f3n principal de cada decisi\u00f3n",
+  reasonsEmpty: "Ning\u00fan fallo de regla.",
+  findings: "Hallazgos",
+  findingsSub: "todas las reglas que dispararon",
+  findingsEmpty: "Sin hallazgos.",
+  leak: "Doble pago evitado",
+  leakSub: " en ya pagadas o pedido duplicado",
+  extract: "Revisi\u00f3n por extracci\u00f3n",
+  extractSub: " escaladas por lectura incompleta",
+  extractNone: "sin facturas en revisi\u00f3n",
+  suppliers: "Proveedores",
+  supplier: "Proveedor",
+  topFinding: "Hallazgo m\u00e1s frecuente",
+  nobody: "Nadie en revisi\u00f3n.",
+};
 
 function fmtWhen(iso: string) {
   return new Date(iso).toLocaleString("es-ES", {
@@ -13,97 +38,151 @@ function fmtWhen(iso: string) {
   });
 }
 
+function safePolicy(): Policy | null {
+  try {
+    return getPolicy();
+  } catch {
+    return null;
+  }
+}
+
+function RankList({ rows, empty }: { rows: CountRow[]; empty: string }) {
+  const max = rows[0]?.n ?? 0;
+  if (rows.length === 0) return <div className="an-empty">{empty}</div>;
+  return (
+    <div className="rank">
+      {rows.map((r) => (
+        <div className="rank-row" key={r.code}>
+          <div className="rank-top">
+            <span className="rank-label" title={r.code}>{r.label}</span>
+            <span className="rank-n">{r.n}</span>
+          </div>
+          <div className="rank-bar">
+            <i className={r.tone} style={{ width: pctBar(r.n, max) }} />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function toneClass(t: Tone): string {
+  return t === "MIX" ? "" : t;
+}
+
 export default function Insights() {
-  const { summary, latest_run, decisions } = getState();
+  const { latest_run, decisions } = getState();
+  const policy = safePolicy();
+  const an = buildInsights(decisions, policy);
   const stats = (latest_run?.stats && typeof latest_run.stats === "object"
     ? (latest_run.stats as Record<string, unknown>)
     : {}) as Record<string, unknown>;
-  const lowConf = Number(stats["extractor_low_conf"] ?? 0);
+
+  const extractor = String(stats["extractor"] ?? "");
+  const latency = stats["avg_latency_ms"];
+  const ops = [
+    latest_run ? L.last + fmtWhen(latest_run.started_at) : null,
+    extractor || null,
+    latency != null && latency !== "" ? ("media " + String(latency) + " ms") : null,
+    latest_run?.rules_version || null,
+  ].filter(Boolean).join("  \u00b7  ");
 
   return (
-    <>
+    <div>
       <div>
-        <h1 style={{ margin: "0 0 4px" }}>An{"\u00e1"}lisis</h1>
+        <h1 style={{ margin: "0 0 4px" }}>{L.title}</h1>
         <div className="muted" style={{ fontSize: 13 }}>
-          {latest_run
-            ? `\u00daltima ejecuci\u00f3n: ${fmtWhen(latest_run.started_at)}  -  ${latest_run.rules_version}`
-            : "A\u00fan no hay ejecuciones registradas."}
+          {ops || L.none}
         </div>
       </div>
 
       <div className="grid cards" style={{ marginTop: 20 }}>
         <div className="card">
-          <div className="k">Facturas</div>
-          <div className="v">{summary.total}</div>
-          <div className="sub">{lowConf} con extracci\u00f3n de baja confianza</div>
+          <div className="k">{L.stp}</div>
+          <div className="v">{an.stpPct}%</div>
+          <div className="sub">{an.auto} de {an.total}{L.reviewOf}</div>
         </div>
         <div className="card">
-          <div className="k">Pagar</div>
-          <div className="v" style={{ color: "var(--pagar)" }}>{summary.PAGAR}</div>
-          <div className="sub">{pct(summary.PAGAR, summary.total)}</div>
+          <div className="k">{L.pay}</div>
+          <div className={"v money " + toneClass("PAGAR")}>{euros(an.euros.PAGAR)}</div>
+          <div className="sub">{an.counts.PAGAR}{L.invoices}</div>
         </div>
         <div className="card">
-          <div className="k">No pagar</div>
-          <div className="v" style={{ color: "var(--no_pagar)" }}>{summary.NO_PAGAR}</div>
-          <div className="sub">{pct(summary.NO_PAGAR, summary.total)}</div>
+          <div className="k">{L.blocked}</div>
+          <div className={"v money " + toneClass("NO_PAGAR")}>{euros(an.euros.NO_PAGAR)}</div>
+          <div className="sub">{an.counts.NO_PAGAR}{L.invoices}</div>
         </div>
         <div className="card">
-          <div className="k">Escalar</div>
-          <div className="v" style={{ color: "var(--escalar)" }}>{summary.ESCALAR}</div>
-          <div className="sub">{pct(summary.ESCALAR, summary.total)}</div>
+          <div className="k">{L.reviewing}</div>
+          <div className={"v money " + toneClass("ESCALAR")}>{euros(an.euros.ESCALAR)}</div>
+          <div className="sub">{an.counts.ESCALAR}{L.invoices}</div>
         </div>
       </div>
 
-      {summary.total > 0 && (
-        <div className="bar" style={{ marginTop: 16 }}>
-          <i className="PAGAR" style={{ width: pct(summary.PAGAR, summary.total) }} />
-          <i className="NO_PAGAR" style={{ width: pct(summary.NO_PAGAR, summary.total) }} />
-          <i className="ESCALAR" style={{ width: pct(summary.ESCALAR, summary.total) }} />
+      <div className="an-split">
+        <div className="card">
+          <div className="k">{L.reasons}</div>
+          <div className="sub" style={{ marginBottom: 12 }}>{L.reasonsSub}</div>
+          <RankList rows={an.reasons} empty={L.reasonsEmpty} />
         </div>
-      )}
+        <div className="card">
+          <div className="k">{L.findings}</div>
+          <div className="sub" style={{ marginBottom: 12 }}>{L.findingsSub}</div>
+          <RankList rows={an.findings} empty={L.findingsEmpty} />
+        </div>
+      </div>
 
-      <div className="section-title">Rendimiento</div>
       <div className="grid cards">
         <div className="card">
-          <div className="k">Capacidad</div>
-          <div className="v">{latest_run?.files_per_s?.toFixed(1) ?? "-"}<span style={{ fontSize: 14 }}> arch./s</span></div>
-          <div className="sub">{latest_run?.elapsed_s ? `${latest_run.elapsed_s.toFixed(2)} s en total` : ""}</div>
+          <div className="k">{L.leak}</div>
+          <div className="v">{an.leakN}</div>
+          <div className="sub">{euros(an.leakEuros)}{L.leakSub}</div>
         </div>
         <div className="card">
-          <div className="k">Coste</div>
-          <div className="v">${(latest_run?.cost_usd ?? 0).toFixed(2)}</div>
-        </div>
-        <div className="card">
-          <div className="k">Extracci\u00f3n</div>
-          <div className="v" style={{ fontSize: 18 }}>{String(stats["extractor"] ?? "-")}</div>
-          <div className="sub">media {String(stats["avg_latency_ms"] ?? "-")} ms/archivo</div>
-        </div>
-        <div className="card">
-          <div className="k">Pendiente de revisi\u00f3n</div>
-          <div className="v">{summary.ESCALAR}</div>
+          <div className="k">{L.extract}</div>
+          <div className="v">{an.counts.ESCALAR ? (an.extractPct + "%") : "-"}</div>
+          <div className="sub">
+            {an.counts.ESCALAR
+              ? (an.extractN + " de " + an.counts.ESCALAR + L.extractSub)
+              : L.extractNone}
+          </div>
         </div>
       </div>
 
-      <div className="section-title">Decisiones recientes</div>
-      <div className="card" style={{ padding: 0 }}>
-        <table>
-          <thead>
-            <tr><th>Archivo</th><th>Resultado</th><th>Motivo</th></tr>
-          </thead>
-          <tbody>
-            {decisions.slice(0, 12).map((d) => (
-              <tr key={d.file_id}>
-                <td className="mono">{d.file_id}</td>
-                <td><span className={`pill ${d.result}`}>{d.result}</span></td>
-                <td className="mono muted">{d.reason}</td>
+      <div className="section-title">{L.suppliers}</div>
+      <div className="card hist-card">
+        <div className="hist-scroll">
+          <table className="sup-table">
+            <thead>
+              <tr>
+                <th>{L.supplier}</th>
+                <th>NIF</th>
+                <th className="hist-num">{L.reviewing}</th>
+                <th className="hist-num">Importe</th>
+                <th>{L.topFinding}</th>
               </tr>
-            ))}
-            {decisions.length === 0 && (
-              <tr><td colSpan={3} className="muted" style={{ padding: 18 }}>Sin decisiones.</td></tr>
-            )}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {an.suppliers.map((s) => (
+                <tr key={s.key}>
+                  <td>{s.name}</td>
+                  <td className="mono">{s.nif}</td>
+                  <td className="hist-num">{s.escalar}</td>
+                  <td className="mono hist-num">{euros(s.euros)}</td>
+                  <td className="muted">{s.topFinding}</td>
+                </tr>
+              ))}
+              {an.suppliers.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="muted" style={{ padding: 18 }}>
+                    {L.nobody}
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
-    </>
+    </div>
   );
 }

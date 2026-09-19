@@ -175,17 +175,34 @@ def decision(file_id: str, db_path: Path = DEFAULT_DB) -> dict | None:
         conn.close()
 
 
+def clear(db_path: Path = DEFAULT_DB) -> dict:
+    """wipe runs + decisions so the console can start from a blank board."""
+    conn = connect(db_path)
+    try:
+        conn.execute("DELETE FROM decisions")
+        conn.execute("DELETE FROM runs")
+        conn.commit()
+    finally:
+        conn.close()
+    outcomes = Path(__file__).resolve().parents[1] / "outputs" / "outcomes.jsonl"
+    if outcomes.exists():
+        outcomes.write_text("", encoding="utf-8")
+    return {"ok": True}
+
+
 def _main() -> int:
     import argparse
 
     ap = argparse.ArgumentParser(description="Pipeline state store (read side / CLI for the webapp).")
-    ap.add_argument("cmd", choices=["json", "decision"], help="json = full snapshot; decision = one file")
+    ap.add_argument("cmd", choices=["json", "decision", "clear"], help="json = full snapshot; decision = one file; clear = wipe")
     ap.add_argument("--file-id")
     ap.add_argument("--db", default=str(DEFAULT_DB))
     args = ap.parse_args()
 
     if args.cmd == "json":
         print(json.dumps(snapshot(Path(args.db)), default=str))
+    elif args.cmd == "clear":
+        print(json.dumps(clear(Path(args.db)), default=str))
     else:
         print(json.dumps(decision(args.file_id, Path(args.db)), default=str))
     return 0
