@@ -74,6 +74,7 @@ def test_retain_decisions_removes_files_from_previous_batch(tmp_path):
     db = tmp_path / "state.sqlite"
     conn = state.connect(db)
     try:
+        state.start_run(conn, "run-1", "lote1", "norma-v3")
         for file_id in ("keep.pdf", "stale.pdf"):
             state.record_decision(
                 conn,
@@ -90,3 +91,66 @@ def test_retain_decisions_removes_files_from_previous_batch(tmp_path):
         conn.close()
 
     assert [item["file_id"] for item in state.snapshot(db)["decisions"]] == ["keep.pdf"]
+
+
+def test_decision_history_preserves_same_file_across_batches(tmp_path):
+    db = tmp_path / "state.sqlite"
+    conn = state.connect(db)
+    try:
+        state.start_run(conn, "run-lote1", "lote1", "norma-v3")
+        state.record_decision(
+            conn,
+            "run-lote1",
+            Outcome(file_id="same.pdf", result="PAGAR", reason="v3"),
+            extraction_method="test",
+            extraction_ok=True,
+            extracted={},
+            latency_ms=1,
+        )
+        state.start_run(conn, "run-lote2", "lote2", "norma-v4")
+        state.record_decision(
+            conn,
+            "run-lote2",
+            Outcome(
+                file_id="same.pdf",
+                result="ESCALAR",
+                reason="v4",
+                rules_version="norma-v4",
+            ),
+            extraction_method="test",
+            extraction_ok=True,
+            extracted={},
+            latency_ms=1,
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+    assert state.decision("same.pdf", db)["result"] == "ESCALAR"
+    assert state.run_decisions("run-lote1", db)[0]["result"] == "PAGAR"
+    assert state.run_decisions("run-lote2", db)[0]["rules_version"] == "norma-v4"
+
+
+def test_existing_current_decisions_are_backfilled_into_history(tmp_path):
+    db = tmp_path / "state.sqlite"
+    conn = state.connect(db)
+    try:
+        state.start_run(conn, "legacy-run", "lote1", "norma-v3")
+        state.record_decision(
+            conn,
+            "legacy-run",
+            Outcome(file_id="legacy.pdf", result="PAGAR", reason="legacy"),
+            extraction_method="test",
+            extraction_ok=True,
+            extracted={},
+            latency_ms=1,
+        )
+        conn.commit()
+        conn.execute("DROP TABLE decision_history")
+        conn.commit()
+    finally:
+        conn.close()
+
+    history = state.run_decisions("legacy-run", db)
+
+    assert [item["file_id"] for item in history] == ["legacy.pdf"]

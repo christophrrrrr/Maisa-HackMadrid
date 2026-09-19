@@ -42,11 +42,14 @@ resultados bajo reglas incorrectas.
 ```bash
 .venv/bin/python -m src.pipeline \
   --batch lote2 \
+  --replace-state \
   --xlsx lote_2_sorpresa/<excel-con-Norma_Pagos_v4>.xlsx
 ```
 
 La salida predeterminada es `outputs/outcomes_lote2.jsonl`. La escritura es
 atómica y el pipeline valida cobertura exacta, duplicados y resultados permitidos.
+`--replace-state` deja la consola mostrando el lote nuevo, mientras el historial
+por ejecución conserva la traza completa del lote 1.
 
 ## 5. Validar los dos artefactos
 
