@@ -11,6 +11,7 @@ This is what the "Run batch" button triggers:
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import sys
 import time
@@ -62,10 +63,25 @@ def _collect_files(facturas_dir: Path, limit: int | None) -> list[Path]:
         )
 
     files = grab(facturas_dir)
-    # also include anything uploaded from the console (additive, de-duped by name)
+    # Also include anything uploaded from the console. Deduplicate by both name
+    # and content because the upload boundary may normalize a Unicode filename.
     if INBOX_DIR.is_dir() and facturas_dir.resolve() != INBOX_DIR.resolve():
-        seen = {f.name for f in files}
-        files += [f for f in grab(INBOX_DIR) if f.name not in seen]
+        def digest(file: Path) -> bytes:
+            h = hashlib.sha256()
+            with file.open("rb") as stream:
+                for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+                    h.update(chunk)
+            return h.digest()
+
+        seen_names = {f.name for f in files}
+        seen_content = {digest(f) for f in files}
+        for file in grab(INBOX_DIR):
+            content = digest(file)
+            if file.name in seen_names or content in seen_content:
+                continue
+            files.append(file)
+            seen_names.add(file.name)
+            seen_content.add(content)
     return files[:limit] if limit else files
 
 
@@ -79,6 +95,7 @@ def run(
     db_path: Path = state.DEFAULT_DB,
     limit: int | None = None,
     use_vision: bool = True,
+    replace_state: bool = False,
 ) -> dict:
     # reference date + extractor fall back to the editable policy (settings page)
     cfg = load_policy()
@@ -120,6 +137,8 @@ def run(
     outcomes = decide_batch(invoices, biz, erp, today=today)
 
     # 3) persist + emit each decision
+    if replace_state:
+        state.retain_decisions(conn, (o.file_id for o in outcomes))
     for o in outcomes:
         state.record_decision(
             conn, run_id, o,
@@ -166,12 +185,17 @@ def _main() -> int:
     ap.add_argument("--today", help="reference date YYYY-MM-DD for rule 4 (default: today)")
     ap.add_argument("--limit", type=int, help="process only the first N files (dev)")
     ap.add_argument("--no-vision", action="store_true", help="skip the vision model for scans (digital only)")
+    ap.add_argument(
+        "--replace-state", action="store_true",
+        help="replace the visible decisions with this batch after successful extraction",
+    )
     args = ap.parse_args()
 
     today = date.fromisoformat(args.today) if args.today else None
     facturas_dir = Path(args.dir) if args.dir else FACTURAS_DIR
     result = run(facturas_dir=facturas_dir, extractor_name=args.extractor, batch=args.batch,
-                 stream=args.stream, today=today, limit=args.limit, use_vision=not args.no_vision)
+                 stream=args.stream, today=today, limit=args.limit, use_vision=not args.no_vision,
+                 replace_state=args.replace_state)
     if not args.stream:
         print(f"run {result['run_id']}: {result['summary']} in {result['elapsed_s']:.2f}s -> {result['outcomes']}")
     return 0
