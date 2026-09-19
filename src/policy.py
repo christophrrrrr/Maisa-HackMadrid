@@ -53,6 +53,27 @@ REASONS: dict[str, dict[str, str]] = {
 }
 
 
+FILE_TYPE_META: dict[str, dict] = {
+    "pdf": {"label": "PDF", "exts": [".pdf"], "help": "facturas digitales y escaneos"},
+    "image": {
+        "label": "Imagen",
+        "exts": [".jpg", ".jpeg", ".png", ".webp", ".tif", ".tiff"],
+        "help": "fotos y escaneos sueltos",
+    },
+    "xml": {"label": "XML", "exts": [".xml", ".xsig"], "help": "FacturaE / UBL"},
+}
+
+DEFAULT_FILE_TYPES: dict[str, dict] = {
+    "pdf": {"enabled": True, "vision": True},
+    "image": {"enabled": False, "vision": True, "max_mb": 12},
+    "xml": {"enabled": False, "facturae": True},
+}
+
+DEFAULT_WATCH: dict = {"enabled": False, "folder_name": None}
+
+PERSIST_KEYS = ("tolerance", "extractor", "today", "reason_outcomes", "file_types", "watch")
+
+
 def defaults() -> dict:
     return {
         "rules_version": RULES_VERSION,
@@ -60,7 +81,61 @@ def defaults() -> dict:
         "extractor": "hybrid",  # A's digital+vision; 'baseline' is the offline fallback
         "today": None,  # reference date for rule 4; None = system today
         "reason_outcomes": dict(DEFAULT_REASON_OUTCOMES),
+        "file_types": {k: dict(v) for k, v in DEFAULT_FILE_TYPES.items()},
+        "watch": dict(DEFAULT_WATCH),
     }
+
+
+def kind_for_suffix(suffix: str) -> str | None:
+    s = suffix.lower()
+    for key, meta in FILE_TYPE_META.items():
+        if s in meta["exts"]:
+            return key
+    return None
+
+
+def accepted_suffixes(cfg: dict | None = None) -> set[str]:
+    cfg = cfg or load_policy()
+    out: set[str] = set()
+    types = cfg.get("file_types") or {}
+    for key, spec in types.items():
+        if spec.get("enabled") and key in FILE_TYPE_META:
+            out.update(FILE_TYPE_META[key]["exts"])
+    return out or {".pdf"}
+
+
+def _merge_file_types(saved: object) -> dict:
+    out = {k: dict(v) for k, v in DEFAULT_FILE_TYPES.items()}
+    if not isinstance(saved, dict):
+        return out
+    for key, default in DEFAULT_FILE_TYPES.items():
+        spec = saved.get(key)
+        if not isinstance(spec, dict):
+            continue
+        out[key]["enabled"] = bool(spec.get("enabled", default["enabled"]))
+        if "vision" in default:
+            out[key]["vision"] = bool(spec.get("vision", default["vision"]))
+        if "max_mb" in default:
+            try:
+                n = int(spec.get("max_mb", default["max_mb"]))
+            except (TypeError, ValueError):
+                n = int(default["max_mb"])
+            out[key]["max_mb"] = max(1, min(n, 50))
+        if "facturae" in default:
+            out[key]["facturae"] = bool(spec.get("facturae", default["facturae"]))
+    if not any(v.get("enabled") for v in out.values()):
+        out["pdf"]["enabled"] = True
+    return out
+
+
+def _merge_watch(saved: object) -> dict:
+    out = dict(DEFAULT_WATCH)
+    if not isinstance(saved, dict):
+        return out
+    name = saved.get("folder_name")
+    out["folder_name"] = str(name) if name else None
+    out["enabled"] = bool(saved.get("enabled")) and bool(out["folder_name"])
+    return out
 
 
 def load_policy() -> dict:
@@ -77,6 +152,8 @@ def load_policy() -> dict:
         for code, outcome in (saved.get("reason_outcomes") or {}).items():
             if code in cfg["reason_outcomes"] and outcome in RESULTS:
                 cfg["reason_outcomes"][code] = outcome
+        cfg["file_types"] = _merge_file_types(saved.get("file_types"))
+        cfg["watch"] = _merge_watch(saved.get("watch"))
     return cfg
 
 
@@ -92,13 +169,14 @@ def save_policy(data: dict) -> dict:
     for code, outcome in (data.get("reason_outcomes") or {}).items():
         if code in cfg["reason_outcomes"] and outcome in RESULTS:
             cfg["reason_outcomes"][code] = outcome
+    if "file_types" in data:
+        cfg["file_types"] = _merge_file_types(data.get("file_types"))
+    if "watch" in data:
+        cfg["watch"] = _merge_watch(data.get("watch"))
 
     CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
     CONFIG_PATH.write_text(
-        json.dumps(
-            {k: cfg[k] for k in ("tolerance", "extractor", "today", "reason_outcomes")},
-            indent=2,
-        ),
+        json.dumps({k: cfg[k] for k in PERSIST_KEYS}, indent=2),
         encoding="utf-8",
     )
     return cfg
@@ -106,7 +184,7 @@ def save_policy(data: dict) -> dict:
 
 def as_ui() -> dict:
     """full payload for the settings page: current values + metadata."""
-    return {**load_policy(), "reasons": REASONS, "results": RESULTS}
+    return {**load_policy(), "reasons": REASONS, "results": RESULTS, "file_type_meta": FILE_TYPE_META}
 
 
 def _main() -> int:

@@ -22,7 +22,7 @@ from .business_data import load_business_data
 from .erp_snapshot import index_by_pedido, load_snapshot
 from .extractor import Extractor
 from .models import InvoiceData
-from .policy import load_policy
+from .policy import accepted_suffixes, load_policy
 from .rules_engine import decide_batch
 
 REPO = Path(__file__).resolve().parents[1]
@@ -51,11 +51,21 @@ def get_extractor(name: str, *, use_vision: bool = True) -> Extractor:
 
 
 def _collect_files(facturas_dir: Path, limit: int | None) -> list[Path]:
-    files = sorted(facturas_dir.glob("*.pdf")) if facturas_dir.is_dir() else []
+    suffixes = accepted_suffixes()
+
+    def grab(folder: Path) -> list[Path]:
+        if not folder.is_dir():
+            return []
+        return sorted(
+            p for p in folder.iterdir()
+            if p.is_file() and p.suffix.lower() in suffixes
+        )
+
+    files = grab(facturas_dir)
     # also include anything uploaded from the console (additive, de-duped by name)
     if INBOX_DIR.is_dir() and facturas_dir.resolve() != INBOX_DIR.resolve():
         seen = {f.name for f in files}
-        files += [f for f in sorted(INBOX_DIR.glob("*.pdf")) if f.name not in seen]
+        files += [f for f in grab(INBOX_DIR) if f.name not in seen]
     return files[:limit] if limit else files
 
 
@@ -91,6 +101,7 @@ def run(
     invoices: list[InvoiceData] = []
     latencies: dict[str, float] = {}
     method: dict[str, str] = {}
+    costs: dict[str, float] = {}
     t0 = time.monotonic()
     for i, f in enumerate(files, 1):
         s = time.monotonic()
@@ -101,6 +112,7 @@ def run(
         # prefer the per-file method the extractor actually took (embedded_text/vision/...)
         method[inv.file_id] = getattr(extractor, "last_method", None) or (
             extractor.name if inv.extraction_ok else f"{extractor.name}(low-conf)")
+        costs[inv.file_id] = float(getattr(extractor, "last_cost", 0.0) or 0.0)
         _emit(stream, {"event": "extracted", "i": i, "total": len(files),
                        "file_id": inv.file_id, "ok": inv.extraction_ok, "latency_ms": round(ms, 1)})
 
@@ -115,18 +127,22 @@ def run(
             extraction_ok=(o.reason != "incomplete_extraction"),
             extracted=next((inv.model_dump() for inv in invoices if inv.file_id == o.file_id), None),
             latency_ms=latencies.get(o.file_id),
-            cost_usd=0.0,  # baseline is free; A's LLM extractor fills real cost here
+            cost_usd=costs.get(o.file_id, 0.0),
         )
         _emit(stream, {"event": "decided", "file_id": o.file_id, "result": o.result, "reason": o.reason})
     conn.commit()
 
     elapsed = time.monotonic() - t0
+    total_cost = round(sum(costs.values()), 6)
+    n_vision = sum(1 for v in method.values() if v == "vision")
     stats = {
         "extractor": extractor.name,
-        "extractor_low_conf": sum(1 for v in method.values() if "low-conf" in v),
+        "extractor_low_conf": sum(1 for v in method.values() if "low-conf" in v or v == "unavailable"),
         "avg_latency_ms": round(sum(latencies.values()) / len(latencies), 1) if latencies else 0,
+        "n_vision": n_vision,
+        "cost_usd": total_cost,
     }
-    state.finish_run(conn, run_id, elapsed_s=elapsed, cost_usd=0.0, stats=stats)
+    state.finish_run(conn, run_id, elapsed_s=elapsed, cost_usd=total_cost, stats=stats)
 
     # 4) deliverable
     OUTCOMES.parent.mkdir(parents=True, exist_ok=True)

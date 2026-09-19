@@ -1,4 +1,5 @@
 import { spawn } from "node:child_process";
+import path from "node:path";
 import { pythonCmd, repoRoot } from "@/lib/python";
 
 export const runtime = "nodejs";
@@ -12,10 +13,12 @@ export async function GET(req: Request) {
   const url = new URL(req.url);
   const today = url.searchParams.get("today") || "";
   const limit = url.searchParams.get("limit") || "";
+  const inbox = url.searchParams.get("inbox") === "1";
 
   const args = ["-m", "src.pipeline", "--stream"];
   if (today) args.push("--today", today);
   if (limit) args.push("--limit", limit);
+  if (inbox) args.push("--dir", path.join(repoRoot(), "outputs", "inbox"));
 
   const encoder = new TextEncoder();
   const stream = new ReadableStream({

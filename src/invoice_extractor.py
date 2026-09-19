@@ -51,6 +51,8 @@ DEFAULT_FALLBACK_MODELS = [
 ]
 MIN_TEXT_CHARS = 100
 MONEY_TOLERANCE = Decimal("0.01")
+# last paid vision call (gateway). digital / cache / free Gemini stay 0.
+_last_vision_cost = 0.0
 
 ExtractionMethod = Literal["embedded_text", "vision", "vision_cache", "unavailable"]
 
@@ -70,6 +72,7 @@ class ExtractionRecord(BaseModel):
     warnings: list[str] = Field(default_factory=list)
     latency_ms: int = 0
     model: str | None = None
+    cost_usd: float = 0.0
 
 
 class VisionInvoice(BaseModel):
@@ -354,6 +357,27 @@ def _invoice_from_vision(file_id: str, parsed: VisionInvoice) -> tuple[InvoiceDa
     ), warnings
 
 
+def _usd_from_usage(model: str, usage: Any) -> float:
+    """price a completion from token usage. digital / cache / free gemini never call this."""
+    if usage is None:
+        return 0.0
+    if isinstance(usage, dict):
+        inp = usage.get("prompt_tokens") or usage.get("input_tokens") or 0
+        out = usage.get("completion_tokens") or usage.get("output_tokens") or 0
+    else:
+        inp = getattr(usage, "prompt_tokens", None) or getattr(usage, "input_tokens", None) or 0
+        out = getattr(usage, "completion_tokens", None) or getattr(usage, "output_tokens", None) or 0
+    inp, out = int(inp), int(out)
+    m = (model or "").lower()
+    # USD per 1M tokens — list prices, not guesses from the UI
+    pin, pout = 0.15, 0.60  # gemini 2.5 flash
+    if "gpt-4o" in m:
+        pin, pout = 2.50, 10.00
+    elif "claude" in m:
+        pin, pout = 3.00, 15.00
+    return (inp * pin + out * pout) / 1_000_000
+
+
 def _call_gateway_vision(
     images: list[bytes], model: str, fallback_models: list[str], gateway_key: str
 ) -> VisionInvoice:
@@ -383,6 +407,8 @@ def _call_gateway_vision(
         response_format=response_format,
         extra_body=extra_body,
     )
+    global _last_vision_cost
+    _last_vision_cost = _usd_from_usage(model, getattr(response, "usage", None))
     response_text = response.choices[0].message.content
     if not response_text:
         raise ValueError("AI Gateway returned no response content")
@@ -400,6 +426,8 @@ def _extract_with_vision(
     force: bool,
 ) -> tuple[InvoiceData, ExtractionMethod, list[str]]:
     cache_path = cache_dir / f"{digest}.json"
+    global _last_vision_cost
+    _last_vision_cost = 0.0
     if cache_path.exists() and not force:
         cached = VisionInvoice.model_validate_json(cache_path.read_text(encoding="utf-8"))
         invoice, warnings = _invoice_from_vision(path.name, cached)
@@ -459,6 +487,8 @@ def extract_pdf(
     force: bool = False,
 ) -> ExtractionRecord:
     started = time.perf_counter()
+    global _last_vision_cost
+    _last_vision_cost = 0.0
     digest = _sha256(path)
     document = fitz.open(path)
     try:
@@ -500,6 +530,7 @@ def extract_pdf(
             warnings=warnings,
             latency_ms=round((time.perf_counter() - started) * 1000),
             model=used_model,
+            cost_usd=_last_vision_cost if method == "vision" else 0.0,
         )
     finally:
         document.close()

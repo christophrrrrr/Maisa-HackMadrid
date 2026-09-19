@@ -1,7 +1,6 @@
-import type { Decision, Policy, Result } from "./types";
+import type { Decision, Policy, Result, RunRow } from "./types";
 
 const LEAK = new Set(["already_paid", "duplicate_pedido"]);
-const SKIP_REASON = new Set(["all_rules_pass", ""]);
 
 export type Tone = Result | "MIX";
 
@@ -27,7 +26,6 @@ export type InsightsData = {
   stpPct: number;
   euros: { PAGAR: number; NO_PAGAR: number; ESCALAR: number };
   counts: { PAGAR: number; NO_PAGAR: number; ESCALAR: number };
-  reasons: CountRow[];
   findings: CountRow[];
   leakN: number;
   leakEuros: number;
@@ -101,7 +99,6 @@ function topCode(codes: string[]): string {
 export function buildInsights(decisions: Decision[], policy: Policy | null): InsightsData {
   const counts = { PAGAR: 0, NO_PAGAR: 0, ESCALAR: 0 };
   const euros = { PAGAR: 0, NO_PAGAR: 0, ESCALAR: 0 };
-  const reasons = new Map<string, { n: number; hits: Decision[] }>();
   const findings = new Map<string, { n: number; hits: Decision[] }>();
   const bySupplier = new Map<string, { row: SupplierRow; findings: string[] }>();
 
@@ -113,7 +110,6 @@ export function buildInsights(decisions: Decision[], policy: Policy | null): Ins
     counts[d.result] += 1;
     euros[d.result] += moneyOf(d);
 
-    if (!SKIP_REASON.has(d.reason)) bump(reasons, d.reason, d);
     for (const f of d.findings || []) {
       if (f) bump(findings, f, d);
     }
@@ -158,7 +154,6 @@ export function buildInsights(decisions: Decision[], policy: Policy | null): Ins
     stpPct: total ? Math.round((auto / total) * 100) : 0,
     euros,
     counts,
-    reasons: rank(reasons, policy),
     findings: rank(findings, policy),
     leakN,
     leakEuros,
@@ -174,4 +169,60 @@ export function euros(n: number): string {
 
 export function pctBar(n: number, max: number): string {
   return max ? `${Math.round((n / max) * 100)}%` : "0%";
+}
+
+export function usd(n: number): string {
+  const digits = n > 0 && n < 0.01 ? 4 : 2;
+  return n.toLocaleString("en-US", {
+    style: "currency", currency: "USD",
+    minimumFractionDigits: digits, maximumFractionDigits: digits,
+  });
+}
+
+export type RunOps = {
+  costUsd: number;
+  nVision: number;
+  nPaid: number;
+  nFiles: number;
+  filesPerS: number | null;
+  elapsedS: number | null;
+  avgLatencyMs: number | null;
+};
+
+function asStats(raw: unknown): Record<string, unknown> {
+  if (raw && typeof raw === "object") return raw as Record<string, unknown>;
+  if (typeof raw === "string") {
+    try { return JSON.parse(raw) as Record<string, unknown>; } catch { return {}; }
+  }
+  return {};
+}
+
+export function runOps(run: RunRow | null, decisions: Decision[]): RunOps | null {
+  if (!run) return null;
+  const ofRun = decisions.filter((d) => d.run_id === run.run_id);
+  const stats = asStats(run.stats);
+  const fromDecisions = ofRun.reduce((s, d) => s + (Number(d.cost_usd) || 0), 0);
+  const fromRun = Number(run.cost_usd) || 0;
+  const fromStats = Number(stats.cost_usd) || 0;
+  const costUsd = fromRun || fromStats || fromDecisions;
+  const nVision = Number(stats.n_vision) || ofRun.filter((d) => d.extraction_method === "vision").length;
+  const latencies = ofRun.map((d) => Number(d.latency_ms)).filter((n) => Number.isFinite(n) && n > 0);
+  const avgFromStats = Number(stats.avg_latency_ms);
+  const avgFromFiles = latencies.length
+    ? latencies.reduce((s, n) => s + n, 0) / latencies.length
+    : null;
+  const avgLatencyMs = Number.isFinite(avgFromStats) && avgFromStats > 0
+    ? avgFromStats
+    : avgFromFiles;
+  const filesPerS = run.files_per_s != null ? Number(run.files_per_s) : null;
+  const elapsedS = run.elapsed_s != null ? Number(run.elapsed_s) : null;
+  return {
+    costUsd,
+    nVision,
+    nPaid: ofRun.filter((d) => (Number(d.cost_usd) || 0) > 0).length,
+    nFiles: Number(run.total) || ofRun.length,
+    filesPerS: filesPerS != null && Number.isFinite(filesPerS) ? filesPerS : null,
+    elapsedS: elapsedS != null && Number.isFinite(elapsedS) ? elapsedS : null,
+    avgLatencyMs: avgLatencyMs != null && Number.isFinite(avgLatencyMs) ? avgLatencyMs : null,
+  };
 }

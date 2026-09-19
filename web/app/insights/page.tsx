@@ -1,6 +1,7 @@
 import { getPolicy, getState } from "@/lib/python";
-import { buildInsights, euros, pctBar, type CountRow, type Tone } from "@/lib/insights";
+import { buildInsights, euros, pctBar, runOps, usd, type CountRow, type Tone } from "@/lib/insights";
 import type { Policy } from "@/lib/types";
+import DecisionHistory from "@/components/DecisionHistory";
 
 export const dynamic = "force-dynamic";
 
@@ -14,9 +15,6 @@ const L = {
   blocked: "Bloqueado",
   reviewing: "En revisi\u00f3n",
   invoices: " facturas",
-  reasons: "Motivos",
-  reasonsSub: "raz\u00f3n principal de cada decisi\u00f3n",
-  reasonsEmpty: "Ning\u00fan fallo de regla.",
   findings: "Hallazgos",
   findingsSub: "todas las reglas que dispararon",
   findingsEmpty: "Sin hallazgos.",
@@ -28,6 +26,13 @@ const L = {
   suppliers: "Proveedores",
   supplier: "Proveedor",
   topFinding: "Hallazgo m\u00e1s frecuente",
+  cost: "Coste",
+  costFree: "sin coste de API",
+  costPaid: " llamadas de pago",
+  costGemini: " vision \u00b7 Gemini / cache sin coste",
+  speed: "Velocidad",
+  speedNone: "sin ejecuci\u00f3n",
+  speedFiles: " facturas en ",
   nobody: "Nadie en revisi\u00f3n.",
 };
 
@@ -36,6 +41,18 @@ function fmtWhen(iso: string) {
     day: "2-digit", month: "2-digit", year: "numeric",
     hour: "2-digit", minute: "2-digit",
   });
+}
+
+function fmtRate(n: number) {
+  return n.toLocaleString("es-ES", { maximumFractionDigits: 1 }) + " /s";
+}
+
+function fmtSec(n: number) {
+  return n.toLocaleString("es-ES", { maximumFractionDigits: 2 }) + " s";
+}
+
+function fmtMs(n: number) {
+  return Math.round(n).toLocaleString("es-ES") + " ms";
 }
 
 function safePolicy(): Policy | null {
@@ -74,24 +91,48 @@ export default function Insights() {
   const { latest_run, decisions } = getState();
   const policy = safePolicy();
   const an = buildInsights(decisions, policy);
+  const opsRun = runOps(latest_run, decisions);
   const stats = (latest_run?.stats && typeof latest_run.stats === "object"
     ? (latest_run.stats as Record<string, unknown>)
     : {}) as Record<string, unknown>;
 
   const extractor = String(stats["extractor"] ?? "");
-  const latency = stats["avg_latency_ms"];
   const ops = [
     latest_run ? L.last + fmtWhen(latest_run.started_at) : null,
     extractor || null,
-    latency != null && latency !== "" ? ("media " + String(latency) + " ms") : null,
     latest_run?.rules_version || null,
   ].filter(Boolean).join("  \u00b7  ");
+
+  const costSub = !opsRun
+    ? L.speedNone
+    : opsRun.costUsd > 0
+      ? (opsRun.nPaid + L.costPaid)
+      : opsRun.nVision
+        ? (opsRun.nVision + L.costGemini)
+        : L.costFree;
+
+  const speedValue = !opsRun
+    ? "-"
+    : opsRun.filesPerS != null
+      ? fmtRate(opsRun.filesPerS)
+      : opsRun.elapsedS != null
+        ? fmtSec(opsRun.elapsedS)
+        : "-";
+
+  const speedSub = !opsRun
+    ? L.speedNone
+    : [
+        opsRun.nFiles
+          ? (opsRun.nFiles + L.speedFiles + (opsRun.elapsedS != null ? fmtSec(opsRun.elapsedS) : "-"))
+          : null,
+        opsRun.avgLatencyMs != null ? ("media " + fmtMs(opsRun.avgLatencyMs)) : null,
+      ].filter(Boolean).join(" \u00b7 ") || L.speedNone;
 
   return (
     <div>
       <div>
         <h1 style={{ margin: "0 0 4px" }}>{L.title}</h1>
-        <div className="muted" style={{ fontSize: 13 }}>
+        <div className="subtitle">
           {ops || L.none}
         </div>
       </div>
@@ -121,30 +162,36 @@ export default function Insights() {
 
       <div className="an-split">
         <div className="card">
-          <div className="k">{L.reasons}</div>
-          <div className="sub" style={{ marginBottom: 12 }}>{L.reasonsSub}</div>
-          <RankList rows={an.reasons} empty={L.reasonsEmpty} />
-        </div>
-        <div className="card">
           <div className="k">{L.findings}</div>
           <div className="sub" style={{ marginBottom: 12 }}>{L.findingsSub}</div>
           <RankList rows={an.findings} empty={L.findingsEmpty} />
         </div>
-      </div>
-
-      <div className="grid cards">
-        <div className="card">
-          <div className="k">{L.leak}</div>
-          <div className="v">{an.leakN}</div>
-          <div className="sub">{euros(an.leakEuros)}{L.leakSub}</div>
+        <div className="an-stack">
+          <div className="card">
+            <div className="k">{L.leak}</div>
+            <div className="v">{an.leakN}</div>
+            <div className="sub">{euros(an.leakEuros)}{L.leakSub}</div>
+          </div>
+          <div className="card">
+            <div className="k">{L.extract}</div>
+            <div className="v">{an.counts.ESCALAR ? (an.extractPct + "%") : "-"}</div>
+            <div className="sub">
+              {an.counts.ESCALAR
+                ? (an.extractN + " de " + an.counts.ESCALAR + L.extractSub)
+                : L.extractNone}
+            </div>
+          </div>
         </div>
-        <div className="card">
-          <div className="k">{L.extract}</div>
-          <div className="v">{an.counts.ESCALAR ? (an.extractPct + "%") : "-"}</div>
-          <div className="sub">
-            {an.counts.ESCALAR
-              ? (an.extractN + " de " + an.counts.ESCALAR + L.extractSub)
-              : L.extractNone}
+        <div className="an-stack">
+          <div className="card">
+            <div className="k">{L.cost}</div>
+            <div className="v">{opsRun ? usd(opsRun.costUsd) : "-"}</div>
+            <div className="sub">{costSub}</div>
+          </div>
+          <div className="card">
+            <div className="k">{L.speed}</div>
+            <div className="v">{speedValue}</div>
+            <div className="sub">{speedSub}</div>
           </div>
         </div>
       </div>
@@ -183,6 +230,8 @@ export default function Insights() {
           </table>
         </div>
       </div>
+
+      <DecisionHistory decisions={decisions} />
     </div>
   );
 }

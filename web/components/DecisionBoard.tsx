@@ -1,8 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { Decision, Result, StateSnapshot } from "@/lib/types";
+import type { Decision, Policy, Result, StateSnapshot } from "@/lib/types";
 import DecisionModal from "./DecisionModal";
+import {
+  acceptAttr, ensureRead, filesFromDir, imageMaxMb, loadWatchHandle,
+  matchesExt, suffixesOf, withFileDefaults,
+} from "@/lib/files";
 
 type Ongoing = { file_id: string; latency_ms: number | null; ok: boolean };
 type Progress = { done: number; total: number; running: boolean };
@@ -30,7 +34,6 @@ function DecisionCard({ d, onOpen }: { d: Decision; onOpen: () => void }) {
   return (
     <div className="dcard">
       <div className="dcard-head" onClick={onOpen}>
-        <span className={`pill ${d.result}`}>{d.result}</span>
         <div className="dcard-main">
           <div className="dcard-file">{d.file_id}</div>
           <div className="dcard-sub">{d.reason}</div>
@@ -51,8 +54,13 @@ export default function DecisionBoard() {
   const [conf, setConf] = useState<Conf>("ALL");
   const [err, setErr] = useState("");
   const [clearing, setClearing] = useState(false);
+  const [policy, setPolicy] = useState<Policy | null>(null);
   const esRef = useRef<EventSource | null>(null);
   const pickRef = useRef<HTMLInputElement | null>(null);
+  const runningRef = useRef(false);
+  const seenRef = useRef<Set<string>>(new Set());
+  const decisionsRef = useRef<Map<string, Decision>>(new Map());
+  const runRef = useRef<(files?: File[], inboxOnly?: boolean) => void>(() => {});
 
   const loadState = useCallback(async () => {
     const snap: StateSnapshot = await fetch("/api/state").then((r) => r.json());
@@ -60,11 +68,42 @@ export default function DecisionBoard() {
   }, []);
 
   useEffect(() => { loadState(); }, [loadState]);
+  useEffect(() => {
+    fetch("/api/policy").then((r) => r.json()).then((p: Policy) => setPolicy(withFileDefaults(p))).catch(() => {});
+  }, []);
   useEffect(() => () => esRef.current?.close(), []);
+  useEffect(() => {
+    if (!policy?.watch.enabled) return;
+    const pol = policy;
+    let stop = false;
+    async function scan() {
+      if (stop || runningRef.current) return;
+      const handle = await loadWatchHandle();
+      if (!handle || stop) return;
+      const ok = await ensureRead(handle);
+      if (!ok) {
+        setErr("No hay permiso para leer la carpeta vigilada.");
+        return;
+      }
+      const files = await filesFromDir(handle, suffixesOf(pol), imageMaxMb(pol));
+      const known = new Set<string>([...decisionsRef.current.keys(), ...seenRef.current]);
+      const fresh = files.filter((f) => !known.has(f.name));
+      if (fresh.length === 0) return;
+      for (const f of fresh) seenRef.current.add(f.name);
+      runRef.current(fresh, true);
+    }
+    scan();
+    const id = window.setInterval(scan, 4000);
+    return () => { stop = true; window.clearInterval(id); };
+  }, [policy]);
+  runningRef.current = p.running;
+  decisionsRef.current = decisions;
+  for (const id of decisions.keys()) seenRef.current.add(id);
 
   function addFiles(list: FileList | null) {
     if (!list) return;
-    const incoming = Array.from(list).filter((f) => f.name.toLowerCase().endsWith(".pdf"));
+    const exts = policy ? suffixesOf(policy) : [".pdf"];
+    const incoming = Array.from(list).filter((f) => matchesExt(f.name, exts));
     setQueued((prev) => {
       const byName = new Map(prev.map((f) => [f.name, f]));
       for (const f of incoming) byName.set(f.name, f);
@@ -78,23 +117,24 @@ export default function DecisionBoard() {
     setQueued((prev) => prev.filter((f) => f.name !== name));
   }
 
-  async function run() {
-    if (p.running || queued.length === 0) return;
+  async function run(files?: File[], inboxOnly = false) {
+    const batch = files ?? queued;
+    if (p.running || batch.length === 0) return;
     setErr("");
-    setOngoing(queued.map((f) => ({ file_id: f.name, latency_ms: null, ok: true })));
-    setP({ done: 0, total: queued.length, running: true });
+    setOngoing(batch.map((f) => ({ file_id: f.name, latency_ms: null, ok: true })));
+    setP({ done: 0, total: batch.length, running: true });
 
     const form = new FormData();
-    for (const f of queued) form.append("files", f);
+    for (const f of batch) form.append("files", f);
     const up = await fetch("/api/upload", { method: "POST", body: form });
     if (!up.ok) {
       setErr("No se pudieron cargar los archivos.");
       setP({ done: 0, total: 0, running: false });
       setOngoing([]);
-      return;
+      return false;
     }
 
-    const es = new EventSource("/api/run");
+    const es = new EventSource(inboxOnly ? "/api/run?inbox=1" : "/api/run");
     esRef.current = es;
 
     es.onmessage = (e) => {
@@ -144,6 +184,8 @@ export default function DecisionBoard() {
     };
   }
 
+  runRef.current = run;
+
   async function clearAll() {
     if (p.running || clearing) return;
     const ok = window.confirm("Se eliminaran todas las decisiones y ejecuciones. Esta accion no se puede deshacer.");
@@ -188,25 +230,35 @@ export default function DecisionBoard() {
   const filtered = pagar.length + nopagar.length + revise.length;
   const filtersOn = Boolean(needle || reason !== "ALL" || conf !== "ALL");
 
+  const auto = Boolean(policy?.watch.enabled);
+  const folderName = policy?.watch.folder_name;
+  const accept = policy ? acceptAttr(policy) : "application/pdf,.pdf";
+
   return (
     <>
       <div className="board-head">
-        <h1 style={{ margin: 0 }}>Facturas</h1>
+        <h1>Facturas</h1>
         <div className="progress-wrap">
           <input
             ref={pickRef}
             type="file"
-            accept="application/pdf,.pdf"
+            accept={accept}
             multiple
             hidden
             onChange={(e) => addFiles(e.target.files)}
           />
-          <button className="btn ghost" onClick={() => pickRef.current?.click()} disabled={p.running}>
-            {"A\u00f1adir facturas"}
-          </button>
-          <button className="btn" onClick={run} disabled={p.running || queued.length === 0}>
-            {p.running ? `Procesando ${p.done}/${p.total}` : "Ejecutar lote"}
-          </button>
+          {auto ? (
+            <span className="chip">{p.running ? `Procesando ${p.done}/${p.total}` : (`Auto - ${folderName || "carpeta"}`)}</span>
+          ) : (
+            <>
+              <button className="btn ghost" onClick={() => pickRef.current?.click()} disabled={p.running}>
+                {"A\u00f1adir facturas"}
+              </button>
+              <button className="btn" onClick={() => run()} disabled={p.running || queued.length === 0}>
+                {p.running ? `Procesando ${p.done}/${p.total}` : "Ejecutar lote"}
+              </button>
+            </>
+          )}
           <button className="btn ghost danger" onClick={clearAll} disabled={p.running || clearing || all.length === 0}>
             {clearing ? "Vaciando..." : "Vaciar"}
           </button>
@@ -230,7 +282,7 @@ export default function DecisionBoard() {
           <option value="LOW">Baja confianza</option>
         </select>
         {filtersOn && (
-          <span className="muted" style={{ fontSize: 13 }}>
+          <span className="meta">
             {filtered} de {all.length}
           </span>
         )}
@@ -249,7 +301,11 @@ export default function DecisionBoard() {
                 </div>
               ))
         ) : queued.length === 0 ? (
-          <div className="queue-empty">Seleccione las facturas que desea analizar.</div>
+          <div className="queue-empty">
+            {auto
+              ? (`Vigilando ${folderName || "la carpeta"}. Los archivos nuevos se procesan solos.`)
+              : "Seleccione las facturas que desea analizar."}
+          </div>
         ) : (
           queued.map((f) => (
             <div key={f.name} className="qchip">

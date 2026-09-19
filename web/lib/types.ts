@@ -39,6 +39,26 @@ export interface StateSnapshot {
   decisions: Decision[];
 }
 
+export type FileKind = "pdf" | "image" | "xml";
+
+export interface FileTypeConfig {
+  enabled: boolean;
+  vision?: boolean;
+  max_mb?: number;
+  facturae?: boolean;
+}
+
+export interface FileTypeMeta {
+  label: string;
+  exts: string[];
+  help: string;
+}
+
+export interface WatchConfig {
+  enabled: boolean;
+  folder_name: string | null;
+}
+
 export interface Policy {
   rules_version: string;
   tolerance: string;
@@ -47,4 +67,7 @@ export interface Policy {
   reason_outcomes: Record<string, Result>;
   reasons: Record<string, { label: string; rule: string; help: string }>;
   results: Result[];
+  file_types: Record<FileKind, FileTypeConfig>;
+  file_type_meta: Record<FileKind, FileTypeMeta>;
+  watch: WatchConfig;
 }
