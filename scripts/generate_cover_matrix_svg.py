@@ -1,0 +1,140 @@
+import json
+
+with open("outputs/outcomes.jsonl") as f:
+    items = [json.loads(line) for line in f]
+
+# 500 items: 25 columns x 20 rows
+# ViewBox: 0 0 660 215
+# Centered data area:
+# x in [42, 618] -> width = 576, dx = 576 / 24 = 24.0
+# y in [28, 164] -> height = 136, dy = 136 / 19 = 7.1579
+
+cols = 25
+rows = 20
+
+x0 = 42.0
+y0 = 28.0
+dx = 24.0
+dy = 136.0 / 19.0
+
+svg_parts = []
+svg_parts.append('<svg viewBox="0 0 660 215" width="100%" height="auto" class="matriz-svg" xmlns="http://www.w3.org/2000/svg">')
+
+# Definitions
+svg_parts.append('''
+  <defs>
+    <pattern id="ledger-grid-fine" width="24.0" height="7.1579" patternUnits="userSpaceOnUse">
+      <path d="M 24.0 0 L 0 0 0 7.1579" fill="none" stroke="#ebf0eb" stroke-width="0.35"/>
+    </pattern>
+  </defs>
+''')
+
+# Outer canvas background & fine archival borders
+svg_parts.append('<rect x="2" y="2" width="656" height="211" fill="#fcfdfc" stroke="#c9d4ca" stroke-width="0.55"/>')
+svg_parts.append('<rect x="5" y="5" width="650" height="205" fill="none" stroke="#e6ede6" stroke-width="0.35"/>')
+
+# Corner crosshairs (+)
+corners = [(2, 2), (658, 2), (2, 213), (658, 213)]
+for cx, cy in corners:
+    svg_parts.append(f'<line x1="{cx-3.5}" y1="{cy}" x2="{cx+3.5}" y2="{cy}" stroke="#4a3c7e" stroke-width="0.5"/>')
+    svg_parts.append(f'<line x1="{cx}" y1="{cy-3.5}" x2="{cx}" y2="{cy+3.5}" stroke="#4a3c7e" stroke-width="0.5"/>')
+
+# Archival seal watermark in background
+seal_cx = 530
+seal_cy = 96
+svg_parts.append(f'''
+  <g opacity="0.14" stroke="#4a3c7e" fill="none" transform="rotate(-6 {seal_cx} {seal_cy})">
+    <circle cx="{seal_cx}" cy="{seal_cy}" r="60" stroke-width="0.75" stroke-dasharray="2.5 1.5"/>
+    <circle cx="{seal_cx}" cy="{seal_cy}" r="56.5" stroke-width="0.3"/>
+    <circle cx="{seal_cx}" cy="{seal_cy}" r="43" stroke-width="0.5"/>
+    <circle cx="{seal_cx}" cy="{seal_cy}" r="40.5" stroke-width="0.25" stroke-dasharray="1 1"/>
+    <circle cx="{seal_cx}" cy="{seal_cy}" r="25" stroke-width="0.4"/>
+    <path id="seal-path" d="M {seal_cx-50} {seal_cy} A 50 50 0 1 1 {seal_cx+50} {seal_cy} A 50 50 0 1 1 {seal_cx-50} {seal_cy}" fill="none"/>
+    <text font-family="'Noto Sans Mono', monospace" font-size="4.6" fill="#4a3c7e" letter-spacing="1.4" text-anchor="middle">
+      <textPath href="#seal-path" startOffset="50%">
+        * AUDITORIA DETERMINISTA * ELEQUIPO * HACKSPAIN 2026 * EXPEDIENTE FORENSE *
+      </textPath>
+    </text>
+    <text x="{seal_cx}" y="{seal_cy-4}" font-family="'TeX Gyre Heros Cn', sans-serif" font-weight="700" font-size="8" fill="#4a3c7e" text-anchor="middle" letter-spacing="0.4">500</text>
+    <text x="{seal_cx}" y="{seal_cy+5}" font-family="'Noto Sans Mono', monospace" font-size="4.5" fill="#4a3c7e" text-anchor="middle" letter-spacing="0.3">FACTURAS</text>
+    <text x="{seal_cx}" y="{seal_cy+12}" font-family="'Noto Sans Mono', monospace" font-size="3.8" fill="#4a3c7e" text-anchor="middle" letter-spacing="0.2">0,00 $ MODELOS</text>
+  </g>
+''')
+
+# Ledger grid background
+svg_parts.append(f'<rect x="{x0-4}" y="{y0-3}" width="584" height="142" fill="url(#ledger-grid-fine)"/>')
+
+# Coordinate ticks and 5x5 quadrant guides
+for c in range(0, 25, 5):
+    x = x0 + c * dx
+    svg_parts.append(f'<line x1="{x:.1f}" y1="{y0-3}" x2="{x:.1f}" y2="{y0+136+3}" stroke="#c9d4ca" stroke-width="0.4" stroke-dasharray="1.5 1.5"/>')
+    col_num = f"{c+1:02d}"
+    svg_parts.append(f'<text x="{x:.1f}" y="{y0-9}" font-family="\'Noto Sans Mono\', monospace" font-size="5.2" fill="#55635b" text-anchor="middle">C{col_num}</text>')
+
+# Last column label C25
+x_c25 = x0 + 24 * dx
+svg_parts.append(f'<text x="{x_c25:.1f}" y="{y0-9}" font-family="\'Noto Sans Mono\', monospace" font-size="5.2" fill="#55635b" text-anchor="middle">C25</text>')
+
+for r in range(0, 20, 5):
+    y = y0 + r * dy
+    svg_parts.append(f'<line x1="{x0-3}" y1="{y:.1f}" x2="{x0+576+3}" y2="{y:.1f}" stroke="#c9d4ca" stroke-width="0.4" stroke-dasharray="1.5 1.5"/>')
+    row_num = f"{r+1:02d}"
+    svg_parts.append(f'<text x="{x0-8}" y="{y+1.8:.1f}" font-family="\'Noto Sans Mono\', monospace" font-size="5.2" fill="#55635b" text-anchor="end">F{row_num}</text>')
+
+# 500 invoices drawn with geometric precision
+for idx, it in enumerate(items):
+    col = idx % cols
+    row = idx // cols
+    x = x0 + col * dx
+    y = y0 + row * dy
+    res = it["result"]
+
+    if res == "PAGAR":
+        svg_parts.append(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="2.0" fill="#256a4a"/>')
+    elif res == "NO_PAGAR":
+        # Crimson duplicate target
+        svg_parts.append(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="5.0" fill="none" stroke="#8f241b" stroke-width="0.8" stroke-dasharray="1 1"/>')
+        svg_parts.append(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="2.2" fill="#8f241b"/>')
+        svg_parts.append(f'<line x1="{x-5.6:.1f}" y1="{y:.1f}" x2="{x+5.6:.1f}" y2="{y:.1f}" stroke="#8f241b" stroke-width="0.4"/>')
+    elif res == "ESCALAR":
+        # Amber escalation diamond
+        svg_parts.append(f'<rect x="{x-2.8:.1f}" y="{y-2.8:.1f}" width="5.6" height="5.6" transform="rotate(45 {x:.1f} {y:.1f})" fill="none" stroke="#9c6512" stroke-width="0.75"/>')
+        svg_parts.append(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="1.3" fill="#9c6512"/>')
+
+# Barrier hairline
+svg_parts.append('<line x1="12" y1="184" x2="648" y2="184" stroke="#c9d4ca" stroke-width="0.45"/>')
+
+# Refined legend & filter indicator
+svg_parts.append('''
+  <g transform="translate(18, 198)">
+    <!-- PAGAR glyph -->
+    <circle cx="4" cy="-1.5" r="2.2" fill="#256a4a"/>
+    <text x="11" y="1.2" font-family="'TeX Gyre Heros Cn', sans-serif" font-weight="700" font-size="6.4" fill="#256a4a">452 PAGAR</text>
+    <text x="56" y="1.2" font-family="'Noto Sans Mono', monospace" font-size="5.4" fill="#55635b">(90,4 %)</text>
+
+    <!-- NO_PAGAR glyph -->
+    <circle cx="120" cy="-1.5" r="4.2" fill="none" stroke="#8f241b" stroke-width="0.75" stroke-dasharray="1 1"/>
+    <circle cx="120" cy="-1.5" r="1.8" fill="#8f241b"/>
+    <text x="129" y="1.2" font-family="'TeX Gyre Heros Cn', sans-serif" font-weight="700" font-size="6.4" fill="#8f241b">11 NO_PAGAR</text>
+    <text x="180" y="1.2" font-family="'Noto Sans Mono', monospace" font-size="5.4" fill="#55635b">(2,2 %)</text>
+
+    <!-- ESCALAR glyph -->
+    <rect x="238" y="-3.8" width="4.6" height="4.6" transform="rotate(45 240.3 -1.5)" fill="none" stroke="#9c6512" stroke-width="0.75"/>
+    <circle cx="240.3" cy="-1.5" r="1.2" fill="#9c6512"/>
+    <text x="249" y="1.2" font-family="'TeX Gyre Heros Cn', sans-serif" font-weight="700" font-size="6.4" fill="#9c6512">37 ESCALAR</text>
+    <text x="298" y="1.2" font-family="'Noto Sans Mono', monospace" font-size="5.4" fill="#55635b">(7,4 %)</text>
+
+    <!-- FILTERS BAR -->
+    <text x="368" y="1.2" font-family="'Noto Sans Mono', monospace" font-size="5.2" fill="#4a3c7e" letter-spacing="0.3">
+      TAMIZ: [G1 NIF] · [G2 IBAN] · [G3 FECHA] · [G4 IVA] · [G5 PO] · [G6 ERP]
+    </text>
+  </g>
+''')
+
+svg_parts.append('</svg>')
+
+svg_markup = "\n".join(svg_parts)
+with open("tmp/matriz_cover.svg", "w") as f:
+    f.write(svg_markup)
+
+print("Generated expanded tmp/matriz_cover.svg.")
