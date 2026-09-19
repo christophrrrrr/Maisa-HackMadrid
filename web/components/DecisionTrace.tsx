@@ -1,4 +1,4 @@
-import type { Decision } from "@/lib/types";
+import type { CheckValue, Decision, RuleCheck } from "@/lib/types";
 
 const FIELDS: [string, string][] = [
   ["invoice_number", "N. factura"],
@@ -27,70 +27,177 @@ function KV({ rows }: { rows: [string, React.ReactNode][] }) {
 
 const DASH = <span className="faint">&mdash;</span>;
 
+const REASON_LABELS: Record<string, string> = {
+  all_rules_pass: "Todas las comprobaciones son correctas",
+  incomplete_extraction: "No se pudo leer la factura con suficiente confianza",
+  supplier_not_in_master: "El proveedor no figura en el maestro",
+  iban_mismatch: "El IBAN no coincide con el maestro de proveedores",
+  pedido_not_found: "El pedido no existe en Pedidos_2026",
+  pedido_supplier_mismatch: "El pedido pertenece a otro proveedor",
+  amount_mismatch: "El total no coincide con el importe del pedido",
+  total_not_base_plus_iva: "El total no coincide con base m\u00e1s IVA",
+  iva_miscalculated: "La cuota de IVA est\u00e1 mal calculada",
+  invalid_date: "La fecha de emisi\u00f3n no es v\u00e1lida",
+  future_date: "La fecha de emisi\u00f3n est\u00e1 en el futuro",
+  pedido_not_in_erp: "El pedido no tiene un asiento en el ERP",
+  erp_amount_mismatch: "El total no coincide con el importe del ERP",
+  erp_status_unexpected: "El ERP tiene un estado inesperado",
+  already_paid: "El ERP indica que la factura ya est\u00e1 pagada",
+  duplicate_pedido: "El pedido aparece en m\u00e1s de una factura",
+};
+
+const FIELD_LABELS = Object.fromEntries(FIELDS);
+
+function display(value: unknown): React.ReactNode {
+  if (value == null || value === "") return DASH;
+  return String(value);
+}
+
+function ComparedValue({ value, tone }: { value: CheckValue; tone: "actual" | "expected" }) {
+  return (
+    <div className={`compare-value ${tone}`}>
+      <div className="compare-label">{value.label}</div>
+      <div className="compare-data">{display(value.value)}</div>
+      <div className="compare-source">{value.source}</div>
+    </div>
+  );
+}
+
+function CheckCard({ check }: { check: RuleCheck }) {
+  return (
+    <div className={`check-card ${check.status}`}>
+      <div className="check-head">
+        <span className="check-icon" aria-hidden="true">
+          {check.status === "pass" ? "\u2713" : check.status === "fail" ? "!" : "\u2013"}
+        </span>
+        <div className="check-title">
+          <b>{check.label}</b>
+          <span>Regla {check.rule}</span>
+        </div>
+      </div>
+      {(check.actual || check.expected) && (
+        <div className="comparison">
+          {check.actual && <ComparedValue value={check.actual} tone="actual" />}
+          {check.actual && check.expected && <span className="compare-arrow">vs.</span>}
+          {check.expected && <ComparedValue value={check.expected} tone="expected" />}
+        </div>
+      )}
+      <div className="check-message">{check.message}</div>
+    </div>
+  );
+}
+
 export default function DecisionTrace({ d }: { d: Decision }) {
   const ex = (d.extracted ?? {}) as Record<string, unknown>;
   const ev = (d.evidence ?? {}) as Record<string, unknown>;
-  const hasDetail = d.extracted != null || (d.findings && d.findings.length > 0) || Object.keys(ev).length > 0;
+  const checks = d.checks ?? [];
+  const failed = checks.filter((check) => check.status === "fail");
+  const passed = checks.filter((check) => check.status === "pass");
+  const skipped = checks.filter((check) => check.status === "skipped");
+  const sourceEvidence = d.extraction_evidence ?? {};
+  const primary = failed.find((check) => check.code === d.reason) ?? failed[0];
+  const summary = REASON_LABELS[d.reason] ?? primary?.message ?? d.reason;
+  const action = d.result === "PAGAR"
+    ? "No requiere revisi\u00f3n manual."
+    : d.result === "NO_PAGAR"
+      ? "No emitir el pago. Validar el bloqueo antes de cerrar la incidencia."
+      : "Revisar la discrepancia y corregir la factura o la fuente de referencia.";
 
   return (
-    <div className="trace-grid">
-      {!hasDetail && (
-        <div className="trace-step span2">
-          <div className="reason-box">
-            {"Decisi\u00f3n emitida. Motivo: "}<b>{d.reason}</b>{". El trazado completo se carga al finalizar la ejecuci\u00f3n."}
-          </div>
+    <div className="decision-detail">
+      <section className={`decision-summary ${d.result}`}>
+        <div className="summary-top">
+          <span className={`pill ${d.result}`}>{d.result}</span>
+          <span className="summary-code">{d.reason}</span>
         </div>
+        <h2>{summary}</h2>
+        <p>{action}</p>
+      </section>
+
+      {failed.length > 0 && (
+        <section className="trace-section">
+          <div className="trace-section-head">
+            <span>Discrepancias</span>
+            <span className="section-count">{failed.length}</span>
+          </div>
+          <div className="check-list">
+            {failed.map((check, index) => <CheckCard key={`${check.code}-${index}`} check={check} />)}
+          </div>
+        </section>
       )}
 
-      <div className="trace-step">
-        <div className="lbl">{"1 \u00b7 Entrada"}</div>
-        <KV rows={[
-          ["archivo", d.file_id],
-          ["extracci\u00f3n", `${d.extraction_method ?? "-"} (${d.extraction_ok ? "correcta" : "baja confianza"})`],
-          ["normativa", d.rules_version || "-"],
-        ]} />
-      </div>
+      {checks.length === 0 && (
+        <section className="trace-section">
+          <div className="reason-box">
+            {"El trazado comparativo estar\u00e1 disponible despu\u00e9s de volver a procesar esta factura."}
+            {d.detail ? ` ${d.detail}` : ""}
+          </div>
+        </section>
+      )}
 
-      <div className="trace-step">
-        <div className="lbl">{"2 \u00b7 Decisi\u00f3n"}</div>
-        <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 10 }}>
-          <span className={`pill ${d.result}`}>{d.result}</span>
-          <span className="faint" style={{ fontSize: 12 }}>
-            {d.latency_ms != null ? `${d.latency_ms.toFixed(0)} ms` : "-"}
-            {d.cost_usd ? `  \u00b7  $${d.cost_usd.toFixed(4)}` : ""}
-          </span>
+      <section className="trace-section">
+        <div className="trace-section-head">
+          <span>{"Campos le\u00eddos de la factura"}</span>
         </div>
-        {d.reason && <div className="reason-box">{d.reason}</div>}
-      </div>
-
-      {d.extracted != null && (
-        <div className="trace-step">
-          <div className="lbl">{"3 \u00b7 Campos extra\u00eddos"}</div>
+        {d.extracted != null ? (
           <KV rows={FIELDS.map(([k, label]) => [
             label, ex[k] != null && ex[k] !== "" ? String(ex[k]) : DASH,
           ])} />
-        </div>
+        ) : (
+          <div className="faint">{"Los campos se cargar\u00e1n al terminar la ejecuci\u00f3n."}</div>
+        )}
+      </section>
+
+      {(passed.length > 0 || skipped.length > 0) && (
+        <details className="trace-details">
+          <summary>
+            Comprobaciones restantes
+            <span>{passed.length} correctas{skipped.length ? ` \u00b7 ${skipped.length} omitidas` : ""}</span>
+          </summary>
+          <div className="check-list compact">
+            {[...passed, ...skipped].map((check, index) => (
+              <CheckCard key={`${check.code}-${index}`} check={check} />
+            ))}
+          </div>
+        </details>
       )}
 
-      <div className="trace-step">
-        <div className="lbl">{"4 \u00b7 Reglas aplicadas"}</div>
-        {d.findings && d.findings.length > 0 ? (
-          <div className="findings">
-            {d.findings.map((f, i) => <span key={i} className="finding">{f}</span>)}
+      {Object.keys(sourceEvidence).length > 0 && (
+        <details className="trace-details">
+          <summary>
+            Evidencia del documento
+            <span>{Object.keys(sourceEvidence).length} campos con referencia</span>
+          </summary>
+          <div className="source-list">
+            {Object.entries(sourceEvidence).map(([field, evidence]) => (
+              <div className="source-row" key={field}>
+                <div>
+                  <b>{FIELD_LABELS[field] ?? field}</b>
+                  <span>{"P\u00e1gina"} {evidence.page}</span>
+                </div>
+                <q>{evidence.text}</q>
+              </div>
+            ))}
           </div>
-        ) : (
-          <span className="pill PAGAR">todas las comprobaciones correctas</span>
-        )}
-      </div>
+        </details>
+      )}
 
-      <div className="trace-step span2">
-        <div className="lbl">{"5 \u00b7 Evidencia y pruebas"}</div>
-        {Object.keys(ev).length > 0 ? (
-          <KV rows={Object.entries(ev).map(([k, v]) => [k, String(v)])} />
-        ) : (
-          <div className="faint">Sin referencias cruzadas (el documento no super\u00f3 el filtro inicial).</div>
-        )}
-      </div>
+      <details className="trace-details">
+        <summary>
+          {"Detalles t\u00e9cnicos"}
+          <span>{d.rules_version || "sin versi\u00f3n"}</span>
+        </summary>
+        <KV rows={[
+          ["archivo", d.file_id],
+          ["run id", d.run_id || DASH],
+          ["extracci\u00f3n", `${d.extraction_method ?? "-"} (${d.extraction_ok ? "correcta" : "baja confianza"})`],
+          ["normativa", d.rules_version || DASH],
+          ["latencia", d.latency_ms != null ? `${d.latency_ms.toFixed(0)} ms` : DASH],
+          ["coste", d.cost_usd ? `$${d.cost_usd.toFixed(4)}` : "$0"],
+          ["actualizado", d.updated_at || DASH],
+          ...Object.entries(ev).map(([key, value]) => [key, display(value)] as [string, React.ReactNode]),
+        ]} />
+      </details>
     </div>
   );
 }

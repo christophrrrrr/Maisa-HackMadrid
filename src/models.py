@@ -12,9 +12,9 @@ from __future__ import annotations
 
 from datetime import date
 from decimal import Decimal
-from typing import Literal
+from typing import Any, Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 Result = Literal["PAGAR", "NO_PAGAR", "ESCALAR"]
 
@@ -70,6 +70,23 @@ class InvoiceData(BaseModel):
     extraction_note: str | None = None
 
 
+class CheckValue(BaseModel):
+    label: str
+    value: Any = None
+    source: str
+
+
+class RuleCheck(BaseModel):
+    rule: str
+    code: str
+    label: str
+    status: Literal["pass", "fail", "skipped"]
+    result: Result | None = None
+    message: str
+    actual: CheckValue | None = None
+    expected: CheckValue | None = None
+
+
 class Outcome(BaseModel):
     """Final decision for one invoice. `file_id` + `result` are the delivery
     contract; the rest is trace (judges reward it, the verifier ignores it)."""
@@ -78,8 +95,9 @@ class Outcome(BaseModel):
     result: Result
     reason: str                             # primary reason code, e.g. "iban_mismatch"
     detail: str | None = None               # human-readable, may list several findings
-    findings: list[str] = []                # every rule that fired
-    evidence: dict = {}                     # matched pedido / erp asiento / supplier id ...
+    findings: list[str] = Field(default_factory=list)  # every rule that fired
+    evidence: dict = Field(default_factory=dict)       # matched reference records
+    checks: list[RuleCheck] = Field(default_factory=list)
     rules_version: str = "norma-v3"
 
     def to_contract_line(self) -> dict:

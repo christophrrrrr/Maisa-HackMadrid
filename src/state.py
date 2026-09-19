@@ -41,12 +41,15 @@ CREATE TABLE IF NOT EXISTS decisions (
     run_id             TEXT NOT NULL,
     result             TEXT NOT NULL,       -- PAGAR | NO_PAGAR | ESCALAR
     reason             TEXT NOT NULL,
+    detail             TEXT,
     findings           TEXT NOT NULL,       -- json array
     evidence           TEXT NOT NULL,       -- json object
+    checks             TEXT NOT NULL DEFAULT '[]', -- json array
     rules_version      TEXT NOT NULL,
     extraction_method  TEXT,                -- 'baseline-regex' | 'llm-vision' | ...
     extraction_ok      INTEGER NOT NULL DEFAULT 1,
     extracted          TEXT,                -- json of InvoiceData (the parsed fields)
+    extraction_evidence TEXT NOT NULL DEFAULT '{}', -- field -> page/snippet
     latency_ms         REAL,
     cost_usd           REAL NOT NULL DEFAULT 0,
     updated_at         TEXT NOT NULL
@@ -61,6 +64,18 @@ def connect(db_path: Path = DEFAULT_DB) -> sqlite3.Connection:
     conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row
     conn.executescript(_SCHEMA)
+    columns = {row["name"] for row in conn.execute("PRAGMA table_info(decisions)")}
+    migrations = {
+        "detail": "ALTER TABLE decisions ADD COLUMN detail TEXT",
+        "checks": "ALTER TABLE decisions ADD COLUMN checks TEXT NOT NULL DEFAULT '[]'",
+        "extraction_evidence": (
+            "ALTER TABLE decisions ADD COLUMN extraction_evidence TEXT NOT NULL DEFAULT '{}'"
+        ),
+    }
+    for name, statement in migrations.items():
+        if name not in columns:
+            conn.execute(statement)
+    conn.commit()
     return conn
 
 
@@ -85,25 +100,32 @@ def record_decision(
     extraction_method: str | None,
     extraction_ok: bool,
     extracted: dict | None,
+    extraction_evidence: dict | None,
     latency_ms: float | None,
     cost_usd: float = 0.0,
 ) -> None:
     conn.execute(
         """INSERT INTO decisions
-           (file_id, run_id, result, reason, findings, evidence, rules_version,
-            extraction_method, extraction_ok, extracted, latency_ms, cost_usd, updated_at)
-           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
+           (file_id, run_id, result, reason, detail, findings, evidence, checks, rules_version,
+            extraction_method, extraction_ok, extracted, extraction_evidence,
+            latency_ms, cost_usd, updated_at)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
            ON CONFLICT(file_id) DO UPDATE SET
              run_id=excluded.run_id, result=excluded.result, reason=excluded.reason,
-             findings=excluded.findings, evidence=excluded.evidence,
+             detail=excluded.detail, findings=excluded.findings, evidence=excluded.evidence,
+             checks=excluded.checks,
              rules_version=excluded.rules_version, extraction_method=excluded.extraction_method,
              extraction_ok=excluded.extraction_ok, extracted=excluded.extracted,
+             extraction_evidence=excluded.extraction_evidence,
              latency_ms=excluded.latency_ms, cost_usd=excluded.cost_usd,
              updated_at=excluded.updated_at""",
         (
             outcome.file_id, run_id, outcome.result, outcome.reason,
-            json.dumps(outcome.findings), json.dumps(outcome.evidence), outcome.rules_version,
+            outcome.detail, json.dumps(outcome.findings), json.dumps(outcome.evidence, default=str),
+            json.dumps([check.model_dump() for check in outcome.checks], default=str),
+            outcome.rules_version,
             extraction_method, int(extraction_ok), json.dumps(extracted or {}, default=str),
+            json.dumps(extraction_evidence or {}, default=str),
             latency_ms, cost_usd, _now(),
         ),
     )
@@ -128,7 +150,7 @@ def finish_run(conn: sqlite3.Connection, run_id: str, *, elapsed_s: float, cost_
 
 def _row_to_decision(r: sqlite3.Row) -> dict:
     d = dict(r)
-    for k in ("findings", "evidence", "extracted"):
+    for k in ("findings", "evidence", "checks", "extracted", "extraction_evidence"):
         try:
             d[k] = json.loads(d[k]) if d[k] else None
         except (json.JSONDecodeError, TypeError):

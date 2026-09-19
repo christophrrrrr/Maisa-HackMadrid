@@ -102,6 +102,7 @@ def run(
     latencies: dict[str, float] = {}
     method: dict[str, str] = {}
     costs: dict[str, float] = {}
+    extraction_evidence: dict[str, dict] = {}
     t0 = time.monotonic()
     for i, f in enumerate(files, 1):
         s = time.monotonic()
@@ -113,6 +114,9 @@ def run(
         method[inv.file_id] = getattr(extractor, "last_method", None) or (
             extractor.name if inv.extraction_ok else f"{extractor.name}(low-conf)")
         costs[inv.file_id] = float(getattr(extractor, "last_cost", 0.0) or 0.0)
+        extraction_evidence[inv.file_id] = dict(
+            getattr(extractor, "last_evidence", {}) or {}
+        )
         _emit(stream, {"event": "extracted", "i": i, "total": len(files),
                        "file_id": inv.file_id, "ok": inv.extraction_ok, "latency_ms": round(ms, 1)})
 
@@ -126,6 +130,7 @@ def run(
             extraction_method=method.get(o.file_id),
             extraction_ok=(o.reason != "incomplete_extraction"),
             extracted=next((inv.model_dump() for inv in invoices if inv.file_id == o.file_id), None),
+            extraction_evidence=extraction_evidence.get(o.file_id),
             latency_ms=latencies.get(o.file_id),
             cost_usd=costs.get(o.file_id, 0.0),
         )
