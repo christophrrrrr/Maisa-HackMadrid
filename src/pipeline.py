@@ -19,7 +19,7 @@ from datetime import date, datetime, timezone
 from pathlib import Path
 
 from . import state
-from .business_data import load_business_data
+from .business_data import BusinessDataError, load_business_data
 from .erp_snapshot import index_by_pedido, load_snapshot
 from .extractor import Extractor
 from .manual_overrides import apply_override, load_overrides
@@ -104,7 +104,14 @@ def run(
         today = date.fromisoformat(cfg["today"])
     today = today or date.today()
     extractor = get_extractor(extractor_name or cfg.get("extractor") or "hybrid", use_vision=use_vision)
-    biz = load_business_data()
+    try:
+        biz = load_business_data()
+    except BusinessDataError as exc:
+        # the master Excel is structurally unreadable (a required sheet/column is
+        # missing or renamed beyond recognition). fail loudly with an actionable
+        # message instead of deciding on wrong / empty lookups.
+        _emit(stream, {"event": "data_error", "scope": "business_data", "error": str(exc)})
+        raise
     erp = index_by_pedido(load_snapshot())
 
     files = _collect_files(facturas_dir, limit)
@@ -115,6 +122,10 @@ def run(
     state.start_run(conn, run_id, batch, biz.rules_version)
     _emit(stream, {"event": "run_start", "run_id": run_id, "total": len(files),
                    "extractor": extractor.name, "rules_version": biz.rules_version})
+    # surface master data-quality issues (dup suppliers, conflicting rows, bad
+    # amounts, NIF -> multiple ids). these don't stop the run but must be visible.
+    if biz.warnings:
+        _emit(stream, {"event": "data_warnings", "scope": "business_data", "warnings": biz.warnings})
 
     # 1) extract (the slow, probabilistic part) — measure per file
     invoices: list[InvoiceData] = []
@@ -182,6 +193,7 @@ def run(
         "n_vision": n_vision,
         "n_manual_overrides": manual_override_count,
         "cost_usd": total_cost,
+        "data_warnings": biz.warnings,
     }
     state.finish_run(conn, run_id, elapsed_s=elapsed, cost_usd=total_cost, stats=stats)
 
