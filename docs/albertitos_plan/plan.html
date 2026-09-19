@@ -156,61 +156,37 @@ table.compacta td{ font-size:8.3pt; padding:.85mm 2.4mm .85mm 0; }
 .veredictos .rotulo{ font-size:8.4pt; display:block; margin-top:1.4mm; line-height:1.32; }
 
 /* ---------- portada ---------- */
-.portada{ padding:16mm 30mm 12mm; }
+.portada{ padding:16mm 30mm 16mm; }
 .portada .firma{
-  font-family:var(--forma); font-size:8.4pt; color:var(--tinta-suave);
+  text-align:center;
+  font-family:var(--forma); font-size:8pt; letter-spacing:.04em; color:var(--tinta-suave);
   border-bottom:.8pt solid var(--tinta); padding-bottom:1.8mm;
 }
-.portada h1{ font-size:74pt; line-height:.9; letter-spacing:-.022em; margin:9mm 0 0; }
-.portada .bajada{ font-size:13pt; line-height:1.34; max-width:120mm; margin:4.5mm 0 0; }
-.portada .bajada .sub{ color:var(--tinta-suave); }
-
-.expediente{
-  margin-top:10mm;
-  border:.8pt solid var(--tinta);
-  display:grid; grid-template-columns:1fr 58mm;
+/* centro óptico: el bloque del título reparte el aire 4:5 entre arriba y abajo */
+.titular{ flex:1 1 auto; display:flex; flex-direction:column; justify-content:center; text-align:center; padding-bottom:12mm; }
+.portada h1{ font-size:104pt; line-height:.86; letter-spacing:-.028em; margin:0; }
+.portada .lema{
+  font-family:var(--forma); font-size:15pt; color:var(--tinta-suave);
+  margin:8mm 0 0; letter-spacing:-.005em;
 }
-.exp-doc{ padding:5mm 5mm 4.5mm; border-right:.5pt solid var(--pauta); }
-.exp-rot{ font-family:var(--forma); font-size:7.4pt; color:var(--tinta-suave); margin-bottom:2.4mm; }
-.exp-doc .nombre{ font-family:var(--dato); font-size:10.4pt; }
-.exp-campos{ margin:3mm 0 0; }
-.exp-campos td{ border:0; padding:.55mm 0; font-size:8.4pt; }
-.exp-campos td:first-child{ font-family:var(--forma); font-size:7.5pt; color:var(--tinta-suave); width:30mm; }
-.exp-campos td.val{ font-family:var(--dato); font-size:8pt; }
 
-.exp-fallo{ border-top:.5pt solid var(--pauta); margin-top:3.2mm; padding-top:2.2mm; font-size:8.2pt; }
-.exp-fallo div{ margin-bottom:.9mm; }
-.exp-fallo .pega{ font-family:var(--forma); font-size:7.4pt; color:var(--nopagar); }
+.reparto-lote{ flex:0 0 auto; }
+.barra{ display:flex; height:4mm; gap:.6mm; }
+.barra span{ display:block; }
+.b-pagar{ background:var(--pagar); }
+.b-nopagar{ background:var(--nopagar); }
+.b-escalar{ background:var(--escalar); }
 
-.exp-sello{ padding:5mm; display:flex; flex-direction:column; justify-content:space-between; }
-.sello{
-  border:1.6pt solid var(--sello); border-radius:1.4mm;
-  padding:2.6mm 3mm 2.2mm; text-align:center;
-  transform:rotate(-5.2deg); color:var(--sello);
-  box-shadow:0 0 0 .5pt var(--sello) inset;
+.cifras{ display:grid; grid-template-columns:repeat(3,1fr); column-gap:8mm; margin-top:5mm; text-align:center; }
+.cifras .cifra{ font-family:var(--forma); font-weight:700; font-size:30pt; line-height:1; display:block; letter-spacing:-.01em; }
+.cifras .v{ display:block; margin-top:1.8mm; font-size:8.6pt; }
+.cifras .rotulo{ font-family:var(--forma); font-size:9pt; color:var(--tinta-suave); display:block; margin-top:.8mm; }
+
+.portada .linea{
+  text-align:center;
+  font-family:var(--forma); font-size:8.4pt; letter-spacing:.02em; color:var(--tinta-suave);
+  border-top:.5pt solid var(--pauta); margin-top:8mm; padding-top:2.4mm;
 }
-.sello .veredicto{ font-family:var(--forma); font-weight:700; font-size:25pt; letter-spacing:.07em; line-height:1; display:block; }
-.sello .marco{ font-family:var(--forma); font-size:6.6pt; letter-spacing:.05em; border-top:.5pt solid var(--sello); margin-top:1.6mm; padding-top:1.1mm; }
-.exp-nota{ font-size:8pt; line-height:1.34; color:var(--tinta-suave); margin-top:4mm; }
-.exp-nota b{ color:var(--tinta); font-family:var(--forma); font-size:8pt; }
-
-.medicion{
-  margin-top:8.5mm; display:grid; grid-template-columns:repeat(5,1fr);
-  border-top:.8pt solid var(--tinta); border-bottom:.5pt solid var(--pauta);
-}
-.medicion div{ padding:2.6mm 3mm 2.6mm 0; }
-.medicion .cifra{ font-family:var(--forma); font-weight:700; font-size:16pt; line-height:1; display:block; }
-.medicion .rotulo{ font-family:var(--forma); font-size:7pt; color:var(--tinta-suave); display:block; margin-top:1.2mm; line-height:1.25; }
-
-.indice{ margin-top:7.5mm; display:grid; grid-template-columns:1fr 1fr; column-gap:10mm; }
-.indice ol{ margin:0; padding:0; list-style:none; }
-.indice li{
-  display:flex; justify-content:space-between; align-items:baseline;
-  font-family:var(--forma); font-size:8.5pt;
-  border-bottom:.4pt solid var(--pauta-fina); padding:1.4mm 0 1mm;
-}
-.indice li span:last-child{ font-family:var(--dato); font-size:7.3pt; color:var(--sello); }
-.indice li.sec{ font-weight:700; border-bottom:.8pt solid var(--pauta); }
 
 /* ---------- figura de la costura ---------- */
 .costura{
@@ -322,68 +298,25 @@ dl.fallos dd:last-child{ border-bottom:.8pt solid var(--pauta); }
 
 <!-- ============================ 1 · PORTADA ============================ -->
 <section class="hoja portada">
-  <div class="firma">Elequipo. Maisa HackSpain 2026, reto 500 Sombras de Alberto.</div>
+  <div class="firma">Elequipo · Maisa HackSpain 2026 · 500 Sombras de Alberto</div>
 
-  <h1>Cuentas<br>claras</h1>
-
-  <p class="bajada">El sistema que le dice a Alberto qué facturas pagar.
-  <span class="sub">Y que, para cada una, le enseña de dónde sale la respuesta.</span></p>
-
-  <div class="expediente">
-    <div class="exp-doc">
-      <div class="exp-rot">Expediente de una factura del lote 1</div>
-      <div class="nombre">2026-0811-B_catering.pdf</div>
-      <table class="exp-campos">
-        <tr><td>Proveedor</td><td class="val">P005 · Catering Hermanos Pico S.L.</td></tr>
-        <tr><td>Pedido</td><td class="val">PO-2026-0707</td></tr>
-        <tr><td>Asiento en el ERP</td><td class="val">AS-70006 · PENDIENTE</td></tr>
-        <tr><td>Base e IVA</td><td class="val">2.310,00 + 485,10 €</td></tr>
-        <tr><td>Total facturado</td><td class="val">2.920,10 €</td></tr>
-      </table>
-      <div class="exp-fallo">
-        <div><span class="pega">No cuadra con el pedido.</span> Factura 2.920,10 €; el pedido dice 2.795,10 €.</div>
-        <div><span class="pega">No cuadra consigo misma.</span> Base más IVA suman 2.795,10 €, no 2.920,10 €.</div>
-        <div><span class="pega">No cuadra con el ERP.</span> El asiento espera 2.795,10 €.</div>
-      </div>
-    </div>
-    <div class="exp-sello">
-      <div>
-        <div class="sello">
-          <span class="veredicto">ESCALAR</span>
-          <div class="marco">13 comprobaciones · 3 discrepancias</div>
-        </div>
-        <p class="exp-nota"><b>Nadie adivinó nada.</b> Las trece comprobaciones de la norma v3 se
-        ejecutaron sobre los campos leídos del PDF, el Excel de pedidos y el asiento del ERP. Tres
-        no pasaron. Las tres llevan escrito de dónde sale cada cifra.</p>
-      </div>
-      <p class="exp-nota">Decidido en 4,85 ms. Coste en modelos: 0,00 $. El PDF traía texto y
-      nadie tuvo que mirar la imagen.</p>
-    </div>
+  <div class="titular">
+    <h1>Cuentas<br>claras</h1>
+    <p class="lema">Qué facturas pagar, y por qué.</p>
   </div>
 
-  <div class="medicion">
-    <div><span class="cifra">500</span><span class="rotulo">archivos del lote 1,<br>uno por veredicto</span></div>
-    <div><span class="cifra">2,06 s</span><span class="rotulo">el lote completo,<br>en un portátil</span></div>
-    <div><span class="cifra">243</span><span class="rotulo">archivos por segundo<br>medidos</span></div>
-    <div><span class="cifra">0,00 $</span><span class="rotulo">coste en modelos<br>de esa ejecución</span></div>
-    <div><span class="cifra">37</span><span class="rotulo">a revisión humana,<br>el 7,4 %</span></div>
-  </div>
-
-  <div class="indice">
-    <ol>
-      <li class="sec"><span>1 · El trabajo de Alberto</span><span>p. 2</span></li>
-      <li class="sec"><span>2 · Arquitectura</span><span>p. 3</span></li>
-      <li><span>2.1 Las etapas</span><span>p. 3</span></li>
-      <li><span>2.2 Estado y reparto · 2.3 La norma v3</span><span>p. 4</span></li>
-      <li><span>2.4 Seguir una decisión</span><span>p. 5</span></li>
-    </ol>
-    <ol>
-      <li><span>2.5 Escala y coste</span><span>p. 6</span></li>
-      <li><span>2.6 Lo que aguanta y lo que no</span><span>p. 7</span></li>
-      <li><span>2.7 Resiliencia y lote 2</span><span>p. 8</span></li>
-      <li class="sec"><span>3 · ADRs y trade-offs</span><span>p. 9</span></li>
-      <li class="sec"><span>4 · Límites · 5 · La consola</span><span>p. 11</span></li>
-    </ol>
+  <div class="reparto-lote">
+    <div class="barra">
+      <span class="b-pagar" style="flex:452"></span>
+      <span class="b-nopagar" style="flex:11"></span>
+      <span class="b-escalar" style="flex:37"></span>
+    </div>
+    <div class="cifras">
+      <div><span class="cifra">452</span><span class="v v-pagar">PAGAR</span><span class="rotulo">se pagan solas</span></div>
+      <div><span class="cifra">11</span><span class="v v-nopagar">NO_PAGAR</span><span class="rotulo">duplicados detenidos</span></div>
+      <div><span class="cifra">37</span><span class="v v-escalar">ESCALAR</span><span class="rotulo">las mira una persona</span></div>
+    </div>
+    <div class="linea">500 facturas · 2,06 s · 0,00 $ en modelos · un portátil</div>
   </div>
 </section>
 
@@ -437,7 +370,7 @@ dl.fallos dd:last-child{ border-bottom:.8pt solid var(--pauta); }
       Seis vienen de un NIF que no está en el maestro de proveedores: 24.623,50 €. Tres tienen una
       fecha de emisión ilegible o imposible: 9.946,20 €.</p>
       <p>El motivo visible es el primero por precedencia, pero el expediente guarda todos los
-      hallazgos. La factura de la portada arrastra tres.</p>
+      hallazgos. La factura de la página 5 arrastra tres.</p>
     </div>
     <div class="col ancho-d">
       <h3>El formato que pide el problema</h3>
@@ -628,9 +561,10 @@ dl.fallos dd:last-child{ border-bottom:.8pt solid var(--pauta); }
     <div class="col ancho-d">
       <h2><span class="num">2.4</span>Seguir una decisión</h2>
       <p class="entrada">Esto es lo que el sistema guarda de
-      <span class="id">2026-0811-B_catering.pdf</span>. No es un resumen escrito para este
-      documento: son las trece comprobaciones tal como salen del motor, cada una con el valor
-      observado, el esperado y la fuente del esperado.</p>
+      <span class="id">2026-0811-B_catering.pdf</span>: una factura de Catering Hermanos Pico por
+      2.920,10 € contra un pedido de 2.795,10 €, decidida en 4,85 ms. No es un resumen escrito
+      para este documento: son las trece comprobaciones tal como salen del motor, cada una con el
+      valor observado, el esperado y la fuente del esperado.</p>
       <table class="traza">
         <thead><tr><th class="regla">R</th><th style="width:28mm">Comprobación</th><th class="est">Resultado</th><th style="width:36mm">Observado</th><th>Esperado, y de dónde sale</th></tr></thead>
         <tbody>
