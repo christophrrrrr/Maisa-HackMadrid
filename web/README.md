@@ -21,10 +21,26 @@ calls the Python CLI, so there are no native Node DB builds.
 uv venv
 uv pip install -r requirements.txt
 
-# Install the web dependencies once, then start the console:
+# Start the local ERP and keep this terminal open:
+.venv/bin/python challenge/alberto_erp.py --rapido
+```
+
+In another terminal:
+
+```bash
+.venv/bin/python -m src.erp_snapshot --quiet
 cd web
 npm ci
 npm run dev                         # http://localhost:3000
+```
+
+The ERP snapshot must exist before processing a batch. If the ERP bridge is
+already running and `outputs/erp_snapshot.sqlite` is initialized, the first two
+ERP commands can be skipped.
+
+```bash
+# Useful health check from the repository root:
+.venv/bin/python -c 'from src.erp_snapshot import load_snapshot; print(len(load_snapshot()))'
 ```
 
 The console automatically uses `<repo>/.venv/bin/python` (or
@@ -39,11 +55,10 @@ To use a different interpreter, pass an absolute path:
 PYTHON="$(cd .. && pwd)/.venv/bin/python" npm run dev
 ```
 
-Optionally, create the initial state before opening the console:
+Optionally, create the initial decision state before opening the console:
 
 ```bash
-# Run from the repository root, with the ERP available.
-.venv/bin/python -m src.erp_snapshot
+# Run from the repository root after creating the ERP snapshot.
 .venv/bin/python -m src.pipeline --today 2026-09-18
 ```
 
