@@ -89,6 +89,13 @@ failure caused by passing a relative interpreter path to backend processes.
 then starts Next.js. Stopping the command also stops the ERP process it created.
 See [`web/README.md`](web/README.md) for state initialization and overrides.
 
+### Run batch 2
+
+Batch 2 uses an isolated invoice directory, `norma-v4`, the refreshed ERP
+snapshot and writes `outputs/outcomes_lote2.jsonl` without touching lote 1.
+Follow [`docs/LOTE2_RUNBOOK.md`](docs/LOTE2_RUNBOOK.md); until the official v4
+rules are implemented, the pipeline fails closed instead of applying v3.
+
 The command writes `outputs/extracted_invoices.jsonl`. Vision results are cached by PDF
 content hash under `.cache/invoice_extraction/`, so interrupted or repeated runs do not pay
 for the same document twice. The default route is `google/gemini-3-flash`, with

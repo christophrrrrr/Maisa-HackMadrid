@@ -20,6 +20,7 @@ from pathlib import Path
 
 from . import state
 from .business_data import DEFAULT_XLSX, load_business_data
+from .deliverables import validate_outcomes
 from .erp_snapshot import DEFAULT_DB as DEFAULT_ERP_DB, index_by_pedido, load_snapshot
 from .extractor import Extractor
 from .manual_overrides import apply_override, load_overrides
@@ -128,11 +129,13 @@ def rules_version_for_batch(batch: str) -> str:
 
 
 def write_outcomes(outcomes, path: Path) -> None:
-    """Write one batch contract without touching the other batch's artifact."""
+    """Atomically write one batch contract without touching the other batch."""
     path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("w", encoding="utf-8") as fh:
+    temporary = path.with_name(f".{path.name}.tmp")
+    with temporary.open("w", encoding="utf-8") as fh:
         for outcome in outcomes:
             fh.write(json.dumps(outcome.to_contract_line(), ensure_ascii=False) + "\n")
+    temporary.replace(path)
 
 
 def run(
@@ -231,13 +234,14 @@ def run(
 
     # 4) deliverable
     write_outcomes(outcomes, outcomes_path)
+    contract = validate_outcomes(outcomes_path, (file.name for file in files))
 
     summary = state.snapshot(db_path)["summary"]
     _emit(stream, {"event": "run_done", "run_id": run_id, "elapsed_s": round(elapsed, 2),
                    "files_per_s": round(len(files) / elapsed, 1) if elapsed else 0, "summary": summary})
     conn.close()
     return {"run_id": run_id, "elapsed_s": elapsed, "summary": summary,
-            "outcomes": str(outcomes_path)}
+            "outcomes": str(outcomes_path), "contract": contract}
 
 
 def _main() -> int:
