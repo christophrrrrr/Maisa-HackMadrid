@@ -189,11 +189,19 @@ def run(
     method: dict[str, str] = {}
     costs: dict[str, float] = {}
     manual_override_count = 0
+    extraction_evidence: dict[str, dict] = {}
     t0 = time.monotonic()
     for i, f in enumerate(files, 1):
         s = time.monotonic()
         inv = extractor.extract(f)
-        inv, manually_corrected = apply_override(inv, f, manual_overrides)
+        try:
+            inv, manually_corrected = apply_override(inv, f, manual_overrides)
+        except ValueError as override_err:
+            # a stale or malformed manual override must never kill the whole
+            # batch; skip it, keep the auto-extracted invoice, and surface it.
+            manually_corrected = False
+            _emit(stream, {"event": "override_skipped",
+                           "file_id": inv.file_id, "error": str(override_err)})
         ms = (time.monotonic() - s) * 1000
         invoices.append(inv)
         latencies[inv.file_id] = ms
@@ -204,6 +212,9 @@ def run(
             method[inv.file_id] = f"{method[inv.file_id]}+human-override"
             manual_override_count += 1
         costs[inv.file_id] = float(getattr(extractor, "last_cost", 0.0) or 0.0)
+        extraction_evidence[inv.file_id] = dict(
+            getattr(extractor, "last_evidence", {}) or {}
+        )
         _emit(stream, {"event": "extracted", "i": i, "total": len(files),
                        "file_id": inv.file_id, "ok": inv.extraction_ok, "latency_ms": round(ms, 1)})
 
@@ -221,12 +232,15 @@ def run(
     # 3) persist + emit each decision
     if replace_state:
         state.retain_decisions(conn, (o.file_id for o in outcomes))
+    by_id = {inv.file_id: inv for inv in invoices}
     for o in outcomes:
+        inv = by_id.get(o.file_id)
         state.record_decision(
             conn, run_id, o,
             extraction_method=method.get(o.file_id),
-            extraction_ok=(o.reason != "incomplete_extraction"),
-            extracted=next((inv.model_dump() for inv in invoices if inv.file_id == o.file_id), None),
+            extraction_ok=bool(inv.extraction_ok) if inv is not None else (o.reason == "all_rules_pass"),
+            extracted=inv.model_dump() if inv is not None else None,
+            extraction_evidence=extraction_evidence.get(o.file_id),
             latency_ms=latencies.get(o.file_id),
             cost_usd=costs.get(o.file_id, 0.0),
         )

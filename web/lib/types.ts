@@ -1,16 +1,36 @@
 export type Result = "PAGAR" | "NO_PAGAR" | "ESCALAR";
 
+export interface CheckValue {
+  label: string;
+  value: unknown;
+  source: string;
+}
+
+export interface RuleCheck {
+  rule: string;
+  code: string;
+  label: string;
+  status: "pass" | "fail" | "skipped";
+  result: Result | null;
+  message: string;
+  actual: CheckValue | null;
+  expected: CheckValue | null;
+}
+
 export interface Decision {
   file_id: string;
   run_id: string;
   result: Result;
   reason: string;
+  detail: string | null;
   findings: string[];
   evidence: Record<string, unknown>;
+  checks: RuleCheck[];
   rules_version: string;
   extraction_method: string | null;
   extraction_ok: boolean;
   extracted: Record<string, unknown> | null;
+  extraction_evidence: Record<string, { page: number; text: string }>;
   latency_ms: number | null;
   cost_usd: number;
   updated_at: string;

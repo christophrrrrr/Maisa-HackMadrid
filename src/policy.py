@@ -31,6 +31,10 @@ DEFAULT_REASON_OUTCOMES: dict[str, str] = {
     "erp_status_unexpected": "ESCALAR",
     "already_paid": "NO_PAGAR",
     "duplicate_pedido": "NO_PAGAR",
+    # universal-ingestion triage (any file type in -> always a routed decision)
+    "out_of_scope": "ESCALAR",
+    "unreadable": "ESCALAR",
+    "unknown_format": "ESCALAR",
 }
 
 # human metadata for the settings ui: label + which norma rule it maps to + help
@@ -50,6 +54,9 @@ REASONS: dict[str, dict[str, str]] = {
     "erp_status_unexpected": {"label": "Estado ERP inesperado", "rule": "5", "help": "el estado no es PENDIENTE ni PAGADA"},
     "already_paid": {"label": "Ya pagada", "rule": "5", "help": "el ERP marca el asiento como PAGADA"},
     "duplicate_pedido": {"label": "Pedido duplicado", "rule": "5", "help": "el mismo pedido aparece en mas de una factura"},
+    "out_of_scope": {"label": "No es una factura", "rule": "triage", "help": "el documento no parece una factura de proveedor"},
+    "unreadable": {"label": "Documento ilegible", "rule": "triage", "help": "no se pudo extraer contenido del archivo"},
+    "unknown_format": {"label": "Formato no soportado", "rule": "triage", "help": "el tipo de archivo no tiene un lector conocido"},
 }
 
 
@@ -61,12 +68,20 @@ FILE_TYPE_META: dict[str, dict] = {
         "help": "fotos y escaneos sueltos",
     },
     "xml": {"label": "XML", "exts": [".xml", ".xsig"], "help": "FacturaE / UBL"},
+    "email": {"label": "Email", "exts": [".eml", ".msg"], "help": "correos con o sin adjuntos"},
+    "docx": {"label": "Word", "exts": [".docx", ".doc"], "help": "documentos de Word"},
+    "spreadsheet": {"label": "Hoja de calculo", "exts": [".xlsx", ".xls", ".csv"], "help": "Excel / CSV"},
+    "text": {"label": "Texto", "exts": [".txt", ".md", ".htm", ".html", ".json"], "help": "texto plano / HTML"},
 }
 
 DEFAULT_FILE_TYPES: dict[str, dict] = {
     "pdf": {"enabled": True, "vision": True},
     "image": {"enabled": False, "vision": True, "max_mb": 12},
     "xml": {"enabled": False, "facturae": True},
+    "email": {"enabled": False, "vision": True},
+    "docx": {"enabled": False, "vision": True},
+    "spreadsheet": {"enabled": False, "vision": False},
+    "text": {"enabled": False, "vision": True},
 }
 
 DEFAULT_WATCH: dict = {"enabled": False, "folder_name": None}

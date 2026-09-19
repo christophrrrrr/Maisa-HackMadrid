@@ -21,6 +21,16 @@ def gemini_available() -> str | None:
     return os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
 
 
+def _drop_missing_ssl_paths() -> None:
+    # miniconda on windows sets SSL_CERT_FILE to ssl/cacert.pem, which does not
+    # exist (the bundle lives under Library/ssl). google-genai then fails every
+    # vision call with FileNotFoundError before it can reach gemini.
+    for key in ("SSL_CERT_FILE", "SSL_CERT_DIR"):
+        value = os.environ.get(key)
+        if value and not os.path.exists(value):
+            os.environ.pop(key, None)
+
+
 class GeminiInvoice(BaseModel):
     """Response schema forced on Gemini so it uses the EXACT canonical field names
     (all strings, nullable — the caller coerces to Decimal/date). Without this,
@@ -42,6 +52,7 @@ def call_gemini_json(images: list[bytes], prompt: str, *, model: str | None = No
     """Send page images + prompt to Gemini and return raw JSON text matching the
     canonical field names. Uses OS trust store (Norton/corporate MITM safe),
     a forced response schema, and temperature 0 for determinism."""
+    _drop_missing_ssl_paths()
     try:  # trust the OS cert store (handles Norton/corporate TLS interception)
         import truststore
         truststore.inject_into_ssl()

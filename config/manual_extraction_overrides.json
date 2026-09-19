@@ -1,6 +1,6 @@
 {
   "scan_021.pdf": {
-    "sha256": "b6a220c2177d4a46b96bab3980bfb90a1918c3a9639b992a571f0704aed3159f",
+    "sha256": "66c035d8c079a36301b027eb4101b5bc5efb64c22c4f1bc2611d4a8327a69938",
     "fields": {
       "supplier_tax_id": "B90233808",
       "extraction_ok": true,

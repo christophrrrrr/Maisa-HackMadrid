@@ -42,12 +42,15 @@ CREATE TABLE IF NOT EXISTS decisions (
     run_id             TEXT NOT NULL,
     result             TEXT NOT NULL,       -- PAGAR | NO_PAGAR | ESCALAR
     reason             TEXT NOT NULL,
+    detail             TEXT,
     findings           TEXT NOT NULL,       -- json array
     evidence           TEXT NOT NULL,       -- json object
+    checks             TEXT NOT NULL DEFAULT '[]', -- json array
     rules_version      TEXT NOT NULL,
     extraction_method  TEXT,                -- 'baseline-regex' | 'llm-vision' | ...
     extraction_ok      INTEGER NOT NULL DEFAULT 1,
     extracted          TEXT,                -- json of InvoiceData (the parsed fields)
+    extraction_evidence TEXT NOT NULL DEFAULT '{}', -- field -> page/snippet
     latency_ms         REAL,
     cost_usd           REAL NOT NULL DEFAULT 0,
     updated_at         TEXT NOT NULL
@@ -60,12 +63,15 @@ CREATE TABLE IF NOT EXISTS decision_history (
     file_id            TEXT NOT NULL,
     result             TEXT NOT NULL,
     reason             TEXT NOT NULL,
+    detail             TEXT,
     findings           TEXT NOT NULL,
     evidence           TEXT NOT NULL,
+    checks             TEXT NOT NULL DEFAULT '[]',
     rules_version      TEXT NOT NULL,
     extraction_method  TEXT,
     extraction_ok      INTEGER NOT NULL DEFAULT 1,
     extracted          TEXT,
+    extraction_evidence TEXT NOT NULL DEFAULT '{}',
     latency_ms         REAL,
     cost_usd           REAL NOT NULL DEFAULT 0,
     updated_at         TEXT NOT NULL,
@@ -80,15 +86,43 @@ def connect(db_path: Path = DEFAULT_DB) -> sqlite3.Connection:
     conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row
     conn.executescript(_SCHEMA)
+    decision_columns = {row["name"] for row in conn.execute("PRAGMA table_info(decisions)")}
+    decision_migrations = {
+        "detail": "ALTER TABLE decisions ADD COLUMN detail TEXT",
+        "checks": "ALTER TABLE decisions ADD COLUMN checks TEXT NOT NULL DEFAULT '[]'",
+        "extraction_evidence": (
+            "ALTER TABLE decisions ADD COLUMN extraction_evidence TEXT NOT NULL DEFAULT '{}'"
+        ),
+    }
+    for name, statement in decision_migrations.items():
+        if name not in decision_columns:
+            conn.execute(statement)
+
+    history_columns = {
+        row["name"] for row in conn.execute("PRAGMA table_info(decision_history)")
+    }
+    history_migrations = {
+        "detail": "ALTER TABLE decision_history ADD COLUMN detail TEXT",
+        "checks": "ALTER TABLE decision_history ADD COLUMN checks TEXT NOT NULL DEFAULT '[]'",
+        "extraction_evidence": (
+            "ALTER TABLE decision_history ADD COLUMN extraction_evidence TEXT NOT NULL DEFAULT '{}'"
+        ),
+    }
+    for name, statement in history_migrations.items():
+        if name not in history_columns:
+            conn.execute(statement)
+
     # One-time, idempotent migration for state created before per-run history
     # existed. This preserves lote 1 before lote 2 replaces the visible board.
     conn.execute(
         """INSERT OR IGNORE INTO decision_history
-           (run_id, batch, file_id, result, reason, findings, evidence, rules_version,
-            extraction_method, extraction_ok, extracted, latency_ms, cost_usd, updated_at)
+           (run_id, batch, file_id, result, reason, detail, findings, evidence, checks,
+            rules_version, extraction_method, extraction_ok, extracted,
+            extraction_evidence, latency_ms, cost_usd, updated_at)
            SELECT d.run_id, COALESCE(r.batch, 'unknown'), d.file_id, d.result, d.reason,
-                  d.findings, d.evidence, d.rules_version, d.extraction_method,
-                  d.extraction_ok, d.extracted, d.latency_ms, d.cost_usd, d.updated_at
+                  d.detail, d.findings, d.evidence, d.checks, d.rules_version,
+                  d.extraction_method, d.extraction_ok, d.extracted,
+                  d.extraction_evidence, d.latency_ms, d.cost_usd, d.updated_at
            FROM decisions d LEFT JOIN runs r ON r.run_id = d.run_id"""
     )
     conn.commit()
@@ -116,6 +150,7 @@ def record_decision(
     extraction_method: str | None,
     extraction_ok: bool,
     extracted: dict | None,
+    extraction_evidence: dict | None = None,
     latency_ms: float | None,
     cost_usd: float = 0.0,
 ) -> None:
@@ -125,36 +160,43 @@ def record_decision(
     batch = batch_row[0]
     now = _now()
     findings = json.dumps(outcome.findings)
-    evidence = json.dumps(outcome.evidence)
+    evidence = json.dumps(outcome.evidence, default=str)
+    checks = json.dumps([check.model_dump() for check in outcome.checks], default=str)
     extracted_json = json.dumps(extracted or {}, default=str)
+    extraction_evidence_json = json.dumps(extraction_evidence or {}, default=str)
     conn.execute(
         """INSERT INTO decisions
-           (file_id, run_id, result, reason, findings, evidence, rules_version,
-            extraction_method, extraction_ok, extracted, latency_ms, cost_usd, updated_at)
-           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
+           (file_id, run_id, result, reason, detail, findings, evidence, checks, rules_version,
+            extraction_method, extraction_ok, extracted, extraction_evidence,
+            latency_ms, cost_usd, updated_at)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
            ON CONFLICT(file_id) DO UPDATE SET
              run_id=excluded.run_id, result=excluded.result, reason=excluded.reason,
-             findings=excluded.findings, evidence=excluded.evidence,
+             detail=excluded.detail, findings=excluded.findings, evidence=excluded.evidence,
+             checks=excluded.checks,
              rules_version=excluded.rules_version, extraction_method=excluded.extraction_method,
              extraction_ok=excluded.extraction_ok, extracted=excluded.extracted,
+             extraction_evidence=excluded.extraction_evidence,
              latency_ms=excluded.latency_ms, cost_usd=excluded.cost_usd,
              updated_at=excluded.updated_at""",
         (
             outcome.file_id, run_id, outcome.result, outcome.reason,
-            findings, evidence, outcome.rules_version,
+            outcome.detail, findings, evidence, checks, outcome.rules_version,
             extraction_method, int(extraction_ok), extracted_json,
-            latency_ms, cost_usd, now,
+            extraction_evidence_json, latency_ms, cost_usd, now,
         ),
     )
     conn.execute(
         """INSERT OR REPLACE INTO decision_history
-           (run_id, batch, file_id, result, reason, findings, evidence, rules_version,
-            extraction_method, extraction_ok, extracted, latency_ms, cost_usd, updated_at)
-           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+           (run_id, batch, file_id, result, reason, detail, findings, evidence, checks,
+            rules_version, extraction_method, extraction_ok, extracted,
+            extraction_evidence, latency_ms, cost_usd, updated_at)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
         (
             run_id, batch, outcome.file_id, outcome.result, outcome.reason,
-            findings, evidence, outcome.rules_version, extraction_method,
-            int(extraction_ok), extracted_json, latency_ms, cost_usd, now,
+            outcome.detail, findings, evidence, checks, outcome.rules_version,
+            extraction_method, int(extraction_ok), extracted_json,
+            extraction_evidence_json, latency_ms, cost_usd, now,
         ),
     )
 
@@ -197,7 +239,7 @@ def finish_run(conn: sqlite3.Connection, run_id: str, *, elapsed_s: float, cost_
 
 def _row_to_decision(r: sqlite3.Row) -> dict:
     d = dict(r)
-    for k in ("findings", "evidence", "extracted"):
+    for k in ("findings", "evidence", "checks", "extracted", "extraction_evidence"):
         try:
             d[k] = json.loads(d[k]) if d[k] else None
         except (json.JSONDecodeError, TypeError):

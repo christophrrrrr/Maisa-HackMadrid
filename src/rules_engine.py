@@ -28,7 +28,7 @@ from datetime import date
 from decimal import Decimal
 
 from .business_data import BusinessData, normalize_iban
-from .models import ERPEntry, InvoiceData, Outcome, Result
+from .models import CheckValue, ERPEntry, InvoiceData, Outcome, Result, RuleCheck
 from .policy import RULES_VERSION, load_policy
 
 # policy is editable from the console's settings page (outputs/policy.json). it's
@@ -49,6 +49,33 @@ class Finding:
     @property
     def result(self) -> Result:
         return POLICY.get(self.code, "ESCALAR")
+
+
+def _value(label: str, value: object, source: str) -> CheckValue:
+    return CheckValue(label=label, value=value, source=source)
+
+
+def _check(
+    checks: list[RuleCheck],
+    *,
+    rule: str,
+    code: str,
+    label: str,
+    status: str,
+    message: str,
+    actual: CheckValue | None = None,
+    expected: CheckValue | None = None,
+) -> None:
+    checks.append(RuleCheck(
+        rule=rule,
+        code=code,
+        label=label,
+        status=status,  # type: ignore[arg-type]
+        result=POLICY.get(code, "ESCALAR") if status == "fail" else None,
+        message=message,
+        actual=actual,
+        expected=expected,
+    ))
 
 
 def _approx(a: Decimal | None, b: Decimal | None, tol: Decimal = TOLERANCE) -> bool:
@@ -77,95 +104,295 @@ def _evaluate_v3(
     today = today or date.today()
     findings: list[Finding] = []
     evidence: dict = {}
+    checks: list[RuleCheck] = []
 
-    # --- gate: did extraction give us enough to judge? ---
+    # gate: did extraction give us enough to judge?
     if not invoice.extraction_ok:
-        findings.append(Finding("incomplete_extraction",
-                                invoice.extraction_note or "extractor flagged low confidence"))
-        return _aggregate(invoice, findings, evidence, "norma-v3")  # trust A's flag; don't guess
+        # the extractor may hand us a precise triage code (out_of_scope / unreadable /
+        # unknown_format); default to incomplete_extraction. all of these ESCALATE.
+        code = invoice.extraction_reason or "incomplete_extraction"
+        message = invoice.extraction_note or "extractor flagged low confidence"
+        findings.append(Finding(code, message))
+        _check(
+            checks, rule="filtro", code=code,
+            label="Extracción completa", status="fail", message=message,
+            actual=_value("Estado de extracción", "baja confianza", "Factura"),
+            expected=_value("Estado requerido", "correcta", "Política de extracción"),
+        )
+        return _aggregate(
+            invoice, findings, evidence, checks, "norma-v3"
+        )  # trust A's flag; don't guess
     required = {"purchase_order": invoice.purchase_order,
                 "supplier_tax_id": invoice.supplier_tax_id,
                 "total": invoice.total}
     missing = [k for k, v in required.items() if v in (None, "")]
     if missing:
-        findings.append(Finding("incomplete_extraction", f"missing fields: {', '.join(missing)}"))
-        return _aggregate(invoice, findings, evidence, "norma-v3")  # can't check anything else meaningfully
+        message = f"missing fields: {', '.join(missing)}"
+        findings.append(Finding("incomplete_extraction", message))
+        _check(
+            checks, rule="filtro", code="incomplete_extraction",
+            label="Campos obligatorios", status="fail", message=message,
+            actual=_value("Campos ausentes", ", ".join(missing), "Factura"),
+            expected=_value("Campos requeridos", "pedido, NIF y total", "Política de extracción"),
+        )
+        return _aggregate(invoice, findings, evidence, checks, "norma-v3")
+    _check(
+        checks, rule="filtro", code="incomplete_extraction",
+        label="Extracción completa", status="pass",
+        message="La factura contiene los campos necesarios para aplicar las reglas.",
+    )
 
-    # --- rule 1: supplier known + IBAN matches master ---
+    # rule 1: supplier known + iban matches master
     supplier = biz.supplier_for_invoice(invoice.supplier_tax_id)
     if supplier is None:
-        findings.append(Finding("supplier_not_in_master",
-                                f"NIF {invoice.supplier_tax_id} not in supplier master"))
+        message = f"NIF {invoice.supplier_tax_id} not in supplier master"
+        findings.append(Finding("supplier_not_in_master", message))
+        _check(
+            checks, rule="1", code="supplier_not_in_master",
+            label="Proveedor registrado", status="fail", message=message,
+            actual=_value("NIF de la factura", invoice.supplier_tax_id, "Factura"),
+            expected=_value("NIF registrado", "Debe existir", "Excel · Proveedores"),
+        )
+        _check(
+            checks, rule="1", code="iban_mismatch", label="IBAN del proveedor",
+            status="skipped", message="No se puede comparar el IBAN sin un proveedor registrado.",
+        )
     else:
         evidence["supplier_id"] = supplier.id
-        if normalize_iban(invoice.supplier_iban) != supplier.iban:
-            findings.append(Finding("iban_mismatch",
-                                    f"invoice IBAN != master IBAN for {supplier.id}"))
+        _check(
+            checks, rule="1", code="supplier_not_in_master",
+            label="Proveedor registrado", status="pass",
+            message=f"El NIF corresponde al proveedor {supplier.id}.",
+            actual=_value("NIF de la factura", invoice.supplier_tax_id, "Factura"),
+            expected=_value("NIF registrado", supplier.tax_id, f"Excel · Proveedores · {supplier.id}"),
+        )
+        iban_matches = normalize_iban(invoice.supplier_iban) == supplier.iban
+        if not iban_matches:
+            message = f"invoice IBAN {normalize_iban(invoice.supplier_iban)} != master IBAN {supplier.iban}"
+            findings.append(Finding("iban_mismatch", message))
+        _check(
+            checks, rule="1", code="iban_mismatch", label="IBAN del proveedor",
+            status="pass" if iban_matches else "fail",
+            message=("El IBAN coincide con el maestro de proveedores." if iban_matches else message),
+            actual=_value("IBAN de la factura", normalize_iban(invoice.supplier_iban), "Factura"),
+            expected=_value("IBAN registrado", supplier.iban, f"Excel · Proveedores · {supplier.id}"),
+        )
 
-    # --- rule 2: pedido exists, belongs to supplier, amount matches ---
+    # rule 2: pedido exists, belongs to supplier, amount matches
     order = biz.order(invoice.purchase_order)
     if order is None:
-        findings.append(Finding("pedido_not_found", f"pedido {invoice.purchase_order} not in Pedidos_2026"))
+        message = f"pedido {invoice.purchase_order} not in Pedidos_2026"
+        findings.append(Finding("pedido_not_found", message))
+        _check(
+            checks, rule="2", code="pedido_not_found", label="Pedido existente",
+            status="fail", message=message,
+            actual=_value("Pedido de la factura", invoice.purchase_order, "Factura"),
+            expected=_value("Pedido registrado", "Debe existir", "Excel · Pedidos_2026"),
+        )
+        for code, label in (
+            ("pedido_supplier_mismatch", "Proveedor del pedido"),
+            ("amount_mismatch", "Importe del pedido"),
+        ):
+            _check(
+                checks, rule="2", code=code, label=label, status="skipped",
+                message="No se puede comprobar porque el pedido no existe.",
+            )
     else:
         evidence["pedido"] = order.id
+        _check(
+            checks, rule="2", code="pedido_not_found", label="Pedido existente",
+            status="pass", message=f"El pedido {order.id} existe.",
+            actual=_value("Pedido de la factura", invoice.purchase_order, "Factura"),
+            expected=_value("Pedido registrado", order.id, "Excel · Pedidos_2026"),
+        )
         belongs = (supplier is not None and order.supplier_id == supplier.id) or \
                   (order.tax_id and invoice.supplier_tax_id and order.tax_id == invoice.supplier_tax_id)
         if not belongs:
-            findings.append(Finding("pedido_supplier_mismatch",
-                                    f"pedido {order.id} belongs to {order.supplier_id}, not this supplier"))
-        if not _approx(invoice.total, order.amount):
-            findings.append(Finding("amount_mismatch",
-                                    f"invoice total {invoice.total} != pedido {order.amount}"))
+            message = f"pedido {order.id} belongs to {order.supplier_id}, not this supplier"
+            findings.append(Finding("pedido_supplier_mismatch", message))
+        _check(
+            checks, rule="2", code="pedido_supplier_mismatch", label="Proveedor del pedido",
+            status="pass" if belongs else "fail",
+            message=("El pedido pertenece al proveedor de la factura." if belongs else message),
+            actual=_value("Proveedor de la factura", supplier.id if supplier else invoice.supplier_tax_id, "Factura / maestro"),
+            expected=_value("Proveedor del pedido", order.supplier_id, f"Excel · Pedidos_2026 · {order.id}"),
+        )
+        amount_matches = _approx(invoice.total, order.amount)
+        if not amount_matches:
+            message = f"invoice total {invoice.total} != pedido {order.amount}"
+            findings.append(Finding("amount_mismatch", message))
+        _check(
+            checks, rule="2", code="amount_mismatch", label="Total frente al pedido",
+            status="pass" if amount_matches else "fail",
+            message=("El total coincide con el importe del pedido." if amount_matches else message),
+            actual=_value("Total de la factura", invoice.total, "Factura"),
+            expected=_value("Importe del pedido", order.amount, f"Excel · Pedidos_2026 · {order.id}"),
+        )
 
-    # --- rule 3: IVA correct & total = base + IVA ---
+    # rule 3: iva correct and total = base + iva
     if invoice.base is not None and invoice.iva_amount is not None:
-        if not _approx(invoice.total, invoice.base + invoice.iva_amount):
-            findings.append(Finding("total_not_base_plus_iva",
-                                    f"{invoice.base}+{invoice.iva_amount} != total {invoice.total}"))
+        calculated_total = invoice.base + invoice.iva_amount
+        total_matches = _approx(invoice.total, calculated_total)
+        if not total_matches:
+            message = f"{invoice.base}+{invoice.iva_amount} != total {invoice.total}"
+            findings.append(Finding("total_not_base_plus_iva", message))
+        _check(
+            checks, rule="3", code="total_not_base_plus_iva", label="Base más IVA",
+            status="pass" if total_matches else "fail",
+            message=("La base más el IVA coincide con el total." if total_matches else message),
+            actual=_value("Total de la factura", invoice.total, "Factura"),
+            expected=_value("Base + IVA", calculated_total, "Cálculo · factura"),
+        )
         frac = _iva_rate_fraction(invoice.iva_rate)
-        if frac is not None and not _approx(invoice.iva_amount, invoice.base * frac):
-            findings.append(Finding("iva_miscalculated",
-                                    f"IVA {invoice.iva_amount} != base*{frac}"))
-    # if base/iva absent we don't fail rule 3 here — extraction gate covers unreadable docs
+        if frac is not None:
+            calculated_iva = invoice.base * frac
+            iva_matches = _approx(invoice.iva_amount, calculated_iva)
+            if not iva_matches:
+                message = f"IVA {invoice.iva_amount} != base*{frac}"
+                findings.append(Finding("iva_miscalculated", message))
+            _check(
+                checks, rule="3", code="iva_miscalculated", label="Cálculo del IVA",
+                status="pass" if iva_matches else "fail",
+                message=("La cuota de IVA corresponde a la base y al tipo." if iva_matches else message),
+                actual=_value("IVA de la factura", invoice.iva_amount, "Factura"),
+                expected=_value("Base × tipo IVA", calculated_iva, "Cálculo · factura"),
+            )
+        else:
+            _check(
+                checks, rule="3", code="iva_miscalculated", label="Cálculo del IVA",
+                status="skipped", message="La factura no contiene un tipo de IVA comparable.",
+            )
+    else:
+        for code, label in (
+            ("total_not_base_plus_iva", "Base más IVA"),
+            ("iva_miscalculated", "Cálculo del IVA"),
+        ):
+            _check(
+                checks, rule="3", code=code, label=label, status="skipped",
+                message="La factura no contiene base y cuota de IVA comparables.",
+            )
 
-    # --- rule 4: valid, non-future date ---
+    # rule 4: valid, non-future date
     if invoice.issue_date is None:
-        findings.append(Finding("invalid_date", "no valid issue date"))
+        message = "no valid issue date"
+        findings.append(Finding("invalid_date", message))
+        _check(
+            checks, rule="4", code="invalid_date", label="Fecha de emisión",
+            status="fail", message=message,
+            actual=_value("Fecha de la factura", None, "Factura"),
+            expected=_value("Fecha válida", "Obligatoria", "Norma de pagos"),
+        )
     elif invoice.issue_date > today:
-        findings.append(Finding("future_date", f"issue date {invoice.issue_date} is in the future"))
+        message = f"issue date {invoice.issue_date} is in the future"
+        findings.append(Finding("future_date", message))
+        _check(
+            checks, rule="4", code="future_date", label="Fecha no futura",
+            status="fail", message=message,
+            actual=_value("Fecha de la factura", invoice.issue_date, "Factura"),
+            expected=_value("Fecha de referencia máxima", today, "Ejecución"),
+        )
+    else:
+        _check(
+            checks, rule="4", code="future_date", label="Fecha no futura",
+            status="pass", message="La fecha de emisión es válida y no está en el futuro.",
+            actual=_value("Fecha de la factura", invoice.issue_date, "Factura"),
+            expected=_value("Fecha de referencia máxima", today, "Ejecución"),
+        )
 
-    # --- rule 5: ERP state PENDIENTE, never pay twice ---
+    # rule 5: erp state pendiente, never pay twice
     asiento = erp_by_pedido.get(invoice.purchase_order or "")
     if asiento is None:
-        findings.append(Finding("pedido_not_in_erp", f"pedido {invoice.purchase_order} has no ERP asiento"))
+        message = f"pedido {invoice.purchase_order} has no ERP asiento"
+        findings.append(Finding("pedido_not_in_erp", message))
+        _check(
+            checks, rule="5", code="pedido_not_in_erp", label="Asiento ERP",
+            status="fail", message=message,
+            actual=_value("Pedido consultado", invoice.purchase_order, "Factura"),
+            expected=_value("Asiento asociado", "Debe existir", "ERP"),
+        )
+        for code, label in (
+            ("erp_amount_mismatch", "Importe en ERP"),
+            ("erp_status_unexpected", "Estado en ERP"),
+        ):
+            _check(
+                checks, rule="5", code=code, label=label, status="skipped",
+                message="No se puede comprobar porque no existe un asiento ERP.",
+            )
     else:
         evidence["erp_asiento"] = asiento.asiento_id
         evidence["erp_status"] = asiento.status
-        if not _approx(invoice.total, asiento.expected_amount):
-            findings.append(Finding("erp_amount_mismatch",
-                                    f"invoice total {invoice.total} != ERP {asiento.expected_amount}"))
+        _check(
+            checks, rule="5", code="pedido_not_in_erp", label="Asiento ERP",
+            status="pass", message=f"El pedido está asociado al asiento {asiento.asiento_id}.",
+            actual=_value("Pedido de la factura", invoice.purchase_order, "Factura"),
+            expected=_value("Pedido del asiento", asiento.purchase_order, f"ERP · {asiento.asiento_id}"),
+        )
+        erp_amount_matches = _approx(invoice.total, asiento.expected_amount)
+        if not erp_amount_matches:
+            message = f"invoice total {invoice.total} != ERP {asiento.expected_amount}"
+            findings.append(Finding("erp_amount_mismatch", message))
+        _check(
+            checks, rule="5", code="erp_amount_mismatch", label="Total frente al ERP",
+            status="pass" if erp_amount_matches else "fail",
+            message=("El total coincide con el importe esperado en el ERP." if erp_amount_matches else message),
+            actual=_value("Total de la factura", invoice.total, "Factura"),
+            expected=_value("Importe esperado", asiento.expected_amount, f"ERP · {asiento.asiento_id}"),
+        )
         if asiento.status == "PAGADA":
-            findings.append(Finding("already_paid", f"ERP asiento {asiento.asiento_id} already PAGADA"))
+            message = f"ERP asiento {asiento.asiento_id} already PAGADA"
+            findings.append(Finding("already_paid", message))
+            _check(
+                checks, rule="5", code="already_paid", label="Estado de pago",
+                status="fail", message=message,
+                actual=_value("Estado actual", asiento.status, f"ERP · {asiento.asiento_id}"),
+                expected=_value("Estado requerido", "PENDIENTE", "Norma de pagos"),
+            )
         elif asiento.status != "PENDIENTE":
-            findings.append(Finding("erp_status_unexpected", f"ERP status {asiento.status}"))
+            message = f"ERP status {asiento.status}"
+            findings.append(Finding("erp_status_unexpected", message))
+            _check(
+                checks, rule="5", code="erp_status_unexpected", label="Estado de pago",
+                status="fail", message=message,
+                actual=_value("Estado actual", asiento.status, f"ERP · {asiento.asiento_id}"),
+                expected=_value("Estado requerido", "PENDIENTE", "Norma de pagos"),
+            )
+        else:
+            _check(
+                checks, rule="5", code="erp_status_unexpected", label="Estado de pago",
+                status="pass", message="El asiento está pendiente de pago.",
+                actual=_value("Estado actual", asiento.status, f"ERP · {asiento.asiento_id}"),
+                expected=_value("Estado requerido", "PENDIENTE", "Norma de pagos"),
+            )
 
     if duplicate:
-        findings.append(Finding("duplicate_pedido",
-                                f"pedido {invoice.purchase_order} appears on more than one invoice"))
+        message = f"pedido {invoice.purchase_order} appears on more than one invoice"
+        findings.append(Finding("duplicate_pedido", message))
+        _check(
+            checks, rule="5", code="duplicate_pedido", label="Pedido único en el lote",
+            status="fail", message=message,
+            actual=_value("Pedido repetido", invoice.purchase_order, "Lote actual"),
+            expected=_value("Apariciones permitidas", 1, "Norma de pagos"),
+        )
+    else:
+        _check(
+            checks, rule="5", code="duplicate_pedido", label="Pedido único en el lote",
+            status="pass", message="El pedido aparece una sola vez en el lote.",
+        )
 
-    return _aggregate(invoice, findings, evidence, "norma-v3")
+    return _aggregate(invoice, findings, evidence, checks, "norma-v3")
 
 
 def _aggregate(
     invoice: InvoiceData,
     findings: list[Finding],
     evidence: dict,
+    checks: list[RuleCheck],
     rules_version: str,
 ) -> Outcome:
     if not findings:
         return Outcome(file_id=invoice.file_id, result="PAGAR", reason="all_rules_pass",
                        detail=f"all {rules_version} checks passed", evidence=evidence,
-                       rules_version=rules_version)
+                       checks=checks, rules_version=rules_version)
     # result = most severe finding (ESCALAR > NO_PAGAR)
     result = max((f.result for f in findings), key=lambda r: _PRECEDENCE[r])
     # primary reason = first finding whose result equals the chosen result
@@ -177,6 +404,7 @@ def _aggregate(
         detail="; ".join(f"{f.code}: {f.message}" for f in findings),
         findings=[f.code for f in findings],
         evidence=evidence,
+        checks=checks,
         rules_version=rules_version,
     )
 

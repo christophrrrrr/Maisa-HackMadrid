@@ -12,9 +12,9 @@ from __future__ import annotations
 
 from datetime import date
 from decimal import Decimal
-from typing import Literal
+from typing import Any, Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 Result = Literal["PAGAR", "NO_PAGAR", "ESCALAR"]
 
@@ -68,6 +68,27 @@ class InvoiceData(BaseModel):
     # A's extractor may set this when a scan can't be read confidently:
     extraction_ok: bool = True
     extraction_note: str | None = None
+    # machine-readable triage code when extraction_ok is False, e.g.
+    # "incomplete_extraction" | "out_of_scope" | "unreadable" | "unknown_format".
+    # the rules engine maps this to the ESCALAR reason so the trace is precise.
+    extraction_reason: str | None = None
+
+
+class CheckValue(BaseModel):
+    label: str
+    value: Any = None
+    source: str
+
+
+class RuleCheck(BaseModel):
+    rule: str
+    code: str
+    label: str
+    status: Literal["pass", "fail", "skipped"]
+    result: Result | None = None
+    message: str
+    actual: CheckValue | None = None
+    expected: CheckValue | None = None
 
 
 class Outcome(BaseModel):
@@ -78,8 +99,9 @@ class Outcome(BaseModel):
     result: Result
     reason: str                             # primary reason code, e.g. "iban_mismatch"
     detail: str | None = None               # human-readable, may list several findings
-    findings: list[str] = []                # every rule that fired
-    evidence: dict = {}                     # matched pedido / erp asiento / supplier id ...
+    findings: list[str] = Field(default_factory=list)  # every rule that fired
+    evidence: dict = Field(default_factory=dict)       # matched reference records
+    checks: list[RuleCheck] = Field(default_factory=list)
     rules_version: str = "norma-v3"
 
     def to_contract_line(self) -> dict:
