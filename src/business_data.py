@@ -23,7 +23,15 @@ DEFAULT_XLSX = Path(__file__).resolve().parents[1] / "challenge" / "FINAL_v7_DEF
 
 SHEET_SUPPLIERS = "Proveedores"
 SHEET_ORDERS = "Pedidos_2026"
-SHEET_RULES = "Norma_Pagos_v3"
+DEFAULT_RULES_VERSION = "norma-v3"
+
+
+def rules_sheet_for_version(rules_version: str) -> str:
+    """Map the canonical version label to the workbook sheet name."""
+    prefix = "norma-v"
+    if not rules_version.startswith(prefix) or not rules_version[len(prefix):].isdigit():
+        raise ValueError(f"invalid rules version {rules_version!r}; expected norma-vN")
+    return f"Norma_Pagos_v{rules_version[len(prefix):]}"
 
 
 def normalize_iban(iban: str | None) -> str | None:
@@ -63,7 +71,12 @@ class BusinessData:
         return self.orders.get(pedido.strip())
 
 
-def load_business_data(xlsx_path: Path = DEFAULT_XLSX) -> BusinessData:
+def load_business_data(
+    xlsx_path: Path = DEFAULT_XLSX,
+    *,
+    rules_version: str = DEFAULT_RULES_VERSION,
+) -> BusinessData:
+    rules_sheet = rules_sheet_for_version(rules_version)
     wb = openpyxl.load_workbook(xlsx_path, data_only=True, read_only=True)
     warnings: list[str] = []
 
@@ -118,11 +131,14 @@ def load_business_data(xlsx_path: Path = DEFAULT_XLSX) -> BusinessData:
 
     # --- rules text (kept for the pitch / versioning; the logic is coded in rules_engine) ---
     rules_text: list[str] = []
-    if SHEET_RULES in wb.sheetnames:
-        for row in wb[SHEET_RULES].iter_rows(values_only=True):
-            if row and row[0]:
-                rules_text.append(str(row[0]).strip())
-    rules_version = "norma-v3"
+    if rules_sheet not in wb.sheetnames:
+        wb.close()
+        raise ValueError(
+            f"{xlsx_path} does not contain {rules_sheet!r} for {rules_version}"
+        )
+    for row in wb[rules_sheet].iter_rows(values_only=True):
+        if row and row[0]:
+            rules_text.append(str(row[0]).strip())
 
     wb.close()
     return BusinessData(

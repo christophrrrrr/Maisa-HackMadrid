@@ -32,6 +32,8 @@ def test_each_batch_has_an_isolated_default_input_and_output():
     assert pipeline.input_dir_for_batch("lote1") != pipeline.input_dir_for_batch("lote2")
     assert pipeline.outcomes_path_for_batch("lote1").name == "outcomes.jsonl"
     assert pipeline.outcomes_path_for_batch("lote2").name == "outcomes_lote2.jsonl"
+    assert pipeline.rules_version_for_batch("lote1") == "norma-v3"
+    assert pipeline.rules_version_for_batch("lote2") == "norma-v4"
 
 
 def test_writing_lote2_does_not_overwrite_lote1(tmp_path):
