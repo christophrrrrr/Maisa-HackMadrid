@@ -42,3 +42,5 @@ Thumbs.db
 # generated pipeline outputs
 outputs/*
 !outputs/.gitkeep
+
+revision_manual

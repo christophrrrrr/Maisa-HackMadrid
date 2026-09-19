@@ -1,4 +1,5 @@
 import { execFileSync } from "node:child_process";
+import { existsSync } from "node:fs";
 import path from "node:path";
 import type { StateSnapshot, Decision, Policy } from "./types";
 
@@ -9,7 +10,19 @@ export function repoRoot(): string {
 }
 
 export function pythonCmd(): string {
-  return process.env.PYTHON || (process.platform === "win32" ? "python" : "python3");
+  if (process.env.PYTHON) return path.resolve(process.env.PYTHON);
+
+  const venvPython = path.join(
+    repoRoot(),
+    ".venv",
+    process.platform === "win32" ? "Scripts/python.exe" : "bin/python",
+  );
+
+  return existsSync(venvPython)
+    ? venvPython
+    : process.platform === "win32"
+      ? "python"
+      : "python3";
 }
 
 /** Run a Python module and parse its stdout as JSON. Reads are cheap & synchronous. */
