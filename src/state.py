@@ -203,9 +203,11 @@ def clear(db_path: Path = DEFAULT_DB) -> dict:
         conn.commit()
     finally:
         conn.close()
-    outcomes = Path(__file__).resolve().parents[1] / "outputs" / "outcomes.jsonl"
-    if outcomes.exists():
-        outcomes.write_text("", encoding="utf-8")
+    outputs = Path(__file__).resolve().parents[1] / "outputs"
+    for name in ("outcomes.jsonl", "outcomes_lote2.jsonl"):
+        outcomes = outputs / name
+        if outcomes.exists():
+            outcomes.write_text("", encoding="utf-8")
     return {"ok": True}
 
 

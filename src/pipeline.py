@@ -29,8 +29,19 @@ from .rules_engine import decide_batch
 
 REPO = Path(__file__).resolve().parents[1]
 FACTURAS_DIR = REPO / "challenge" / "facturas"
+LOTE2_DIR = REPO / "lote_2_sorpresa" / "facturas"
 INBOX_DIR = REPO / "outputs" / "inbox"          # PDFs uploaded from the console
 OUTCOMES = REPO / "outputs" / "outcomes.jsonl"
+OUTCOMES_LOTE2 = REPO / "outputs" / "outcomes_lote2.jsonl"
+
+BATCH_INPUT_DIRS = {
+    "lote1": FACTURAS_DIR,
+    "lote2": LOTE2_DIR,
+}
+BATCH_OUTCOMES = {
+    "lote1": OUTCOMES,
+    "lote2": OUTCOMES_LOTE2,
+}
 
 
 def _emit(stream: bool, obj: dict) -> None:
@@ -52,7 +63,12 @@ def get_extractor(name: str, *, use_vision: bool = True) -> Extractor:
     raise SystemExit(f"unknown extractor '{name}' (available: hybrid, baseline)")
 
 
-def _collect_files(facturas_dir: Path, limit: int | None) -> list[Path]:
+def _collect_files(
+    facturas_dir: Path,
+    limit: int | None,
+    *,
+    include_inbox: bool = True,
+) -> list[Path]:
     suffixes = accepted_suffixes()
 
     def grab(folder: Path) -> list[Path]:
@@ -66,7 +82,7 @@ def _collect_files(facturas_dir: Path, limit: int | None) -> list[Path]:
     files = grab(facturas_dir)
     # Also include anything uploaded from the console. Deduplicate by both name
     # and content because the upload boundary may normalize a Unicode filename.
-    if INBOX_DIR.is_dir() and facturas_dir.resolve() != INBOX_DIR.resolve():
+    if include_inbox and INBOX_DIR.is_dir() and facturas_dir.resolve() != INBOX_DIR.resolve():
         def digest(file: Path) -> bytes:
             h = hashlib.sha256()
             with file.open("rb") as stream:
@@ -86,9 +102,31 @@ def _collect_files(facturas_dir: Path, limit: int | None) -> list[Path]:
     return files[:limit] if limit else files
 
 
+def input_dir_for_batch(batch: str) -> Path:
+    try:
+        return BATCH_INPUT_DIRS[batch]
+    except KeyError as exc:
+        raise ValueError(f"unknown batch {batch!r}") from exc
+
+
+def outcomes_path_for_batch(batch: str) -> Path:
+    try:
+        return BATCH_OUTCOMES[batch]
+    except KeyError as exc:
+        raise ValueError(f"unknown batch {batch!r}") from exc
+
+
+def write_outcomes(outcomes, path: Path) -> None:
+    """Write one batch contract without touching the other batch's artifact."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", encoding="utf-8") as fh:
+        for outcome in outcomes:
+            fh.write(json.dumps(outcome.to_contract_line(), ensure_ascii=False) + "\n")
+
+
 def run(
     *,
-    facturas_dir: Path = FACTURAS_DIR,
+    facturas_dir: Path | None = None,
     extractor_name: str | None = None,
     batch: str = "lote1",
     today: date | None = None,
@@ -97,6 +135,7 @@ def run(
     limit: int | None = None,
     use_vision: bool = True,
     replace_state: bool = False,
+    outcomes_path: Path | None = None,
 ) -> dict:
     # reference date + extractor fall back to the editable policy (settings page)
     cfg = load_policy()
@@ -107,7 +146,11 @@ def run(
     biz = load_business_data()
     erp = index_by_pedido(load_snapshot())
 
-    files = _collect_files(facturas_dir, limit)
+    facturas_dir = facturas_dir or input_dir_for_batch(batch)
+    outcomes_path = outcomes_path or outcomes_path_for_batch(batch)
+    files = _collect_files(facturas_dir, limit, include_inbox=(batch == "lote1"))
+    if not files:
+        raise RuntimeError(f"no supported invoice files found in {facturas_dir}")
     manual_overrides = load_overrides()
     run_id = datetime.now(timezone.utc).isoformat()
 
@@ -172,16 +215,14 @@ def run(
     state.finish_run(conn, run_id, elapsed_s=elapsed, cost_usd=total_cost, stats=stats)
 
     # 4) deliverable
-    OUTCOMES.parent.mkdir(parents=True, exist_ok=True)
-    with OUTCOMES.open("w", encoding="utf-8") as fh:
-        for o in outcomes:
-            fh.write(json.dumps(o.to_contract_line(), ensure_ascii=False) + "\n")
+    write_outcomes(outcomes, outcomes_path)
 
     summary = state.snapshot(db_path)["summary"]
     _emit(stream, {"event": "run_done", "run_id": run_id, "elapsed_s": round(elapsed, 2),
                    "files_per_s": round(len(files) / elapsed, 1) if elapsed else 0, "summary": summary})
     conn.close()
-    return {"run_id": run_id, "elapsed_s": elapsed, "summary": summary, "outcomes": str(OUTCOMES)}
+    return {"run_id": run_id, "elapsed_s": elapsed, "summary": summary,
+            "outcomes": str(outcomes_path)}
 
 
 def _main() -> int:
@@ -189,6 +230,7 @@ def _main() -> int:
     ap.add_argument("--extractor", default=None, help="hybrid (default) | baseline; overrides policy")
     ap.add_argument("--dir", help="directory of invoice PDFs (default: challenge/facturas)")
     ap.add_argument("--batch", default="lote1", choices=["lote1", "lote2"])
+    ap.add_argument("--out", help="output JSONL path (default: batch-specific artifact)")
     ap.add_argument("--stream", action="store_true", help="emit JSON progress lines (for the webapp SSE)")
     ap.add_argument("--today", help="reference date YYYY-MM-DD for rule 4 (default: today)")
     ap.add_argument("--limit", type=int, help="process only the first N files (dev)")
@@ -200,10 +242,11 @@ def _main() -> int:
     args = ap.parse_args()
 
     today = date.fromisoformat(args.today) if args.today else None
-    facturas_dir = Path(args.dir) if args.dir else FACTURAS_DIR
+    facturas_dir = Path(args.dir) if args.dir else input_dir_for_batch(args.batch)
+    outcomes_path = Path(args.out) if args.out else outcomes_path_for_batch(args.batch)
     result = run(facturas_dir=facturas_dir, extractor_name=args.extractor, batch=args.batch,
                  stream=args.stream, today=today, limit=args.limit, use_vision=not args.no_vision,
-                 replace_state=args.replace_state)
+                 replace_state=args.replace_state, outcomes_path=outcomes_path)
     if not args.stream:
         print(f"run {result['run_id']}: {result['summary']} in {result['elapsed_s']:.2f}s -> {result['outcomes']}")
     return 0
