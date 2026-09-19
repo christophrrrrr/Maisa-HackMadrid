@@ -1,0 +1,53 @@
+%% simplified pitch diagram: llm extracts, rules decide
+flowchart LR
+    invoices[/"Facturas"/]
+
+    subgraph extract ["1. Extraccion"]
+        direction TB
+        hybrid{"Hibrido"}
+        digital["PDF digital"]
+        vision["Vision LLM"]
+        invoice["InvoiceData"]
+        hybrid -->|"Gratis"| digital
+        hybrid -->|"Escaneado"| vision
+        digital --> invoice
+        vision --> invoice
+    end
+
+    subgraph refs ["Datos de referencia"]
+        direction TB
+        excel["Excel maestros"]
+        erp[("Snapshot ERP")]
+        biz["Pedidos y norma"]
+        excel --> biz
+        erp --> biz
+    end
+
+    subgraph decide ["2. Decision"]
+        direction TB
+        rules["Motor Norma v3"]
+        checks["6 checks auditables"]
+        result{"PAGAR / NO_PAGAR / ESCALAR"}
+        rules --> checks
+        checks --> result
+    end
+
+    subgraph emit ["3. Entregable"]
+        direction TB
+        state[("SQLite")]
+        jsonl[/"outcomes.jsonl"/]
+        ui["Consola de revision"]
+        state --> ui
+        jsonl --> ui
+    end
+
+    invoices ==> hybrid
+    invoice ==> rules
+    biz --> rules
+    result ==> state
+    result ==> jsonl
+
+    style extract fill:#C2E5FF,stroke:#3DADFF
+    style refs fill:#FFECBD,stroke:#FFC943
+    style decide fill:#DCCCFF,stroke:#874FFF
+    style emit fill:#CDF4D3,stroke:#66D575

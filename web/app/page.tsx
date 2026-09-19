@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { getState } from "@/lib/python";
-import { batchLabel, fmtWhen, runErrors, runWarnings, statusLabel, statusTone } from "@/lib/runs";
+import { fmtWhen, runErrors, runWarnings, statusLabel, statusTone } from "@/lib/runs";
 import type { Decision } from "@/lib/types";
+import HomeIssues from "@/components/HomeIssues";
 import HomeReviewStatus from "@/components/HomeReviewStatus";
 
 export const dynamic = "force-dynamic";
@@ -42,8 +43,8 @@ export default function HomePage() {
   const runs = (recent_runs?.length ? recent_runs : latest_run ? [latest_run] : []).slice(0, 5);
   const issues = (recent_runs?.length ? recent_runs : latest_run ? [latest_run] : [])
     .flatMap((run) => [
-      ...runErrors(run).map((message) => ({ message, type: "Error", run })),
-      ...runWarnings(run).map((message) => ({ message, type: "Aviso", run })),
+      ...runErrors(run).map((message) => ({ message, type: "Error" as const, run })),
+      ...runWarnings(run).map((message) => ({ message, type: "Aviso" as const, run })),
     ])
     .map((issue) => ({
       ...issue,
@@ -108,33 +109,7 @@ export default function HomePage() {
 
         <HomeReviewStatus decisions={review} variant="list" />
 
-        <section className="card home-span">
-          <div className="k">Errores e incidencias</div>
-          {issues.length === 0 ? (
-            <div className="an-empty">No se han registrado errores ni incidencias.</div>
-          ) : (
-            <div className="home-list">
-              {issues.map(({ message, type, run, decision }, index) => (
-                <Link
-                  key={`${run.run_id}-${type}-${index}`}
-                  className="home-row"
-                  href={decision
-                    ? `/review?file=${encodeURIComponent(decision.file_id)}`
-                    : `/insights?run=${encodeURIComponent(run.run_id)}`}
-                >
-                  <div>
-                    <div className="home-row-title">{message}</div>
-                    <div className="meta">
-                      {fmtWhen(run.started_at)} · {batchLabel(run)}
-                      {" · "}{decision ? `Ver factura ${decision.file_id}` : "Ver ejecución"}
-                    </div>
-                  </div>
-                  <span className={`pill ${type === "Error" ? "ESCALAR" : "NO_PAGAR"}`}>{type}</span>
-                </Link>
-              ))}
-            </div>
-          )}
-        </section>
+        <HomeIssues issues={issues} />
 
         <section className="card home-span">
           <div className="k">Actividad reciente</div>
