@@ -37,10 +37,29 @@ function pyJson<T>(args: string[]): T {
 
 export function getState(): StateSnapshot {
   try {
-    return pyJson<StateSnapshot>(["-m", "src.state", "json"]);
+    const snap = pyJson<StateSnapshot>(["-m", "src.state", "json"]);
+    return {
+      ...snap,
+      recent_runs: snap.recent_runs ?? (snap.latest_run ? [snap.latest_run] : []),
+    };
   } catch {
     // no run yet / DB missing - return an empty shell so the UI still renders
-    return { latest_run: null, summary: { total: 0, PAGAR: 0, NO_PAGAR: 0, ESCALAR: 0 }, decisions: [] };
+    return {
+      latest_run: null,
+      recent_runs: [],
+      summary: { total: 0, PAGAR: 0, NO_PAGAR: 0, ESCALAR: 0 },
+      decisions: [],
+    };
+  }
+}
+
+export function getHistory(opts?: { runId?: string; limit?: number }): Decision[] {
+  try {
+    const args = ["-m", "src.state", "history", "--limit", String(opts?.limit ?? 500)];
+    if (opts?.runId) args.push("--run-id", opts.runId);
+    return pyJson<Decision[]>(args);
+  } catch {
+    return [];
   }
 }
 
@@ -54,6 +73,14 @@ export function getDecision(fileId: string): Decision | null {
 
 export function getPolicy(): Policy {
   return pyJson<Policy>(["-m", "src.policy", "get"]);
+}
+
+export function getPolicyOrNull(): Policy | null {
+  try {
+    return getPolicy();
+  } catch {
+    return null;
+  }
 }
 
 /** persist a (partial) policy update by piping json to `python -m src.policy set`. */

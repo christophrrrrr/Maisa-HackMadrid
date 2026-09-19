@@ -1,33 +1,40 @@
 import "./globals.css";
 import type { Metadata } from "next";
-import { Newsreader, Source_Sans_3 } from "next/font/google";
+import { IBM_Plex_Mono, Inter } from "next/font/google";
 import Nav from "@/components/Nav";
+import { getState } from "@/lib/python";
 
-const sans = Source_Sans_3({
+const sans = Inter({
   subsets: ["latin"],
   variable: "--font-sans",
   display: "swap",
 });
 
-const serif = Newsreader({
+const mono = IBM_Plex_Mono({
   subsets: ["latin"],
-  variable: "--font-serif",
+  variable: "--font-mono",
+  weight: ["400", "500"],
   display: "swap",
 });
 
 export const metadata: Metadata = {
-  title: "Consola de facturas",
-  description: "Consola de revisi\u00f3n del pipeline de facturas",
+  title: "Factu",
+  description: "Consola de revisión del pipeline de facturas",
 };
 
+export const dynamic = "force-dynamic";
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  const { summary } = getState();
   return (
-    <html lang="es" className={`${sans.variable} ${serif.variable}`}>
+    <html lang="es" className={`${sans.variable} ${mono.variable}`}>
       <body>
-        <div className="topbar">
-          <Nav />
+        <div className="app-shell">
+          <aside className="sidebar">
+            <Nav reviewCount={summary.ESCALAR} />
+          </aside>
+          <main className="wrap">{children}</main>
         </div>
-        <main className="wrap">{children}</main>
       </body>
     </html>
   );

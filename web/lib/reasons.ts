@@ -2,7 +2,7 @@ import type { Policy } from "./types";
 
 export const REASON_LABELS: Record<string, string> = {
   all_rules_pass: "Todas las comprobaciones correctas",
-  incomplete_extraction: "Extracci\u00f3n incompleta",
+  incomplete_extraction: "Extracción incompleta",
   supplier_not_in_master: "Proveedor no dado de alta",
   iban_mismatch: "IBAN no coincide",
   pedido_not_found: "Pedido no encontrado",
@@ -10,7 +10,7 @@ export const REASON_LABELS: Record<string, string> = {
   amount_mismatch: "Importe no coincide",
   total_not_base_plus_iva: "Total distinto de base + IVA",
   iva_miscalculated: "IVA mal calculado",
-  invalid_date: "Fecha no v\u00e1lida",
+  invalid_date: "Fecha no válida",
   future_date: "Fecha futura",
   pedido_not_in_erp: "Pedido ausente en el ERP",
   erp_amount_mismatch: "Importe distinto del ERP",

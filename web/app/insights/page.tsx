@@ -1,39 +1,33 @@
-import { getPolicy, getState } from "@/lib/python";
+import { getPolicyOrNull, getState } from "@/lib/python";
 import { buildInsights, euros, pctBar, runOps, usd, type CountRow, type Tone } from "@/lib/insights";
-import type { Policy } from "@/lib/types";
-import DecisionHistory from "@/components/DecisionHistory";
 
 export const dynamic = "force-dynamic";
 
 const L = {
-  title: "An\u00e1lisis",
-  last: "\u00daltima ejecuci\u00f3n ",
-  none: "A\u00fan no hay ejecuciones registradas.",
-  stp: "Paso autom\u00e1tico",
-  reviewOf: " sin revisi\u00f3n",
+  title: "Análisis",
+  last: "Última ejecución ",
+  none: "Aún no hay ejecuciones registradas.",
+  stp: "Paso automático",
+  reviewOf: " sin revisión",
   pay: "A pagar",
   blocked: "Bloqueado",
-  reviewing: "En revisi\u00f3n",
+  reviewing: "En revisión",
   invoices: " facturas",
   findings: "Hallazgos",
   findingsSub: "todas las reglas que dispararon",
   findingsEmpty: "Sin hallazgos.",
   leak: "Doble pago evitado",
   leakSub: " en ya pagadas o pedido duplicado",
-  extract: "Revisi\u00f3n por extracci\u00f3n",
+  extract: "Revisión por extracción",
   extractSub: " escaladas por lectura incompleta",
-  extractNone: "sin facturas en revisi\u00f3n",
-  suppliers: "Proveedores",
-  supplier: "Proveedor",
-  topFinding: "Hallazgo m\u00e1s frecuente",
+  extractNone: "sin facturas en revisión",
   cost: "Coste",
   costFree: "sin coste de API",
   costPaid: " llamadas de pago",
-  costGemini: " vision \u00b7 Gemini / cache sin coste",
+  costGemini: " vision · Gemini / cache sin coste",
   speed: "Velocidad",
-  speedNone: "sin ejecuci\u00f3n",
+  speedNone: "sin ejecución",
   speedFiles: " facturas en ",
-  nobody: "Nadie en revisi\u00f3n.",
 };
 
 function fmtWhen(iso: string) {
@@ -53,14 +47,6 @@ function fmtSec(n: number) {
 
 function fmtMs(n: number) {
   return Math.round(n).toLocaleString("es-ES") + " ms";
-}
-
-function safePolicy(): Policy | null {
-  try {
-    return getPolicy();
-  } catch {
-    return null;
-  }
 }
 
 function RankList({ rows, empty }: { rows: CountRow[]; empty: string }) {
@@ -89,7 +75,7 @@ function toneClass(t: Tone): string {
 
 export default function Insights() {
   const { latest_run, decisions } = getState();
-  const policy = safePolicy();
+  const policy = getPolicyOrNull();
   const an = buildInsights(decisions, policy);
   const opsRun = runOps(latest_run, decisions);
   const stats = (latest_run?.stats && typeof latest_run.stats === "object"
@@ -101,7 +87,7 @@ export default function Insights() {
     latest_run ? L.last + fmtWhen(latest_run.started_at) : null,
     extractor || null,
     latest_run?.rules_version || null,
-  ].filter(Boolean).join("  \u00b7  ");
+  ].filter(Boolean).join("  ·  ");
 
   const costSub = !opsRun
     ? L.speedNone
@@ -126,7 +112,7 @@ export default function Insights() {
           ? (opsRun.nFiles + L.speedFiles + (opsRun.elapsedS != null ? fmtSec(opsRun.elapsedS) : "-"))
           : null,
         opsRun.avgLatencyMs != null ? ("media " + fmtMs(opsRun.avgLatencyMs)) : null,
-      ].filter(Boolean).join(" \u00b7 ") || L.speedNone;
+      ].filter(Boolean).join(" · ") || L.speedNone;
 
   return (
     <div>
@@ -196,42 +182,6 @@ export default function Insights() {
         </div>
       </div>
 
-      <div className="section-title">{L.suppliers}</div>
-      <div className="card hist-card">
-        <div className="hist-scroll">
-          <table className="sup-table">
-            <thead>
-              <tr>
-                <th>{L.supplier}</th>
-                <th>NIF</th>
-                <th className="hist-num">{L.reviewing}</th>
-                <th className="hist-num">Importe</th>
-                <th>{L.topFinding}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {an.suppliers.map((s) => (
-                <tr key={s.key}>
-                  <td>{s.name}</td>
-                  <td className="mono">{s.nif}</td>
-                  <td className="hist-num">{s.escalar}</td>
-                  <td className="mono hist-num">{euros(s.euros)}</td>
-                  <td className="muted">{s.topFinding}</td>
-                </tr>
-              ))}
-              {an.suppliers.length === 0 && (
-                <tr>
-                  <td colSpan={5} className="muted" style={{ padding: 18 }}>
-                    {L.nobody}
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <DecisionHistory decisions={decisions} />
     </div>
   );
 }

@@ -55,6 +55,7 @@ export interface RunRow {
 
 export interface StateSnapshot {
   latest_run: RunRow | null;
+  recent_runs: RunRow[];
   summary: { total: number; PAGAR: number; NO_PAGAR: number; ESCALAR: number };
   decisions: Decision[];
 }

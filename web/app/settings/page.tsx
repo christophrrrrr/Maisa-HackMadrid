@@ -27,9 +27,15 @@ function toIso(d: string, m: string, y: string): string | null {
   return `${y}-${mm}-${dd}`;
 }
 
-function Switch({ on, onClick }: { on: boolean; onClick: () => void }) {
+function Switch({ on, onClick, label }: { on: boolean; onClick: () => void; label: string }) {
   return (
-    <button type="button" className={"switch" + (on ? " on" : "")} onClick={onClick} aria-pressed={on}>
+    <button
+      type="button"
+      className={"switch" + (on ? " on" : "")}
+      onClick={onClick}
+      aria-label={label}
+      aria-pressed={on}
+    >
       <i />
     </button>
   );
@@ -129,158 +135,240 @@ export default function Settings() {
     setSaved(true);
   }
 
-  if (!draft) return <div className="muted">{"Cargando configuraci\u00f3n..."}</div>;
+  if (!draft) return <div className="muted">Cargando configuración...</div>;
 
   const codes = Object.keys(draft.reason_outcomes);
   const dateInvalid = Boolean((date.d || date.m || date.y) && !toIso(date.d, date.m, date.y));
   const watchInvalid = draft.watch.enabled && !draft.watch.folder_name;
 
   return (
-    <>
-      <h1 style={{ marginBottom: 20 }}>{"Configuraci\u00f3n"}</h1>
+    <div className="settings-page">
+      <header className="settings-heading">
+        <div>
+          <div className="settings-eyebrow">Preferencias del sistema</div>
+          <h1>Configuración</h1>
+          <p>Define cómo se procesan, validan y clasifican las facturas.</p>
+        </div>
+        <div className={"settings-status" + (dirty ? " dirty" : "")}>
+          <span />
+          {dirty ? "Cambios sin guardar" : "Todo actualizado"}
+        </div>
+      </header>
 
-      <div className="settings-grid">
-        <div className="settings-col">
-          <div className="section-title">{"Ejecuci\u00f3n"}</div>
-          <div className="card compact">
-            <div className="setrow">
+      <div className="settings-layout">
+        <div className="settings-stack">
+          <section className="settings-card">
+            <div className="settings-card-head">
+              <div className="settings-card-icon" aria-hidden="true">01</div>
               <div>
-                <div className="lbl">Fecha de referencia</div>
+                <h2>Ejecución</h2>
+                <p>Valores utilizados en cada lote de facturas.</p>
               </div>
+            </div>
+            <div className="settings-card-body">
+              <div className="settings-field-row">
+                <div className="settings-field-copy">
+                  <label>Fecha de referencia</label>
+                  <span>Deja los campos vacíos para utilizar la fecha actual.</span>
+                </div>
               <div className="date3">
                 <input
+                  aria-label="Día de referencia"
                   className="field" inputMode="numeric" maxLength={2} placeholder="dd" style={{ width: 52 }}
                   value={date.d} onChange={(e) => { setDate((x) => ({ ...x, d: e.target.value.replace(/\D/g, "") })); setSaved(false); }}
                 />
                 <span>/</span>
                 <input
+                  aria-label="Mes de referencia"
                   className="field" inputMode="numeric" maxLength={2} placeholder="mm" style={{ width: 52 }}
                   value={date.m} onChange={(e) => { setDate((x) => ({ ...x, m: e.target.value.replace(/\D/g, "") })); setSaved(false); }}
                 />
                 <span>/</span>
                 <input
+                  aria-label="Año de referencia"
                   className="field" inputMode="numeric" maxLength={4} placeholder="aaaa" style={{ width: 72 }}
                   value={date.y} onChange={(e) => { setDate((x) => ({ ...x, y: e.target.value.replace(/\D/g, "") })); setSaved(false); }}
                 />
               </div>
             </div>
-            {dateInvalid && <div className="errline">{"Indique un d\u00eda, mes y a\u00f1o v\u00e1lidos, o deje los campos vac\u00edos."}</div>}
-            <div className="setrow">
-              <div>
-                <div className="lbl">Tolerancia de importe (EUR)</div>
+            {dateInvalid && <div className="errline">Indique un día, mes y año válidos, o deje los campos vacíos.</div>}
+              <div className="settings-field-row">
+                <div className="settings-field-copy">
+                  <label htmlFor="tolerance">Tolerancia de importe</label>
+                  <span>Margen permitido al comparar importes en EUR.</span>
+                </div>
+                <div className="input-suffix">
+                  <input
+                    id="tolerance"
+                    className="field" type="number" step="0.01" min="0"
+                    value={draft.tolerance} onChange={(e) => patch({ tolerance: e.target.value })}
+                  />
+                  <span>EUR</span>
+                </div>
               </div>
-              <input
-                className="field" type="number" step="0.01" min="0" style={{ width: 120 }}
-                value={draft.tolerance} onChange={(e) => patch({ tolerance: e.target.value })}
-              />
             </div>
-          </div>
+          </section>
 
-          <div className="section-title">Tipos de archivo</div>
-          <div className="card">
-            {KINDS.map((kind) => {
-              const spec = draft.file_types[kind];
-              const meta = draft.file_type_meta[kind];
-              return (
-                <div key={kind} className={"ftype" + (spec.enabled ? "" : " off")}>
-                  <div className="ftype-head">
-                    <div>
-                      <div className="lbl">{meta?.label ?? kind}</div>
-                      <div className="desc">{meta?.help} - {(meta?.exts ?? []).join(" ")}</div>
-                    </div>
-                    <Switch on={spec.enabled} onClick={() => patchType(kind, { enabled: !spec.enabled })} />
-                  </div>
-                  {spec.enabled && kind === "pdf" && (
-                    <div className="setrow">
-                      <div>
-                        <div className="lbl">Visi{"\u00f3"}n en escaneos</div>
-                        <div className="desc">OCR si el PDF no tiene texto</div>
-                      </div>
-                      <Switch on={Boolean(spec.vision)} onClick={() => patchType(kind, { vision: !spec.vision })} />
-                    </div>
-                  )}
-                  {spec.enabled && kind === "image" && (
-                    <>
-                      <div className="setrow">
-                        <div>
-                          <div className="lbl">Visi{"\u00f3"}n / OCR</div>
-                          <div className="desc">necesario para leer fotos</div>
-                        </div>
-                        <Switch on={Boolean(spec.vision)} onClick={() => patchType(kind, { vision: !spec.vision })} />
-                      </div>
-                      <div className="setrow">
-                        <div>
-                          <div className="lbl">Tama{"\u00f1"}o m{"\u00e1"}ximo (MB)</div>
-                        </div>
-                        <input
-                          className="field" type="number" min={1} max={50} step={1} style={{ width: 88 }}
-                          value={spec.max_mb ?? 12}
-                          onChange={(e) => patchType(kind, { max_mb: Number(e.target.value) || 1 })}
-                        />
-                      </div>
-                    </>
-                  )}
-                  {spec.enabled && kind === "xml" && (
-                    <div className="setrow">
-                      <div>
-                        <div className="lbl">FacturaE / UBL</div>
-                        <div className="desc">parsear etiquetas electr{"\u00f3"}nicas</div>
-                      </div>
-                      <Switch on={Boolean(spec.facturae)} onClick={() => patchType(kind, { facturae: !spec.facturae })} />
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-
-          <div className="section-title">Entrada</div>
-          <div className="card compact">
-            <div className="setrow">
+          <section className="settings-card">
+            <div className="settings-card-head">
+              <div className="settings-card-icon" aria-hidden="true">02</div>
               <div>
-                <div className="lbl">Carpeta autom{"\u00e1"}tica</div>
-                <div className="desc">
-                  {draft.watch.enabled
-                    ? "los archivos nuevos se procesan solos"
-                    : "a\u00f1adir y ejecutar el lote a mano"}
-                </div>
+                <h2>Tipos de archivo</h2>
+                <p>Elige los formatos aceptados y su método de lectura.</p>
               </div>
-              <Switch on={draft.watch.enabled} onClick={() => setWatch(!draft.watch.enabled)} />
             </div>
-            {draft.watch.enabled && (
-              <div className="setrow">
-                <div>
-                  <div className="lbl">{draft.watch.folder_name || "Ninguna carpeta"}</div>
-                  <div className="desc">
-                    {canPick ? "se vigila en este navegador" : "requiere Chrome o Edge"}
+            <div className="file-type-list">
+              {KINDS.map((kind) => {
+                const spec = draft.file_types[kind];
+                const meta = draft.file_type_meta[kind];
+                const label = meta?.label ?? kind;
+                return (
+                  <div key={kind} className={"file-type-item" + (spec.enabled ? "" : " off")}>
+                    <div className="file-type-head">
+                      <div>
+                        <div className="file-type-name">
+                          <span className="file-type-badge">{kind}</span>
+                          <strong>{label}</strong>
+                        </div>
+                        <p>{meta?.help} · {(meta?.exts ?? []).join(" ")}</p>
+                      </div>
+                      <Switch
+                        label={`${spec.enabled ? "Desactivar" : "Activar"} ${label}`}
+                        on={spec.enabled}
+                        onClick={() => patchType(kind, { enabled: !spec.enabled })}
+                      />
+                    </div>
+                    {spec.enabled && (
+                      <div className="file-type-options">
+                        {kind === "pdf" && (
+                          <div className="settings-field-row">
+                            <div className="settings-field-copy">
+                              <label>Visión en escaneos</label>
+                              <span>Usar OCR cuando el PDF no contiene texto.</span>
+                            </div>
+                            <Switch
+                              label="Activar visión en PDF escaneados"
+                              on={Boolean(spec.vision)}
+                              onClick={() => patchType(kind, { vision: !spec.vision })}
+                            />
+                          </div>
+                        )}
+                        {kind === "image" && (
+                          <>
+                            <div className="settings-field-row">
+                              <div className="settings-field-copy">
+                                <label>Visión / OCR</label>
+                                <span>Necesario para leer fotos y capturas.</span>
+                              </div>
+                              <Switch
+                                label="Activar visión para imágenes"
+                                on={Boolean(spec.vision)}
+                                onClick={() => patchType(kind, { vision: !spec.vision })}
+                              />
+                            </div>
+                            <div className="settings-field-row">
+                              <div className="settings-field-copy">
+                                <label htmlFor="image-max-size">Tamaño máximo</label>
+                                <span>Límite por imagen subida.</span>
+                              </div>
+                              <div className="input-suffix narrow">
+                                <input
+                                  id="image-max-size"
+                                  className="field" type="number" min={1} max={50} step={1}
+                                  value={spec.max_mb ?? 12}
+                                  onChange={(e) => patchType(kind, { max_mb: Number(e.target.value) || 1 })}
+                                />
+                                <span>MB</span>
+                              </div>
+                            </div>
+                          </>
+                        )}
+                        {kind === "xml" && (
+                          <div className="settings-field-row">
+                            <div className="settings-field-copy">
+                              <label>FacturaE / UBL</label>
+                              <span>Interpretar etiquetas de facturas electrónicas.</span>
+                            </div>
+                            <Switch
+                              label="Activar lectura FacturaE y UBL"
+                              on={Boolean(spec.facturae)}
+                              onClick={() => patchType(kind, { facturae: !spec.facturae })}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
-                </div>
-                <button type="button" className="btn ghost sm" onClick={chooseFolder}>
-                  {draft.watch.folder_name ? "Cambiar" : "Seleccionar"}
-                </button>
+                );
+              })}
+            </div>
+          </section>
+
+          <section className="settings-card">
+            <div className="settings-card-head">
+              <div className="settings-card-icon" aria-hidden="true">03</div>
+              <div>
+                <h2>Entrada automática</h2>
+                <p>Procesa los archivos al detectarlos en una carpeta.</p>
               </div>
-            )}
-            {folderErr && <div className="errline">{folderErr}</div>}
-            {watchInvalid && <div className="errline">Seleccione una carpeta para activar el modo autom{"\u00e1"}tico.</div>}
-          </div>
+            </div>
+            <div className="settings-card-body">
+              <div className="settings-field-row">
+                <div className="settings-field-copy">
+                  <label>Vigilar una carpeta</label>
+                  <span>
+                    {draft.watch.enabled
+                      ? "Los archivos nuevos se procesan automáticamente."
+                      : "Los lotes se añaden y ejecutan manualmente."}
+                  </span>
+                </div>
+                <Switch
+                  label="Activar carpeta automática"
+                  on={draft.watch.enabled}
+                  onClick={() => setWatch(!draft.watch.enabled)}
+                />
+              </div>
+              {draft.watch.enabled && (
+                <div className="folder-picker">
+                  <div className="folder-mark" aria-hidden="true" />
+                  <div>
+                    <strong>{draft.watch.folder_name || "Ninguna carpeta seleccionada"}</strong>
+                    <span>{canPick ? "Carpeta vinculada a este navegador" : "Requiere Chrome o Edge"}</span>
+                  </div>
+                  <button type="button" className="btn ghost sm" onClick={chooseFolder}>
+                    {draft.watch.folder_name ? "Cambiar" : "Seleccionar"}
+                  </button>
+                </div>
+              )}
+              {folderErr && <div className="errline">{folderErr}</div>}
+              {watchInvalid && <div className="errline">Seleccione una carpeta para activar el modo automático.</div>}
+            </div>
+          </section>
         </div>
 
-        <div className="settings-col">
-          <div className="section-title">{"Pol\u00edtica"}</div>
-          <div className="card">
+        <section className="settings-card policy-card">
+          <div className="settings-card-head">
+            <div className="settings-card-icon" aria-hidden="true">04</div>
+            <div>
+              <h2>Política de decisión</h2>
+              <p>Asigna el resultado que corresponde a cada regla.</p>
+            </div>
+          </div>
+          <div className="policy-list">
             {codes.map((code) => {
               const meta = draft.reasons[code];
               const current = draft.reason_outcomes[code];
               return (
-                <div key={code} className="policy-row">
-                  <div className="policy-meta">
+                <div key={code} className="policy-item">
+                  <div className="policy-item-top">
                     <span className="rule-tag">regla {meta?.rule ?? "-"}</span>
-                    <span className="name">{meta?.label ?? code}</span>
-                    <span className="help">{meta?.help ?? code}</span>
+                    <strong>{meta?.label ?? code}</strong>
                   </div>
+                  <p>{meta?.help ?? code}</p>
                   <div className="seg">
                     {RESULTS.map((r) => (
                       <button
+                        type="button"
                         key={r}
                         className={current === r ? `on ${r}` : ""}
                         onClick={() => setOutcome(code, r)}
@@ -293,13 +381,17 @@ export default function Settings() {
               );
             })}
           </div>
-        </div>
+        </section>
       </div>
 
-      <div className="savebar">
+      <div className="savebar settings-savebar">
+        <div className="savebar-copy">
+          <strong>{dirty ? "Hay cambios pendientes" : "Configuración al día"}</strong>
+          <span>{dirty ? "Guarda para aplicar los nuevos ajustes." : "No hay cambios pendientes de guardar."}</span>
+        </div>
         {saved && !dirty && <span className="toast">Guardado</span>}
         <button
-          className="btn ghost sm"
+          className="btn ghost"
           disabled={!dirty || saving}
           onClick={() => { setDraft(policy); setDate(fromIso(policy?.today ?? null)); setFolderErr(""); }}
         >
@@ -309,6 +401,6 @@ export default function Settings() {
           {saving ? "Guardando..." : "Guardar cambios"}
         </button>
       </div>
-    </>
+    </div>
   );
 }

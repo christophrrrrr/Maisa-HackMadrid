@@ -50,7 +50,7 @@ function CheckCard({ check }: { check: RuleCheck }) {
     <div className={`check-card ${check.status}`}>
       <div className="check-head">
         <span className="check-icon" aria-hidden="true">
-          {check.status === "pass" ? "\u2713" : check.status === "fail" ? "!" : "\u2013"}
+          {check.status === "pass" ? "✓" : check.status === "fail" ? "!" : "–"}
         </span>
         <div className="check-title">
           <b>{check.label}</b>
@@ -80,7 +80,7 @@ export default function DecisionTrace({ d }: { d: Decision }) {
   const primary = failed.find((check) => check.code === d.reason) ?? failed[0];
   const summary = reasonLabel(d.reason) || primary?.message || "sin motivo";
   const action = d.result === "PAGAR"
-    ? "No requiere revisi\u00f3n manual."
+    ? "No requiere revisión manual."
     : d.result === "NO_PAGAR"
       ? "No emitir el pago. Validar el bloqueo antes de cerrar la incidencia."
       : "Revisar la discrepancia y corregir la factura o la fuente de referencia.";
@@ -110,7 +110,7 @@ export default function DecisionTrace({ d }: { d: Decision }) {
       {checks.length === 0 && (
         <section className="trace-section">
           <div className="reason-box">
-            {"El trazado comparativo estar\u00e1 disponible despu\u00e9s de volver a procesar esta factura."}
+            {"El trazado comparativo estará disponible después de volver a procesar esta factura."}
             {d.detail ? ` ${d.detail}` : ""}
           </div>
         </section>
@@ -118,14 +118,14 @@ export default function DecisionTrace({ d }: { d: Decision }) {
 
       <section className="trace-section">
         <div className="trace-section-head">
-          <span>{"Campos le\u00eddos de la factura"}</span>
+          <span>{"Campos leídos de la factura"}</span>
         </div>
         {d.extracted != null ? (
           <KV rows={FIELDS.map(([k, label]) => [
             label, ex[k] != null && ex[k] !== "" ? String(ex[k]) : DASH,
           ])} />
         ) : (
-          <div className="faint">{"Los campos se cargar\u00e1n al terminar la ejecuci\u00f3n."}</div>
+          <div className="faint">{"Los campos se cargarán al terminar la ejecución."}</div>
         )}
       </section>
 
@@ -133,7 +133,7 @@ export default function DecisionTrace({ d }: { d: Decision }) {
         <details className="trace-details">
           <summary>
             Comprobaciones restantes
-            <span>{passed.length} correctas{skipped.length ? ` \u00b7 ${skipped.length} omitidas` : ""}</span>
+            <span>{passed.length} correctas{skipped.length ? ` · ${skipped.length} omitidas` : ""}</span>
           </summary>
           <div className="check-list compact">
             {[...passed, ...skipped].map((check, index) => (
@@ -154,7 +154,7 @@ export default function DecisionTrace({ d }: { d: Decision }) {
               <div className="source-row" key={field}>
                 <div>
                   <b>{FIELD_LABELS[field] ?? field}</b>
-                  <span>{"P\u00e1gina"} {evidence.page}</span>
+                  <span>{"Página"} {evidence.page}</span>
                 </div>
                 <q>{evidence.text}</q>
               </div>
@@ -165,13 +165,13 @@ export default function DecisionTrace({ d }: { d: Decision }) {
 
       <details className="trace-details">
         <summary>
-          {"Detalles t\u00e9cnicos"}
-          <span>{d.rules_version || "sin versi\u00f3n"}</span>
+          {"Detalles técnicos"}
+          <span>{d.rules_version || "sin versión"}</span>
         </summary>
         <KV rows={[
           ["archivo", d.file_id],
           ["run id", d.run_id || DASH],
-          ["extracci\u00f3n", `${d.extraction_method ?? "-"} (${d.extraction_ok ? "correcta" : "baja confianza"})`],
+          ["extracción", `${d.extraction_method ?? "-"} (${d.extraction_ok ? "correcta" : "baja confianza"})`],
           ["normativa", d.rules_version || DASH],
           ["latencia", d.latency_ms != null ? `${d.latency_ms.toFixed(0)} ms` : DASH],
           ["coste", d.cost_usd ? `$${d.cost_usd.toFixed(4)}` : "$0"],

@@ -4,9 +4,10 @@ Python owns ALL database access. The Next.js console never opens SQLite directly
 it calls the CLI (`python -m src.state json`) and gets JSON. This keeps one owner
 for the schema and avoids native Node sqlite builds on Windows.
 
-Two tables:
-  runs      — one row per batch run (counts, timing, cost, retries, status)
-  decisions — current decision per file_id (result, reason, evidence, trace)
+Three tables:
+  runs              — one row per batch run (counts, timing, cost, retries, status)
+  decisions         — current decision per file_id (latest state for the board)
+  decision_history  — append-only audit trail keyed by (run_id, file_id)
 """
 from __future__ import annotations
 
@@ -54,8 +55,29 @@ CREATE TABLE IF NOT EXISTS decisions (
     cost_usd           REAL NOT NULL DEFAULT 0,
     updated_at         TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS decision_history (
+    run_id             TEXT NOT NULL,
+    file_id            TEXT NOT NULL,
+    result             TEXT NOT NULL,
+    reason             TEXT NOT NULL,
+    detail             TEXT,
+    findings           TEXT NOT NULL,
+    evidence           TEXT NOT NULL,
+    checks             TEXT NOT NULL DEFAULT '[]',
+    rules_version      TEXT NOT NULL,
+    extraction_method  TEXT,
+    extraction_ok      INTEGER NOT NULL DEFAULT 1,
+    extracted          TEXT,
+    extraction_evidence TEXT NOT NULL DEFAULT '{}',
+    latency_ms         REAL,
+    cost_usd           REAL NOT NULL DEFAULT 0,
+    recorded_at        TEXT NOT NULL,
+    PRIMARY KEY (run_id, file_id)
+);
 CREATE INDEX IF NOT EXISTS idx_decisions_result ON decisions(result);
 CREATE INDEX IF NOT EXISTS idx_decisions_run ON decisions(run_id);
+CREATE INDEX IF NOT EXISTS idx_history_recorded ON decision_history(recorded_at);
+CREATE INDEX IF NOT EXISTS idx_history_file ON decision_history(file_id);
 """
 
 
@@ -75,8 +97,26 @@ def connect(db_path: Path = DEFAULT_DB) -> sqlite3.Connection:
     for name, statement in migrations.items():
         if name not in columns:
             conn.execute(statement)
+    _backfill_history(conn)
     conn.commit()
     return conn
+
+
+def _backfill_history(conn: sqlite3.Connection) -> None:
+    """seed history from current decisions once, so existing data is not lost."""
+    count = conn.execute("SELECT COUNT(*) AS n FROM decision_history").fetchone()["n"]
+    if count > 0:
+        return
+    conn.execute(
+        """INSERT OR IGNORE INTO decision_history
+           (run_id, file_id, result, reason, detail, findings, evidence, checks,
+            rules_version, extraction_method, extraction_ok, extracted,
+            extraction_evidence, latency_ms, cost_usd, recorded_at)
+           SELECT run_id, file_id, result, reason, detail, findings, evidence, checks,
+                  rules_version, extraction_method, extraction_ok, extracted,
+                  extraction_evidence, latency_ms, cost_usd, updated_at
+           FROM decisions"""
+    )
 
 
 def _now() -> str:
@@ -92,6 +132,29 @@ def start_run(conn: sqlite3.Connection, run_id: str, batch: str, rules_version: 
     conn.commit()
 
 
+def _decision_values(
+    run_id: str,
+    outcome: Outcome,
+    *,
+    extraction_method: str | None,
+    extraction_ok: bool,
+    extracted: dict | None,
+    extraction_evidence: dict | None,
+    latency_ms: float | None,
+    cost_usd: float,
+    when: str,
+) -> tuple:
+    return (
+        outcome.file_id, run_id, outcome.result, outcome.reason,
+        outcome.detail, json.dumps(outcome.findings), json.dumps(outcome.evidence, default=str),
+        json.dumps([check.model_dump() for check in outcome.checks], default=str),
+        outcome.rules_version,
+        extraction_method, int(extraction_ok), json.dumps(extracted or {}, default=str),
+        json.dumps(extraction_evidence or {}, default=str),
+        latency_ms, cost_usd, when,
+    )
+
+
 def record_decision(
     conn: sqlite3.Connection,
     run_id: str,
@@ -104,6 +167,17 @@ def record_decision(
     latency_ms: float | None,
     cost_usd: float = 0.0,
 ) -> None:
+    when = _now()
+    values = _decision_values(
+        run_id, outcome,
+        extraction_method=extraction_method,
+        extraction_ok=extraction_ok,
+        extracted=extracted,
+        extraction_evidence=extraction_evidence,
+        latency_ms=latency_ms,
+        cost_usd=cost_usd,
+        when=when,
+    )
     conn.execute(
         """INSERT INTO decisions
            (file_id, run_id, result, reason, detail, findings, evidence, checks, rules_version,
@@ -119,15 +193,16 @@ def record_decision(
              extraction_evidence=excluded.extraction_evidence,
              latency_ms=excluded.latency_ms, cost_usd=excluded.cost_usd,
              updated_at=excluded.updated_at""",
-        (
-            outcome.file_id, run_id, outcome.result, outcome.reason,
-            outcome.detail, json.dumps(outcome.findings), json.dumps(outcome.evidence, default=str),
-            json.dumps([check.model_dump() for check in outcome.checks], default=str),
-            outcome.rules_version,
-            extraction_method, int(extraction_ok), json.dumps(extracted or {}, default=str),
-            json.dumps(extraction_evidence or {}, default=str),
-            latency_ms, cost_usd, _now(),
-        ),
+        values,
+    )
+    # append-only audit trail; ignore duplicate (run_id, file_id) on retries
+    conn.execute(
+        """INSERT OR IGNORE INTO decision_history
+           (file_id, run_id, result, reason, detail, findings, evidence, checks, rules_version,
+            extraction_method, extraction_ok, extracted, extraction_evidence,
+            latency_ms, cost_usd, recorded_at)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+        values,
     )
 
 
@@ -152,7 +227,7 @@ def retain_decisions(conn: sqlite3.Connection, file_ids) -> None:
 
 def finish_run(conn: sqlite3.Connection, run_id: str, *, elapsed_s: float, cost_usd: float, stats: dict) -> None:
     counts = dict(conn.execute(
-        "SELECT result, COUNT(*) n FROM decisions WHERE run_id=? GROUP BY result", (run_id,)
+        "SELECT result, COUNT(*) n FROM decision_history WHERE run_id=? GROUP BY result", (run_id,)
     ).fetchall())
     total = sum(counts.values())
     conn.execute(
@@ -175,26 +250,67 @@ def _row_to_decision(r: sqlite3.Row) -> dict:
         except (json.JSONDecodeError, TypeError):
             pass
     d["extraction_ok"] = bool(d["extraction_ok"])
+    if "recorded_at" in d and "updated_at" not in d:
+        d["updated_at"] = d["recorded_at"]
     return d
+
+
+def _row_to_run(r: sqlite3.Row | None) -> dict | None:
+    if r is None:
+        return None
+    run = dict(r)
+    if run.get("stats"):
+        try:
+            run["stats"] = json.loads(run["stats"])
+        except (json.JSONDecodeError, TypeError):
+            pass
+    return run
+
+
+def recent_runs(conn: sqlite3.Connection, limit: int = 20) -> list[dict]:
+    rows = conn.execute(
+        "SELECT * FROM runs ORDER BY started_at DESC LIMIT ?", (limit,)
+    ).fetchall()
+    return [_row_to_run(r) for r in rows if r]
+
+
+def history(db_path: Path = DEFAULT_DB, *, limit: int = 500, run_id: str | None = None) -> list[dict]:
+    """chronological audit records across runs."""
+    conn = connect(db_path)
+    try:
+        if run_id:
+            rows = conn.execute(
+                """SELECT * FROM decision_history
+                   WHERE run_id=?
+                   ORDER BY recorded_at DESC, file_id
+                   LIMIT ?""",
+                (run_id, limit),
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                """SELECT * FROM decision_history
+                   ORDER BY recorded_at DESC, file_id
+                   LIMIT ?""",
+                (limit,),
+            ).fetchall()
+        return [_row_to_decision(r) for r in rows]
+    finally:
+        conn.close()
 
 
 def snapshot(db_path: Path = DEFAULT_DB) -> dict:
     """Everything the console needs, as one JSON-able dict."""
     conn = connect(db_path)
     try:
-        latest = conn.execute("SELECT * FROM runs ORDER BY started_at DESC LIMIT 1").fetchone()
-        run = dict(latest) if latest else None
-        if run and run.get("stats"):
-            try:
-                run["stats"] = json.loads(run["stats"])
-            except json.JSONDecodeError:
-                pass
+        runs = recent_runs(conn, limit=20)
+        latest = runs[0] if runs else None
         decisions = [_row_to_decision(r) for r in
                      conn.execute("SELECT * FROM decisions ORDER BY result, file_id").fetchall()]
         summary = dict(conn.execute(
             "SELECT result, COUNT(*) n FROM decisions GROUP BY result").fetchall())
         return {
-            "latest_run": run,
+            "latest_run": latest,
+            "recent_runs": runs,
             "summary": {
                 "total": len(decisions),
                 "PAGAR": summary.get("PAGAR", 0),
@@ -220,6 +336,7 @@ def clear(db_path: Path = DEFAULT_DB) -> dict:
     """wipe runs + decisions so the console can start from a blank board."""
     conn = connect(db_path)
     try:
+        conn.execute("DELETE FROM decision_history")
         conn.execute("DELETE FROM decisions")
         conn.execute("DELETE FROM runs")
         conn.commit()
@@ -235,8 +352,14 @@ def _main() -> int:
     import argparse
 
     ap = argparse.ArgumentParser(description="Pipeline state store (read side / CLI for the webapp).")
-    ap.add_argument("cmd", choices=["json", "decision", "clear"], help="json = full snapshot; decision = one file; clear = wipe")
+    ap.add_argument(
+        "cmd",
+        choices=["json", "decision", "history", "clear"],
+        help="json = full snapshot; decision = one file; history = audit trail; clear = wipe",
+    )
     ap.add_argument("--file-id")
+    ap.add_argument("--run-id")
+    ap.add_argument("--limit", type=int, default=500)
     ap.add_argument("--db", default=str(DEFAULT_DB))
     args = ap.parse_args()
 
@@ -244,6 +367,8 @@ def _main() -> int:
         print(json.dumps(snapshot(Path(args.db)), default=str))
     elif args.cmd == "clear":
         print(json.dumps(clear(Path(args.db)), default=str))
+    elif args.cmd == "history":
+        print(json.dumps(history(Path(args.db), limit=args.limit, run_id=args.run_id), default=str))
     else:
         print(json.dumps(decision(args.file_id, Path(args.db)), default=str))
     return 0

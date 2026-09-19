@@ -12,6 +12,7 @@ import {
 type Ongoing = { file_id: string; latency_ms: number | null; ok: boolean };
 type Progress = { done: number; total: number; running: boolean };
 type Conf = "ALL" | "OK" | "LOW";
+export type BoardMode = "process" | "review";
 
 function partial(file_id: string, result: Result, reason: string): Decision {
   return {
@@ -33,7 +34,7 @@ function haystack(d: Decision, policy: Policy | null): string {
   ].map((x) => (x == null ? "" : String(x))).join(" ").toLowerCase();
 }
 
-function DecisionCard({ d, onOpen, policy }: { d: Decision; onOpen: () => void; policy: Policy | null }) {
+export function DecisionCard({ d, onOpen, policy }: { d: Decision; onOpen: () => void; policy: Policy | null }) {
   return (
     <div className="dcard">
       <div className="dcard-head" onClick={onOpen}>
@@ -46,7 +47,65 @@ function DecisionCard({ d, onOpen, policy }: { d: Decision; onOpen: () => void; 
   );
 }
 
-export default function DecisionBoard() {
+export function DecisionColumn({ title, dot, count, children }: {
+  title: string; dot: string; count: number; children: React.ReactNode;
+}) {
+  return (
+    <div className="col">
+      <div className="col-head">
+        <div className="col-title">
+          <span className={`dot ${dot}`} /> {title}
+        </div>
+        <span className="count">{count}</span>
+      </div>
+      <div className="col-body">{children}</div>
+    </div>
+  );
+}
+
+export function DecisionFilters({
+  q, setQ, reason, setReason, conf, setConf, reasons, policy, filtered, total, filtersOn,
+}: {
+  q: string;
+  setQ: (v: string) => void;
+  reason: string;
+  setReason: (v: string) => void;
+  conf: Conf;
+  setConf: (v: Conf) => void;
+  reasons: string[];
+  policy: Policy | null;
+  filtered: number;
+  total: number;
+  filtersOn: boolean;
+}) {
+  return (
+    <div className="filters">
+      <input
+        className="search"
+        placeholder="Buscar archivo, pedido, NIF, IBAN, motivo..."
+        value={q}
+        onChange={(e) => setQ(e.target.value)}
+      />
+      <select className="field" value={reason} onChange={(e) => setReason(e.target.value)}>
+        <option value="ALL">Todos los motivos</option>
+        {reasons.map((r) => <option key={r} value={r}>{reasonLabel(r, policy)}</option>)}
+      </select>
+      <select className="field" value={conf} onChange={(e) => setConf(e.target.value as Conf)}>
+        <option value="ALL">Toda extracción</option>
+        <option value="OK">Extracción correcta</option>
+        <option value="LOW">Baja confianza</option>
+      </select>
+      {filtersOn && (
+        <span className="meta">
+          {filtered} de {total}
+        </span>
+      )}
+    </div>
+  );
+}
+
+export default function DecisionBoard({ mode = "process" }: { mode?: BoardMode }) {
+  const isReview = mode === "review";
   const [decisions, setDecisions] = useState<Map<string, Decision>>(new Map());
   const [queued, setQueued] = useState<File[]>([]);
   const [ongoing, setOngoing] = useState<Ongoing[]>([]);
@@ -72,11 +131,11 @@ export default function DecisionBoard() {
 
   useEffect(() => { loadState(); }, [loadState]);
   useEffect(() => {
-    fetch("/api/policy").then((r) => r.json()).then((p: Policy) => setPolicy(withFileDefaults(p))).catch(() => {});
+    fetch("/api/policy").then((r) => r.json()).then((pol: Policy) => setPolicy(withFileDefaults(pol))).catch(() => {});
   }, []);
   useEffect(() => () => esRef.current?.close(), []);
   useEffect(() => {
-    if (!policy?.watch.enabled) return;
+    if (isReview || !policy?.watch.enabled) return;
     const pol = policy;
     let stop = false;
     async function scan() {
@@ -98,7 +157,7 @@ export default function DecisionBoard() {
     scan();
     const id = window.setInterval(scan, 4000);
     return () => { stop = true; window.clearInterval(id); };
-  }, [policy]);
+  }, [policy, isReview]);
   runningRef.current = p.running;
   decisionsRef.current = decisions;
   for (const id of decisions.keys()) seenRef.current.add(id);
@@ -137,7 +196,6 @@ export default function DecisionBoard() {
       return false;
     }
 
-    // inbox=1: only the files just uploaded, not the 500 challenge/facturas
     const es = new EventSource("/api/run?inbox=1");
     esRef.current = es;
     let finished = false;
@@ -147,7 +205,7 @@ export default function DecisionBoard() {
       try {
         m = JSON.parse(e.data) as Record<string, any>;
       } catch {
-        setErr("El servidor envio una respuesta de progreso no valida.");
+        setErr("El servidor envió una respuesta de progreso no válida.");
         return;
       }
       switch (m.event) {
@@ -179,12 +237,12 @@ export default function DecisionBoard() {
           setOngoing([]);
           if (m.code === 0) setQueued([]);
           if (m.code !== 0) {
-            setErr((current) => current || `El pipeline termino con codigo ${m.code ?? "desconocido"}.`);
+            setErr((current) => current || `El pipeline terminó con código ${m.code ?? "desconocido"}.`);
           }
           loadState();
           break;
         case "error":
-          setErr(String(m.message || `Error en la ejecucion (codigo ${m.code ?? "desconocido"})`));
+          setErr(String(m.message || `Error en la ejecución (código ${m.code ?? "desconocido"})`));
           break;
         default:
           break;
@@ -192,7 +250,7 @@ export default function DecisionBoard() {
     };
     es.onerror = () => {
       if (!finished) {
-        setErr((current) => current || "Se perdio la conexion con el pipeline antes de recibir el resultado.");
+        setErr((current) => current || "Se perdió la conexión con el pipeline antes de recibir el resultado.");
       }
       es.close();
       esRef.current = null;
@@ -206,7 +264,7 @@ export default function DecisionBoard() {
 
   async function clearAll() {
     if (p.running || clearing) return;
-    const ok = window.confirm("Se eliminaran todas las decisiones y ejecuciones. Esta accion no se puede deshacer.");
+    const ok = window.confirm("Se eliminarán todas las decisiones y ejecuciones. Esta acción no se puede deshacer.");
     if (!ok) return;
     setClearing(true);
     setErr("");
@@ -223,10 +281,14 @@ export default function DecisionBoard() {
   }
 
   const all = useMemo(() => [...decisions.values()], [decisions]);
+  const pool = useMemo(
+    () => (isReview ? all.filter((d) => d.result === "ESCALAR") : all),
+    [all, isReview],
+  );
   const reasons = useMemo(() => {
-    const s = new Set(all.map((d) => d.reason).filter(Boolean));
+    const s = new Set(pool.map((d) => d.reason).filter(Boolean));
     return [...s].sort((a, b) => reasonLabel(a, policy).localeCompare(reasonLabel(b, policy), "es"));
-  }, [all, policy]);
+  }, [pool, policy]);
 
   const needle = q.trim().toLowerCase();
   const match = (d: Decision) => {
@@ -237,15 +299,15 @@ export default function DecisionBoard() {
     return true;
   };
 
-  const pagar = all.filter((d) => d.result === "PAGAR" && match(d))
+  const pagar = pool.filter((d) => d.result === "PAGAR" && match(d))
     .sort((a, b) => a.file_id.localeCompare(b.file_id));
-  const nopagar = all.filter((d) => d.result === "NO_PAGAR" && match(d))
+  const nopagar = pool.filter((d) => d.result === "NO_PAGAR" && match(d))
     .sort((a, b) => a.file_id.localeCompare(b.file_id));
-  const revise = all.filter((d) => d.result === "ESCALAR" && match(d))
+  const revise = pool.filter((d) => d.result === "ESCALAR" && match(d))
     .sort((a, b) => a.file_id.localeCompare(b.file_id));
   const ongoingShown = ongoing.filter((o) => !needle || o.file_id.toLowerCase().includes(needle));
   const selected = selectedId ? decisions.get(selectedId) ?? null : null;
-  const filtered = pagar.length + nopagar.length + revise.length;
+  const filtered = isReview ? revise.length : pagar.length + nopagar.length + revise.length;
   const filtersOn = Boolean(needle || reason !== "ALL" || conf !== "ALL");
 
   const auto = Boolean(policy?.watch.enabled);
@@ -255,122 +317,112 @@ export default function DecisionBoard() {
   return (
     <>
       <div className="board-head">
-        <h1>Facturas</h1>
-        <div className="progress-wrap">
-          <input
-            ref={pickRef}
-            type="file"
-            accept={accept}
-            multiple
-            hidden
-            onChange={(e) => addFiles(e.target.files)}
-          />
-          {auto ? (
-            <span className="chip">{p.running ? `Procesando ${p.done}/${p.total}` : (`Auto - ${folderName || "carpeta"}`)}</span>
-          ) : (
-            <>
-              <button className="btn ghost" onClick={() => pickRef.current?.click()} disabled={p.running}>
-                {"A\u00f1adir facturas"}
-              </button>
-              <button className="btn" onClick={() => run()} disabled={p.running || queued.length === 0}>
-                {p.running ? `Procesando ${p.done}/${p.total}` : "Ejecutar lote"}
-              </button>
-            </>
+        <div>
+          <h1>{isReview ? "Revisión" : "Procesar"}</h1>
+          {isReview && (
+            <div className="subtitle">Facturas que requieren inspección manual</div>
           )}
-          <button className="btn ghost danger" onClick={clearAll} disabled={p.running || clearing || all.length === 0}>
-            {clearing ? "Vaciando..." : "Vaciar"}
-          </button>
         </div>
-      </div>
-
-      <div className="filters">
-        <input
-          className="search"
-          placeholder="Buscar archivo, pedido, NIF, IBAN, motivo..."
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-        />
-        <select className="field" value={reason} onChange={(e) => setReason(e.target.value)}>
-          <option value="ALL">Todos los motivos</option>
-          {reasons.map((r) => <option key={r} value={r}>{reasonLabel(r, policy)}</option>)}
-        </select>
-        <select className="field" value={conf} onChange={(e) => setConf(e.target.value as Conf)}>
-          <option value="ALL">{"Toda extracci\u00f3n"}</option>
-          <option value="OK">{"Extracci\u00f3n correcta"}</option>
-          <option value="LOW">Baja confianza</option>
-        </select>
-        {filtersOn && (
-          <span className="meta">
-            {filtered} de {all.length}
-          </span>
+        {!isReview && (
+          <div className="progress-wrap">
+            <input
+              ref={pickRef}
+              type="file"
+              accept={accept}
+              multiple
+              hidden
+              onChange={(e) => addFiles(e.target.files)}
+            />
+            {auto ? (
+              <span className="chip">{p.running ? `Procesando ${p.done}/${p.total}` : (`Auto · ${folderName || "carpeta"}`)}</span>
+            ) : (
+              <>
+                <button className="btn ghost" onClick={() => pickRef.current?.click()} disabled={p.running}>
+                  Añadir facturas
+                </button>
+                <button className="btn" onClick={() => run()} disabled={p.running || queued.length === 0}>
+                  {p.running ? `Procesando ${p.done}/${p.total}` : "Ejecutar lote"}
+                </button>
+              </>
+            )}
+            <button className="btn ghost danger" onClick={clearAll} disabled={p.running || clearing || all.length === 0}>
+              {clearing ? "Vaciando..." : "Vaciar"}
+            </button>
+          </div>
         )}
       </div>
+
+      <DecisionFilters
+        q={q} setQ={setQ}
+        reason={reason} setReason={setReason}
+        conf={conf} setConf={setConf}
+        reasons={reasons} policy={policy}
+        filtered={filtered} total={pool.length} filtersOn={filtersOn}
+      />
 
       {err && <div className="errline">{err}</div>}
 
-      <div className="queue">
-        {p.running ? (
-          ongoingShown.length === 0
-            ? <div className="queue-empty">Preparando lote...</div>
-            : ongoingShown.map((o) => (
-                <div key={o.file_id} className="qchip live">
-                  <span className="spin" />
-                  <span className="qname">{o.file_id}</span>
-                </div>
-              ))
-        ) : queued.length === 0 ? (
-          <div className="queue-empty">
-            {auto
-              ? (`Vigilando ${folderName || "la carpeta"}. Los archivos nuevos se procesan solos.`)
-              : "Seleccione las facturas que desea analizar."}
-          </div>
-        ) : (
-          queued.map((f) => (
-            <div key={f.name} className="qchip">
-              <span className="qname">{f.name}</span>
-              <button className="qrm" onClick={() => removeQueued(f.name)} aria-label="Quitar">x</button>
+      {!isReview && (
+        <div className="queue">
+          {p.running ? (
+            ongoingShown.length === 0
+              ? <div className="queue-empty">Preparando lote...</div>
+              : ongoingShown.map((o) => (
+                  <div key={o.file_id} className="qchip live">
+                    <span className="spin" />
+                    <span className="qname">{o.file_id}</span>
+                  </div>
+                ))
+          ) : queued.length === 0 ? (
+            <div className="queue-empty">
+              {auto
+                ? (`Vigilando ${folderName || "la carpeta"}. Los archivos nuevos se procesan solos.`)
+                : "Seleccione las facturas que desea analizar."}
             </div>
-          ))
-        )}
-      </div>
+          ) : (
+            queued.map((f) => (
+              <div key={f.name} className="qchip">
+                <span className="qname">{f.name}</span>
+                <button className="qrm" onClick={() => removeQueued(f.name)} aria-label="Quitar">x</button>
+              </div>
+            ))
+          )}
+        </div>
+      )}
 
-      <div className="board">
-        <Column title="Pagar" dot="pagar" count={pagar.length}>
-          {pagar.length === 0
-            ? <div className="col-empty">Sin facturas</div>
-            : pagar.map((d) => <DecisionCard key={d.file_id} d={d} policy={policy} onOpen={() => setSelectedId(d.file_id)} />)}
-        </Column>
+      {isReview ? (
+        <div className="board board-single">
+          <DecisionColumn title="Pendientes de revisión" dot="revise" count={revise.length}>
+            {revise.length === 0
+              ? <div className="col-empty">Sin incidencias</div>
+              : revise.map((d) => (
+                <DecisionCard key={d.file_id} d={d} policy={policy} onOpen={() => setSelectedId(d.file_id)} />
+              ))}
+          </DecisionColumn>
+        </div>
+      ) : (
+        <div className="board">
+          <DecisionColumn title="Pagar" dot="pagar" count={pagar.length}>
+            {pagar.length === 0
+              ? <div className="col-empty">Sin facturas</div>
+              : pagar.map((d) => <DecisionCard key={d.file_id} d={d} policy={policy} onOpen={() => setSelectedId(d.file_id)} />)}
+          </DecisionColumn>
 
-        <Column title="No pagar" dot="nopagar" count={nopagar.length}>
-          {nopagar.length === 0
-            ? <div className="col-empty">Sin facturas</div>
-            : nopagar.map((d) => <DecisionCard key={d.file_id} d={d} policy={policy} onOpen={() => setSelectedId(d.file_id)} />)}
-        </Column>
+          <DecisionColumn title="No pagar" dot="nopagar" count={nopagar.length}>
+            {nopagar.length === 0
+              ? <div className="col-empty">Sin facturas</div>
+              : nopagar.map((d) => <DecisionCard key={d.file_id} d={d} policy={policy} onOpen={() => setSelectedId(d.file_id)} />)}
+          </DecisionColumn>
 
-        <Column title="Revisar" dot="revise" count={revise.length}>
-          {revise.length === 0
-            ? <div className="col-empty">Sin incidencias</div>
-            : revise.map((d) => <DecisionCard key={d.file_id} d={d} policy={policy} onOpen={() => setSelectedId(d.file_id)} />)}
-        </Column>
-      </div>
+          <DecisionColumn title="Revisar" dot="revise" count={revise.length}>
+            {revise.length === 0
+              ? <div className="col-empty">Sin incidencias</div>
+              : revise.map((d) => <DecisionCard key={d.file_id} d={d} policy={policy} onOpen={() => setSelectedId(d.file_id)} />)}
+          </DecisionColumn>
+        </div>
+      )}
 
       {selected && <DecisionModal d={selected} onClose={() => setSelectedId(null)} />}
     </>
-  );
-}
-
-function Column({ title, dot, count, children }: {
-  title: string; dot: string; count: number; children: React.ReactNode;
-}) {
-  return (
-    <div className="col">
-      <div className="col-head">
-        <div className="col-title">
-          <span className={`dot ${dot}`} /> {title}
-        </div>
-        <span className="count">{count}</span>
-      </div>
-      <div className="col-body">{children}</div>
-    </div>
   );
 }

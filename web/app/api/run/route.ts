@@ -14,8 +14,9 @@ export async function GET(req: Request) {
   const today = url.searchParams.get("today") || "";
   const limit = url.searchParams.get("limit") || "";
 
+  // keep prior decisions so recurring batches accumulate on the board and in history
   const args = [
-    "-m", "src.pipeline", "--stream", "--replace-state",
+    "-m", "src.pipeline", "--stream",
     "--dir", path.join(repoRoot(), "outputs", "inbox"),
   ];
   if (today) args.push("--today", today);
