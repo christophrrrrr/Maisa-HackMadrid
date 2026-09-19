@@ -60,7 +60,7 @@ export default function DecisionBoard() {
   const runningRef = useRef(false);
   const seenRef = useRef<Set<string>>(new Set());
   const decisionsRef = useRef<Map<string, Decision>>(new Map());
-  const runRef = useRef<(files?: File[], inboxOnly?: boolean) => void>(() => {});
+  const runRef = useRef<(files?: File[]) => void>(() => {});
 
   const loadState = useCallback(async () => {
     const snap: StateSnapshot = await fetch("/api/state").then((r) => r.json());
@@ -90,7 +90,7 @@ export default function DecisionBoard() {
       const fresh = files.filter((f) => !known.has(f.name));
       if (fresh.length === 0) return;
       for (const f of fresh) seenRef.current.add(f.name);
-      runRef.current(fresh, true);
+      runRef.current(fresh);
     }
     scan();
     const id = window.setInterval(scan, 4000);
@@ -117,7 +117,7 @@ export default function DecisionBoard() {
     setQueued((prev) => prev.filter((f) => f.name !== name));
   }
 
-  async function run(files?: File[], inboxOnly = false) {
+  async function run(files?: File[]) {
     const batch = files ?? queued;
     if (p.running || batch.length === 0) return;
     setErr("");
@@ -134,7 +134,8 @@ export default function DecisionBoard() {
       return false;
     }
 
-    const es = new EventSource(inboxOnly ? "/api/run?inbox=1" : "/api/run");
+    // inbox=1: only the files just uploaded, not the 500 challenge/facturas
+    const es = new EventSource("/api/run?inbox=1");
     esRef.current = es;
 
     es.onmessage = (e) => {

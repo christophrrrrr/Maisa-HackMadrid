@@ -7,18 +7,16 @@ export const dynamic = "force-dynamic";
 
 // GET /api/run?today=YYYY-MM-DD&limit=N
 // Streams the pipeline's per-file JSON progress as Server-Sent Events.
-// Processes the challenge facturas plus anything uploaded to outputs/inbox.
+// Always processes outputs/inbox (the files the console just uploaded).
 // The extractor (hybrid + Gemini vision) is chosen by the pipeline from policy.
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const today = url.searchParams.get("today") || "";
   const limit = url.searchParams.get("limit") || "";
-  const inbox = url.searchParams.get("inbox") === "1";
 
-  const args = ["-m", "src.pipeline", "--stream"];
+  const args = ["-m", "src.pipeline", "--stream", "--dir", path.join(repoRoot(), "outputs", "inbox")];
   if (today) args.push("--today", today);
   if (limit) args.push("--limit", limit);
-  if (inbox) args.push("--dir", path.join(repoRoot(), "outputs", "inbox"));
 
   const encoder = new TextEncoder();
   const stream = new ReadableStream({

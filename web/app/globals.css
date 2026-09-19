@@ -256,6 +256,9 @@ input.search, input.field, select.field {
   border-radius: var(--r-md); padding: var(--sp-2) var(--sp-3); font-size: var(--fs-base); font-family: inherit; outline: none;
 }
 input.search { width: 260px; }
+input.search::placeholder, input.field::placeholder {
+  color: var(--muted); opacity: 1; font-size: var(--fs-base);
+}
 input.field:focus, select.field:focus, input.search:focus { border-color: var(--accent); }
 .chip {
   font-size: var(--fs-xs); padding: 3px 9px; border: 1px solid var(--border-2); border-radius: var(--r-full);
@@ -362,13 +365,13 @@ input.field:focus, select.field:focus, input.search:focus { border-color: var(--
 
 .queue {
   display: flex; flex-wrap: wrap; gap: var(--sp-2); align-content: flex-start; align-items: center;
-  min-height: 46px; max-height: 128px; overflow-y: auto;
-  margin: 0 0 16px; padding: 10px 12px;
-  background: var(--panel-2); border: 1px solid var(--border); border-radius: var(--r-lg);
+  min-height: 38px; max-height: 128px; overflow-y: auto;
+  margin: 0 0 16px; padding: var(--sp-2) var(--sp-3);
+  background: var(--panel-2); border: 1px solid var(--border-2); border-radius: var(--r-md);
 }
 .queue::-webkit-scrollbar { width: 8px; }
 .queue::-webkit-scrollbar-thumb { background: var(--border-2); border-radius: var(--r-sm); }
-.queue-empty { color: var(--faint); font-size: var(--fs-sm); }
+.queue-empty { color: var(--muted); font-size: var(--fs-base); }
 .qchip {
   display: inline-flex; align-items: center; gap: var(--sp-2);
   background: var(--panel); border: 1px solid var(--border-2); border-radius: var(--r-md);
