@@ -631,7 +631,7 @@
       padding-top: 2mm;
       margin-top: auto;
       display: flex;
-      justify-content: space-between;
+      justify-content: center;
       align-items: center;
       font-family: var(--forma);
       font-size: 7pt;
@@ -641,7 +641,9 @@
 
     .portada-pie .telemetria {
       display: flex;
-      gap: 5mm;
+      justify-content: center;
+      gap: 12mm;
+      width: 100%;
       font-family: var(--dato);
       font-size: 6.7pt;
       color: var(--tinta);
@@ -650,10 +652,6 @@
     .portada-pie .telemetria span b {
       color: var(--sello);
       font-weight: 400;
-    }
-
-    .portada-pie .colofon {
-      letter-spacing: .02em;
     }
 
     /* ---------- figura de la costura (Arquitectura Forense) ---------- */
@@ -1012,8 +1010,8 @@
 
     <div class="portada-matriz-box">
       <div class="matriz-header">
-        <span><b>FIG. 1 · MATRIZ DETERMINISTA DEL LOTE 1</b> (500 facturas en retícula 25 × 20)</span>
-        <span class="gate-info">2,06 s · 0,00 $ MODELOS · 100 % DETERMINISTA</span>
+        <span><b>FIG. 1 · MATRIZ DETERMINISTA · DOS LOTES · 540 FACTURAS</b></span>
+        <span class="gate-info">471 PAGAR · 12 NO_PAGAR · 57 ESCALAR</span>
       </div>
       <svg viewBox="0 0 660 215" width="100%" height="auto" class="matriz-svg" xmlns="http://www.w3.org/2000/svg">
 
@@ -1048,7 +1046,7 @@
             </textPath>
           </text>
           <text x="530" y="92" font-family="'TeX Gyre Heros Cn', sans-serif" font-weight="700" font-size="8"
-            fill="#4a3c7e" text-anchor="middle" letter-spacing="0.4">500</text>
+            fill="#4a3c7e" text-anchor="middle" letter-spacing="0.4">540</text>
           <text x="530" y="101" font-family="'Noto Sans Mono', monospace" font-size="4.5" fill="#4a3c7e"
             text-anchor="middle" letter-spacing="0.3">FACTURAS</text>
           <text x="530" y="108" font-family="'Noto Sans Mono', monospace" font-size="3.8" fill="#4a3c7e"
@@ -1686,20 +1684,21 @@
         <rect x="615.2" y="161.2" width="5.6" height="5.6" transform="rotate(45 618.0 164.0)" fill="none"
           stroke="#9c6512" stroke-width="0.75" />
         <circle cx="618.0" cy="164.0" r="1.3" fill="#9c6512" />
+
         <line x1="12" y1="184" x2="648" y2="184" stroke="#c9d4ca" stroke-width="0.45" />
 
         <g transform="translate(18, 198)">
           <!-- PAGAR glyph -->
           <circle cx="4" cy="-1.5" r="2.2" fill="#256a4a" />
           <text x="11" y="1.2" font-family="'TeX Gyre Heros Cn', sans-serif" font-weight="700" font-size="6.4"
-            fill="#256a4a">452 PAGAR</text>
-          <text x="56" y="1.2" font-family="'Noto Sans Mono', monospace" font-size="5.4" fill="#55635b">(90,4 %)</text>
+            fill="#256a4a">471 PAGAR</text>
+          <text x="56" y="1.2" font-family="'Noto Sans Mono', monospace" font-size="5.4" fill="#55635b">(87,2 %)</text>
 
           <!-- NO_PAGAR glyph -->
           <circle cx="120" cy="-1.5" r="4.2" fill="none" stroke="#8f241b" stroke-width="0.75" stroke-dasharray="1 1" />
           <circle cx="120" cy="-1.5" r="1.8" fill="#8f241b" />
           <text x="129" y="1.2" font-family="'TeX Gyre Heros Cn', sans-serif" font-weight="700" font-size="6.4"
-            fill="#8f241b">11 NO_PAGAR</text>
+            fill="#8f241b">12 NO_PAGAR</text>
           <text x="180" y="1.2" font-family="'Noto Sans Mono', monospace" font-size="5.4" fill="#55635b">(2,2 %)</text>
 
           <!-- ESCALAR glyph -->
@@ -1707,8 +1706,8 @@
             stroke-width="0.75" />
           <circle cx="240.3" cy="-1.5" r="1.2" fill="#9c6512" />
           <text x="249" y="1.2" font-family="'TeX Gyre Heros Cn', sans-serif" font-weight="700" font-size="6.4"
-            fill="#9c6512">37 ESCALAR</text>
-          <text x="298" y="1.2" font-family="'Noto Sans Mono', monospace" font-size="5.4" fill="#55635b">(7,4 %)</text>
+            fill="#9c6512">57 ESCALAR</text>
+          <text x="298" y="1.2" font-family="'Noto Sans Mono', monospace" font-size="5.4" fill="#55635b">(10,6 %)</text>
 
           <!-- FILTERS BAR -->
           <text x="368" y="1.2" font-family="'Noto Sans Mono', monospace" font-size="5.2" fill="#4a3c7e"
@@ -1758,7 +1757,6 @@
         <span><b>8</b> hilos de extracción</span>
         <span><b>58</b> pruebas automáticas</span>
       </div>
-      <span class="colofon">Elequipo · albertitos_plan · 11 páginas de especificación</span>
     </div>
   </section>
 
