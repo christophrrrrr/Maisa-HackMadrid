@@ -3,7 +3,11 @@
 import { useMemo, useState } from "react";
 import type { Decision } from "@/lib/types";
 import { reasonLabel } from "@/lib/reasons";
-import { isIncidentSent, setIncidentSent } from "@/lib/incident-status";
+import {
+  getIncidentStatus,
+  setIncidentStatus,
+  type IncidentStatus,
+} from "@/lib/incident-status";
 
 function field(d: Decision, key: string): string {
   const value = (d.extracted ?? {})[key];
@@ -63,7 +67,7 @@ export default function IncidentResolver({ d, onClose }: { d: Decision; onClose:
   const [subject, setSubject] = useState(generated.subject);
   const [body, setBody] = useState(generated.body);
   const [copied, setCopied] = useState(false);
-  const [sent, setSent] = useState(() => isIncidentSent(d));
+  const [status, setStatus] = useState<IncidentStatus>(() => getIncidentStatus(d));
 
   const open = (url: string) => window.open(url, "_blank", "noopener,noreferrer");
   const encoded = {
@@ -140,17 +144,21 @@ export default function IncidentResolver({ d, onClose }: { d: Decision; onClose:
           WhatsApp
         </button>
       </div>
-      <label className="incident-sent-check">
-        <input
-          type="checkbox"
-          checked={sent}
+      <label className="incident-status-field">
+        <span>Estado de la incidencia</span>
+        <select
+          className="field"
+          value={status}
           onChange={(event) => {
-            const checked = event.target.checked;
-            setSent(checked);
-            setIncidentSent(d, checked);
+            const next = event.target.value as IncidentStatus;
+            setStatus(next);
+            setIncidentStatus(d, next);
           }}
-        />
-        <span>Mensaje enviado al proveedor</span>
+        >
+          <option value="pending">Pendiente</option>
+          <option value="sent">Enviado al proveedor</option>
+          <option value="resolved">Resuelto</option>
+        </select>
       </label>
     </div>
   );

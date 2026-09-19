@@ -25,13 +25,14 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
-  const { summary } = getState();
+  const { decisions } = getState();
+  const reviewDecisions = decisions.filter((decision) => decision.result === "ESCALAR");
   return (
     <html lang="es" className={`${sans.variable} ${mono.variable}`}>
       <body>
         <div className="app-shell">
           <aside className="sidebar">
-            <Nav reviewCount={summary.ESCALAR} />
+            <Nav reviewDecisions={reviewDecisions} />
           </aside>
           <main className="wrap">{children}</main>
         </div>

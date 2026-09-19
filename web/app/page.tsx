@@ -1,23 +1,14 @@
 import Link from "next/link";
 import { getState } from "@/lib/python";
-import { reasonLabel } from "@/lib/reasons";
 import { batchLabel, fmtWhen, runErrors, runWarnings, statusLabel, statusTone } from "@/lib/runs";
 import type { Decision } from "@/lib/types";
+import HomeReviewStatus from "@/components/HomeReviewStatus";
 
 export const dynamic = "force-dynamic";
 
-function fmtDate(iso: string) {
-  const [year, month, day] = iso.split("-");
-  return year && month && day ? `${day}/${month}/${year}` : iso;
-}
-
-function invoiceDate(decision: Decision): string | null {
-  const value = decision.extracted?.issue_date;
-  return typeof value === "string" && value ? value : null;
-}
-
 function urgencyDate(decision: Decision): string {
-  return invoiceDate(decision) || decision.updated_at || "9999-12-31";
+  const issueDate = decision.extracted?.issue_date;
+  return (typeof issueDate === "string" && issueDate) || decision.updated_at || "9999-12-31";
 }
 
 function relatedDecision(message: string, decisions: Decision[], runId: string): Decision | null {
@@ -43,28 +34,11 @@ function relatedDecision(message: string, decisions: Decision[], runId: string):
     ?? null;
 }
 
-function ReviewRow({ d }: { d: Decision }) {
-  const issuedAt = invoiceDate(d);
-  return (
-    <div className="home-row">
-      <div>
-        <div className="home-row-title">{d.file_id}</div>
-        <div className="meta">
-          {issuedAt ? `Factura del ${fmtDate(issuedAt)}` : `Pendiente desde ${fmtWhen(d.updated_at)}`}
-          {" · "}{reasonLabel(d.reason)}
-        </div>
-      </div>
-      <span className={`pill ${d.result}`}>{d.result}</span>
-    </div>
-  );
-}
-
 export default function HomePage() {
   const { latest_run, recent_runs, summary, decisions } = getState();
   const review = decisions
     .filter((d) => d.result === "ESCALAR")
-    .sort((a, b) => urgencyDate(a).localeCompare(urgencyDate(b)))
-    .slice(0, 6);
+    .sort((a, b) => urgencyDate(a).localeCompare(urgencyDate(b)));
   const runs = (recent_runs?.length ? recent_runs : latest_run ? [latest_run] : []).slice(0, 5);
   const issues = (recent_runs?.length ? recent_runs : latest_run ? [latest_run] : [])
     .flatMap((run) => [
@@ -99,18 +73,12 @@ export default function HomePage() {
           <div className="v NO_PAGAR">{summary.NO_PAGAR}</div>
           <div className="sub">no emitir pago</div>
         </div>
-        <Link className="card interactive-card" href="/review">
-          <div className="k">En revisión</div>
-          <div className="v ESCALAR">{summary.ESCALAR}</div>
-          <div className="sub">requieren inspección</div>
-        </Link>
+        <HomeReviewStatus decisions={review} variant="card" />
       </div>
 
       <div className="home-actions">
         <Link className="btn" href="/process">Procesar facturas</Link>
-        <Link className="btn ghost" href="/review">
-          Abrir revisión{summary.ESCALAR ? ` (${summary.ESCALAR})` : ""}
-        </Link>
+        <HomeReviewStatus decisions={review} variant="action" />
       </div>
 
       <div className="home-grid">
@@ -138,16 +106,7 @@ export default function HomePage() {
           )}
         </section>
 
-        <Link className="card interactive-card" href="/review">
-          <div className="k">Pendientes de revisión</div>
-          {review.length === 0 ? (
-            <div className="an-empty">No hay facturas en revisión.</div>
-          ) : (
-            <div className="home-list">
-              {review.map((d) => <ReviewRow key={d.file_id} d={d} />)}
-            </div>
-          )}
-        </Link>
+        <HomeReviewStatus decisions={review} variant="list" />
 
         <section className="card home-span">
           <div className="k">Errores e incidencias</div>

@@ -252,6 +252,7 @@ tbody tr:hover { background: var(--panel-2); }
 .incident-status::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
 .incident-status.sent { color: var(--pagar); }
 .incident-status.pending { color: var(--faint); }
+.incident-status.resolved { color: var(--accent); }
 .review-table-footer { padding: 10px 14px; border-top: 1px solid var(--border); }
 
 .modal-back {
@@ -298,11 +299,11 @@ tbody tr:hover { background: var(--panel-2); }
   outline: none; border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft);
 }
 .incident-channels { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
-.incident-sent-check {
+.incident-status-field {
   display: flex; align-items: center; gap: 9px; width: fit-content;
-  color: var(--text); font-size: var(--fs-sm); font-weight: 600; cursor: pointer;
+  color: var(--text); font-size: var(--fs-sm); font-weight: 600;
 }
-.incident-sent-check input { width: 16px; height: 16px; accent-color: var(--accent); }
+.incident-status-field .field { min-width: 190px; }
 .modal-split {
   display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
   min-height: 0; flex: 1; overflow: hidden;

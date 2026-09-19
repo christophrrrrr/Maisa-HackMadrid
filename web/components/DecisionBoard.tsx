@@ -6,13 +6,12 @@ import type { Decision, Policy, StateSnapshot } from "@/lib/types";
 import { reasonLabel } from "@/lib/reasons";
 import DecisionModal from "./DecisionModal";
 import { withFileDefaults } from "@/lib/files";
-import {
-  INCIDENT_STATUS_EVENT, incidentKey, isIncidentSent,
-} from "@/lib/incident-status";
+import type { IncidentStatus } from "@/lib/incident-status";
+import { useIncidentStatuses } from "@/lib/use-incident-statuses";
 
 type Conf = "ALL" | "OK" | "LOW";
 type DateOrder = "DESC" | "ASC";
-type IncidentStatus = "ALL" | "PENDING" | "SENT";
+type IncidentStatusFilter = "ALL" | IncidentStatus;
 
 function value(d: Decision, key: string): unknown {
   return (d.extracted ?? {})[key];
@@ -63,11 +62,10 @@ export default function DecisionBoard() {
   const [reason, setReason] = useState("ALL");
   const [conf, setConf] = useState<Conf>("ALL");
   const [supplier, setSupplier] = useState("ALL");
-  const [incidentStatus, setIncidentStatus] = useState<IncidentStatus>("ALL");
+  const [incidentStatus, setIncidentStatus] = useState<IncidentStatusFilter>("ALL");
   const [minAmount, setMinAmount] = useState("");
   const [maxAmount, setMaxAmount] = useState("");
   const [dateOrder, setDateOrder] = useState<DateOrder>("DESC");
-  const [sentKeys, setSentKeys] = useState<Set<string>>(new Set());
   const [policy, setPolicy] = useState<Policy | null>(null);
 
   const loadState = useCallback(async () => {
@@ -88,24 +86,8 @@ export default function DecisionBoard() {
   }, []);
 
   const all = useMemo(() => [...decisions.values()], [decisions]);
-  useEffect(() => {
-    setSentKeys(new Set(all.filter(isIncidentSent).map(incidentKey)));
-  }, [all]);
-  useEffect(() => {
-    const update = (event: Event) => {
-      const { key, sent } = (event as CustomEvent<{ key: string; sent: boolean }>).detail;
-      setSentKeys((current) => {
-        const next = new Set(current);
-        if (sent) next.add(key);
-        else next.delete(key);
-        return next;
-      });
-    };
-    window.addEventListener(INCIDENT_STATUS_EVENT, update);
-    return () => window.removeEventListener(INCIDENT_STATUS_EVENT, update);
-  }, []);
-
   const pool = useMemo(() => all.filter((d) => d.result === "ESCALAR"), [all]);
+  const { statusFor, unresolvedCount } = useIncidentStatuses(pool);
   const reasons = useMemo(() => {
     const s = new Set(pool.map((d) => d.reason).filter(Boolean));
     return [...s].sort((a, b) => reasonLabel(a, policy).localeCompare(reasonLabel(b, policy), "es"));
@@ -126,9 +108,7 @@ export default function DecisionBoard() {
     if (reason !== "ALL" && d.reason !== reason) return false;
     if (conf === "OK" && !d.extraction_ok) return false;
     if (conf === "LOW" && d.extraction_ok) return false;
-    const sent = sentKeys.has(incidentKey(d));
-    if (incidentStatus === "SENT" && !sent) return false;
-    if (incidentStatus === "PENDING" && sent) return false;
+    if (incidentStatus !== "ALL" && statusFor(d) !== incidentStatus) return false;
     const supplierKey = textValue(d, "supplier_tax_id") || textValue(d, "supplier_name");
     if (supplier !== "ALL" && supplierKey !== supplier) return false;
     const amount = Number(value(d, "total"));
@@ -187,11 +167,12 @@ export default function DecisionBoard() {
           className="field"
           aria-label="Filtrar por estado"
           value={incidentStatus}
-          onChange={(e) => setIncidentStatus(e.target.value as IncidentStatus)}
+          onChange={(e) => setIncidentStatus(e.target.value as IncidentStatusFilter)}
         >
           <option value="ALL">Todos los estados</option>
-          <option value="PENDING">Pendiente</option>
-          <option value="SENT">Enviado</option>
+          <option value="pending">Pendiente</option>
+          <option value="sent">Enviado</option>
+          <option value="resolved">Resuelto</option>
         </select>
         <input
           className="field amount-filter"
@@ -274,8 +255,10 @@ export default function DecisionBoard() {
                       : <span className="faint">ninguno</span>}
                   </td>
                   <td>
-                    <span className={`incident-status ${sentKeys.has(incidentKey(d)) ? "sent" : "pending"}`}>
-                      {sentKeys.has(incidentKey(d)) ? "Enviado" : "Pendiente"}
+                    <span className={`incident-status ${statusFor(d)}`}>
+                      {statusFor(d) === "resolved"
+                        ? "Resuelto"
+                        : statusFor(d) === "sent" ? "Enviado" : "Pendiente"}
                     </span>
                   </td>
                 </tr>
@@ -290,7 +273,7 @@ export default function DecisionBoard() {
         </div>
         <div className="review-table-footer">
           <span className="meta">
-            {revise.length} factura{revise.length === 1 ? "" : "s"} pendiente{revise.length === 1 ? "" : "s"}
+            {unresolvedCount} factura{unresolvedCount === 1 ? "" : "s"} por resolver
           </span>
         </div>
       </div>

@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import type { Decision } from "@/lib/types";
+import { useIncidentStatuses } from "@/lib/use-incident-statuses";
 
 function IconHome() {
   return (
@@ -95,15 +97,16 @@ const RECORDS: Tab[] = [
 
 const REPORTING: Tab[] = [
   { href: "/cambios", label: "Cambios", Icon: IconCambios },
-  { href: "/insights", label: "Análisis", Icon: IconInsights },
+  { href: "/insights", label: "An\u00e1lisis", Icon: IconInsights },
 ];
 
-export default function Nav({ reviewCount = 0 }: { reviewCount?: number }) {
+export default function Nav({ reviewDecisions = [] }: { reviewDecisions?: Decision[] }) {
   const path = usePathname();
+  const { unresolvedCount } = useIncidentStatuses(reviewDecisions);
 
   function tab(t: Tab) {
     const active = t.href === "/" ? path === "/" : path.startsWith(t.href);
-    const badge = t.href === "/review" ? reviewCount : t.badge;
+    const badge = t.href === "/review" ? unresolvedCount : t.badge;
     return (
       <Link key={t.href} href={t.href} className={active ? "active" : ""}>
         <t.Icon />
