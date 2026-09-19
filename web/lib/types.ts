@@ -98,7 +98,7 @@ export interface RunDiff {
   removed: string[];
 }
 
-export type FileKind = "pdf" | "image" | "xml";
+export type FileKind = "pdf" | "image" | "xml" | "email" | "docx" | "spreadsheet" | "text";
 
 export interface FileTypeConfig {
   enabled: boolean;

@@ -2,26 +2,41 @@ import type { FileKind, FileTypeConfig, FileTypeMeta, Policy, WatchConfig } from
 
 export const DEFAULT_WATCH: WatchConfig = { enabled: false, folder_name: null };
 
+// Keep these in sync with src/policy.py (DEFAULT_FILE_TYPES / FILE_TYPE_META).
+// They are only a fallback: the live values come from the backend via /api/policy.
 export const DEFAULT_FILE_TYPES: Record<FileKind, FileTypeConfig> = {
   pdf: { enabled: true, vision: true },
   image: { enabled: false, vision: true, max_mb: 12 },
   xml: { enabled: false, facturae: true },
+  email: { enabled: false, vision: true },
+  docx: { enabled: false, vision: true },
+  spreadsheet: { enabled: false, vision: false },
+  text: { enabled: false, vision: true },
 };
 
 export const DEFAULT_FILE_TYPE_META: Record<FileKind, FileTypeMeta> = {
   pdf: { label: "PDF", exts: [".pdf"], help: "facturas digitales y escaneos" },
   image: { label: "Imagen", exts: [".jpg", ".jpeg", ".png", ".webp", ".tif", ".tiff"], help: "fotos y escaneos sueltos" },
   xml: { label: "XML", exts: [".xml", ".xsig"], help: "FacturaE / UBL" },
+  email: { label: "Email", exts: [".eml", ".msg"], help: "correos con o sin adjuntos" },
+  docx: { label: "Word", exts: [".docx", ".doc"], help: "documentos de Word" },
+  spreadsheet: { label: "Hoja de c\u00e1lculo", exts: [".xlsx", ".xls", ".csv"], help: "Excel / CSV" },
+  text: { label: "Texto", exts: [".txt", ".md", ".htm", ".html", ".json"], help: "texto plano / HTML" },
 };
 
 export function withFileDefaults(p: Policy): Policy {
+  // merge over EVERY kind the backend knows about (plus our local defaults) so a
+  // format added in policy.py automatically shows up instead of being dropped.
+  const metaKeys = Object.keys(p.file_type_meta ?? DEFAULT_FILE_TYPE_META) as FileKind[];
+  const defaultKeys = Object.keys(DEFAULT_FILE_TYPES) as FileKind[];
+  const kinds = Array.from(new Set<FileKind>([...defaultKeys, ...metaKeys]));
+  const file_types = {} as Record<FileKind, FileTypeConfig>;
+  for (const k of kinds) {
+    file_types[k] = { ...(DEFAULT_FILE_TYPES[k] ?? { enabled: false }), ...(p.file_types?.[k] ?? {}) };
+  }
   return {
     ...p,
-    file_types: {
-      pdf: { ...DEFAULT_FILE_TYPES.pdf, ...(p.file_types?.pdf ?? {}) },
-      image: { ...DEFAULT_FILE_TYPES.image, ...(p.file_types?.image ?? {}) },
-      xml: { ...DEFAULT_FILE_TYPES.xml, ...(p.file_types?.xml ?? {}) },
-    },
+    file_types,
     file_type_meta: p.file_type_meta ?? DEFAULT_FILE_TYPE_META,
     watch: { ...DEFAULT_WATCH, ...(p.watch ?? {}) },
   };

@@ -7,7 +7,30 @@ import {
 } from "@/lib/files";
 
 const RESULTS: Result[] = ["PAGAR", "NO_PAGAR", "ESCALAR"];
-const KINDS: FileKind[] = ["pdf", "image", "xml"];
+// must stay in sync with src/policy.py FILE_TYPE_META / DEFAULT_FILE_TYPES
+const KIND_ORDER: FileKind[] = ["pdf", "image", "xml", "email", "docx", "spreadsheet", "text"];
+const KIND_GROUPS: { title: string; help: string; kinds: FileKind[] }[] = [
+  {
+    title: "Facturas",
+    help: "Formatos habituales de factura de proveedor.",
+    kinds: ["pdf", "image", "xml"],
+  },
+  {
+    title: "Otros documentos",
+    help: "Ingesta universal: se extraen campos o se escala si no es una factura.",
+    kinds: ["email", "docx", "spreadsheet", "text"],
+  },
+];
+
+const KIND_READER: Record<FileKind, string> = {
+  pdf: "Texto embebido; visi\u00f3n si es un escaneo",
+  image: "Visi\u00f3n / OCR",
+  xml: "FacturaE / UBL estructurado",
+  email: "Cuerpo y adjuntos; IA si falta texto",
+  docx: "Texto del documento; IA si no basta",
+  spreadsheet: "Tablas Excel / CSV",
+  text: "Texto / HTML; IA si no basta",
+};
 
 function fromIso(iso: string | null): { d: string; m: string; y: string } {
   if (!iso) return { d: "", m: "", y: "" };
@@ -27,17 +50,25 @@ function toIso(d: string, m: string, y: string): string | null {
   return `${y}-${mm}-${dd}`;
 }
 
-function Switch({ on, onClick, label }: { on: boolean; onClick: () => void; label: string }) {
+function Switch({ on, onClick, label, disabled }: {
+  on: boolean; onClick: () => void; label: string; disabled?: boolean;
+}) {
   return (
-    <button
-      type="button"
-      className={"switch" + (on ? " on" : "")}
-      onClick={onClick}
-      aria-label={label}
-      aria-pressed={on}
-    >
-      <i />
-    </button>
+    <span className={"switch-wrap" + (disabled ? " disabled" : "")} title={disabled ? "Debe quedar al menos un formato activo" : undefined}>
+      <button
+        type="button"
+        className={"switch" + (on ? " on" : "")}
+        onClick={onClick}
+        aria-label={label}
+        aria-pressed={on}
+        disabled={disabled}
+      >
+        <i />
+      </button>
+      <span className={"switch-state" + (on ? " on" : "")} aria-hidden="true">
+        {on ? "Activo" : "Inactivo"}
+      </span>
+    </span>
   );
 }
 
@@ -85,6 +116,21 @@ export default function Settings() {
         ...d,
         file_types: { ...d.file_types, [kind]: { ...d.file_types[kind], ...next } },
       };
+    });
+    setSaved(false);
+  }
+  function patchGroup(kinds: FileKind[], enabled: boolean) {
+    setDraft((d) => {
+      if (!d) return d;
+      const file_types = { ...d.file_types };
+      for (const k of kinds) {
+        if (!file_types[k]) continue;
+        file_types[k] = { ...file_types[k], enabled };
+      }
+      if (!Object.values(file_types).some((spec) => spec.enabled) && file_types.pdf) {
+        file_types.pdf = { ...file_types.pdf, enabled: true };
+      }
+      return { ...d, file_types };
     });
     setSaved(false);
   }
@@ -138,6 +184,18 @@ export default function Settings() {
   if (!draft) return <div className="muted">Cargando configuración...</div>;
 
   const codes = Object.keys(draft.reason_outcomes);
+  const metaKeys = Object.keys(draft.file_type_meta) as FileKind[];
+  const kinds: FileKind[] = [
+    ...KIND_ORDER.filter((k) => metaKeys.includes(k) || Boolean(draft.file_types[k])),
+    ...metaKeys.filter((k) => !KIND_ORDER.includes(k)),
+  ];
+  const groups = KIND_GROUPS
+    .map((g) => ({ ...g, kinds: g.kinds.filter((k) => kinds.includes(k)) }))
+    .filter((g) => g.kinds.length > 0);
+  const grouped = new Set(groups.flatMap((g) => g.kinds));
+  const leftover = kinds.filter((k) => !grouped.has(k));
+  if (leftover.length) groups.push({ title: "Otros", help: "", kinds: leftover });
+  const enabledCount = kinds.filter((k) => draft.file_types[k]?.enabled).length;
   const dateInvalid = Boolean((date.d || date.m || date.y) && !toIso(date.d, date.m, date.y));
   const watchInvalid = draft.watch.enabled && !draft.watch.folder_name;
 
@@ -214,94 +272,180 @@ export default function Settings() {
               <div className="settings-card-icon" aria-hidden="true">02</div>
               <div>
                 <h2>Tipos de archivo</h2>
-                <p>Elige los formatos aceptados y su método de lectura.</p>
+                <p>{"Elige los formatos que el lote acepta y c\u00f3mo se leen."}</p>
               </div>
+              <span className="file-type-count">{enabledCount} de {kinds.length} activos</span>
             </div>
-            <div className="file-type-list">
-              {KINDS.map((kind) => {
-                const spec = draft.file_types[kind];
-                const meta = draft.file_type_meta[kind];
-                const label = meta?.label ?? kind;
-                return (
-                  <div key={kind} className={"file-type-item" + (spec.enabled ? "" : " off")}>
-                    <div className="file-type-head">
-                      <div>
-                        <div className="file-type-name">
-                          <span className="file-type-badge">{kind}</span>
-                          <strong>{label}</strong>
-                        </div>
-                        <p>{meta?.help} · {(meta?.exts ?? []).join(" ")}</p>
-                      </div>
-                      <Switch
-                        label={`${spec.enabled ? "Desactivar" : "Activar"} ${label}`}
-                        on={spec.enabled}
-                        onClick={() => patchType(kind, { enabled: !spec.enabled })}
-                      />
+            {groups.map((group) => {
+              const onInGroup = group.kinds.filter((k) => draft.file_types[k]?.enabled).length;
+              const allOn = onInGroup === group.kinds.length;
+              return (
+                <div key={group.title} className="file-type-group">
+                  <div className="file-type-group-head">
+                    <div>
+                      <strong>{group.title}</strong>
+                      <span>{group.help}</span>
                     </div>
-                    {spec.enabled && (
-                      <div className="file-type-options">
-                        {kind === "pdf" && (
-                          <div className="settings-field-row">
-                            <div className="settings-field-copy">
-                              <label>Visión en escaneos</label>
-                              <span>Usar OCR cuando el PDF no contiene texto.</span>
-                            </div>
-                            <Switch
-                              label="Activar visión en PDF escaneados"
-                              on={Boolean(spec.vision)}
-                              onClick={() => patchType(kind, { vision: !spec.vision })}
-                            />
-                          </div>
-                        )}
-                        {kind === "image" && (
-                          <>
-                            <div className="settings-field-row">
-                              <div className="settings-field-copy">
-                                <label>Visión / OCR</label>
-                                <span>Necesario para leer fotos y capturas.</span>
-                              </div>
-                              <Switch
-                                label="Activar visión para imágenes"
-                                on={Boolean(spec.vision)}
-                                onClick={() => patchType(kind, { vision: !spec.vision })}
-                              />
-                            </div>
-                            <div className="settings-field-row">
-                              <div className="settings-field-copy">
-                                <label htmlFor="image-max-size">Tamaño máximo</label>
-                                <span>Límite por imagen subida.</span>
-                              </div>
-                              <div className="input-suffix narrow">
-                                <input
-                                  id="image-max-size"
-                                  className="field" type="number" min={1} max={50} step={1}
-                                  value={spec.max_mb ?? 12}
-                                  onChange={(e) => patchType(kind, { max_mb: Number(e.target.value) || 1 })}
-                                />
-                                <span>MB</span>
-                              </div>
-                            </div>
-                          </>
-                        )}
-                        {kind === "xml" && (
-                          <div className="settings-field-row">
-                            <div className="settings-field-copy">
-                              <label>FacturaE / UBL</label>
-                              <span>Interpretar etiquetas de facturas electrónicas.</span>
-                            </div>
-                            <Switch
-                              label="Activar lectura FacturaE y UBL"
-                              on={Boolean(spec.facturae)}
-                              onClick={() => patchType(kind, { facturae: !spec.facturae })}
-                            />
-                          </div>
-                        )}
-                      </div>
+                    {group.kinds.length > 1 && (
+                      <button
+                        type="button"
+                        className="btn ghost sm"
+                        onClick={() => patchGroup(group.kinds, !allOn)}
+                      >
+                        {allOn ? "Desactivar grupo" : "Activar grupo"}
+                      </button>
                     )}
                   </div>
-                );
-              })}
-            </div>
+                  <div className="file-type-list">
+                    {group.kinds.map((kind) => {
+                      const spec = draft.file_types[kind] ?? { enabled: false };
+                      const meta = draft.file_type_meta[kind];
+                      const label = meta?.label ?? kind;
+                      const lastOn = spec.enabled && enabledCount <= 1;
+                      return (
+                        <div key={kind} className={"file-type-item" + (spec.enabled ? " on" : " off")}>
+                          <div className="file-type-head">
+                            <div>
+                              <div className="file-type-name">
+                                <strong>{label}</strong>
+                                <span className="file-type-reader">{KIND_READER[kind] ?? kind}</span>
+                              </div>
+                              <p>{meta?.help}</p>
+                              <div className="ext-chips">
+                                {(meta?.exts ?? []).map((ext) => (
+                                  <span key={ext} className="ext-chip">{ext}</span>
+                                ))}
+                              </div>
+                            </div>
+                            <Switch
+                              label={`${spec.enabled ? "Desactivar" : "Activar"} ${label}`}
+                              on={Boolean(spec.enabled)}
+                              disabled={lastOn}
+                              onClick={() => {
+                                if (lastOn) return;
+                                patchType(kind, { enabled: !spec.enabled });
+                              }}
+                            />
+                          </div>
+                          {spec.enabled && (
+                            <div className="file-type-options">
+                              {kind === "pdf" && (
+                                <div className="settings-field-row">
+                                  <div className="settings-field-copy">
+                                    <label>{"Visi\u00f3n en escaneos"}</label>
+                                    <span>Usar OCR cuando el PDF no contiene texto.</span>
+                                  </div>
+                                  <Switch
+                                    label={"Activar visi\u00f3n en PDF escaneados"}
+                                    on={Boolean(spec.vision)}
+                                    onClick={() => patchType(kind, { vision: !spec.vision })}
+                                  />
+                                </div>
+                              )}
+                              {kind === "image" && (
+                                <>
+                                  <div className="settings-field-row">
+                                    <div className="settings-field-copy">
+                                      <label>{"Visi\u00f3n / OCR"}</label>
+                                      <span>Necesario para leer fotos y capturas.</span>
+                                    </div>
+                                    <Switch
+                                      label={"Activar visi\u00f3n para im\u00e1genes"}
+                                      on={Boolean(spec.vision)}
+                                      onClick={() => patchType(kind, { vision: !spec.vision })}
+                                    />
+                                  </div>
+                                  <div className="settings-field-row">
+                                    <div className="settings-field-copy">
+                                      <label htmlFor="image-max-size">{"Tama\u00f1o m\u00e1ximo"}</label>
+                                      <span>{"L\u00edmite por imagen subida."}</span>
+                                    </div>
+                                    <div className="input-suffix narrow">
+                                      <input
+                                        id="image-max-size"
+                                        className="field" type="number" min={1} max={50} step={1}
+                                        value={spec.max_mb ?? 12}
+                                        onChange={(e) => patchType(kind, { max_mb: Number(e.target.value) || 1 })}
+                                      />
+                                      <span>MB</span>
+                                    </div>
+                                  </div>
+                                </>
+                              )}
+                              {kind === "xml" && (
+                                <div className="settings-field-row">
+                                  <div className="settings-field-copy">
+                                    <label>FacturaE / UBL</label>
+                                    <span>{"Interpretar etiquetas de facturas electr\u00f3nicas."}</span>
+                                  </div>
+                                  <Switch
+                                    label="Activar lectura FacturaE y UBL"
+                                    on={Boolean(spec.facturae)}
+                                    onClick={() => patchType(kind, { facturae: !spec.facturae })}
+                                  />
+                                </div>
+                              )}
+                              {kind === "email" && (
+                                <div className="settings-field-row">
+                                  <div className="settings-field-copy">
+                                    <label>IA en el cuerpo / adjuntos</label>
+                                    <span>Si el correo no trae campos claros, extraer con IA.</span>
+                                  </div>
+                                  <Switch
+                                    label={`${spec.vision ? "Desactivar" : "Activar"} IA para email`}
+                                    on={Boolean(spec.vision)}
+                                    onClick={() => patchType(kind, { vision: !spec.vision })}
+                                  />
+                                </div>
+                              )}
+                              {kind === "docx" && (
+                                <div className="settings-field-row">
+                                  <div className="settings-field-copy">
+                                    <label>IA de respaldo</label>
+                                    <span>Usar IA cuando el texto del Word no baste.</span>
+                                  </div>
+                                  <Switch
+                                    label={`${spec.vision ? "Desactivar" : "Activar"} IA para Word`}
+                                    on={Boolean(spec.vision)}
+                                    onClick={() => patchType(kind, { vision: !spec.vision })}
+                                  />
+                                </div>
+                              )}
+                              {kind === "spreadsheet" && (
+                                <div className="settings-field-row">
+                                  <div className="settings-field-copy">
+                                    <label>IA de respaldo</label>
+                                    <span>Normalmente no hace falta: se leen las celdas.</span>
+                                  </div>
+                                  <Switch
+                                    label={`${spec.vision ? "Desactivar" : "Activar"} IA para hojas`}
+                                    on={Boolean(spec.vision)}
+                                    onClick={() => patchType(kind, { vision: !spec.vision })}
+                                  />
+                                </div>
+                              )}
+                              {kind === "text" && (
+                                <div className="settings-field-row">
+                                  <div className="settings-field-copy">
+                                    <label>IA de respaldo</label>
+                                    <span>Usar IA cuando el texto o HTML no sea una factura clara.</span>
+                                  </div>
+                                  <Switch
+                                    label={`${spec.vision ? "Desactivar" : "Activar"} IA para texto`}
+                                    on={Boolean(spec.vision)}
+                                    onClick={() => patchType(kind, { vision: !spec.vision })}
+                                  />
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
           </section>
 
           <section className="settings-card">

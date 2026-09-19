@@ -70,7 +70,11 @@ FILE_TYPE_META: dict[str, dict] = {
     "xml": {"label": "XML", "exts": [".xml", ".xsig"], "help": "FacturaE / UBL"},
     "email": {"label": "Email", "exts": [".eml", ".msg"], "help": "correos con o sin adjuntos"},
     "docx": {"label": "Word", "exts": [".docx", ".doc"], "help": "documentos de Word"},
-    "spreadsheet": {"label": "Hoja de calculo", "exts": [".xlsx", ".xls", ".csv"], "help": "Excel / CSV"},
+    "spreadsheet": {
+        "label": "Hoja de c\u00e1lculo",
+        "exts": [".xlsx", ".xls", ".csv"],
+        "help": "Excel / CSV",
+    },
     "text": {"label": "Texto", "exts": [".txt", ".md", ".htm", ".html", ".json"], "help": "texto plano / HTML"},
 }
 
