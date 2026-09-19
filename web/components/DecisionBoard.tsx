@@ -14,9 +14,9 @@ type Conf = "ALL" | "OK" | "LOW";
 
 function partial(file_id: string, result: Result, reason: string): Decision {
   return {
-    file_id, run_id: "", result, reason, findings: [], evidence: {},
+    file_id, run_id: "", result, reason, detail: null, findings: [], evidence: {}, checks: [],
     rules_version: "", extraction_method: null, extraction_ok: true,
-    extracted: null, latency_ms: null, cost_usd: 0, updated_at: "",
+    extracted: null, extraction_evidence: {}, latency_ms: null, cost_usd: 0, updated_at: "",
   };
 }
 
