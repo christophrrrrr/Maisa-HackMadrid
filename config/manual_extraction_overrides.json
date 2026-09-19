@@ -1,0 +1,10 @@
+{
+  "scan_021.pdf": {
+    "sha256": "b6a220c2177d4a46b96bab3980bfb90a1918c3a9639b992a571f0704aed3159f",
+    "fields": {
+      "supplier_tax_id": "B90233808",
+      "extraction_ok": true,
+      "extraction_note": "human-verified NIF from the invoice header; cross-checked with PO-2026-0723, supplier P011, matching IBAN, and ERP entry AS-72007"
+    }
+  }
+}

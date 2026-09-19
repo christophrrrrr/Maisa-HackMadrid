@@ -96,6 +96,11 @@ for the same document twice. The default route is `google/gemini-3-flash`, with
 `--model`, repeated `--fallback-model`, `AI_GATEWAY_MODEL` or
 `AI_GATEWAY_FALLBACK_MODELS`.
 
+Human-verified field corrections live in
+`config/manual_extraction_overrides.json`. Each correction is bound to the exact PDF SHA-256,
+applied after extraction and recorded as `+human-override` in the decision trace. A changed
+PDF fails closed instead of inheriting a stale correction.
+
 #### Share the Gateway key safely
 
 Do not commit the real key. Add `AI_GATEWAY_API_KEY` to the linked Vercel project's

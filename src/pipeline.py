@@ -22,6 +22,7 @@ from . import state
 from .business_data import load_business_data
 from .erp_snapshot import index_by_pedido, load_snapshot
 from .extractor import Extractor
+from .manual_overrides import apply_override, load_overrides
 from .models import InvoiceData
 from .policy import accepted_suffixes, load_policy
 from .rules_engine import decide_batch
@@ -107,6 +108,7 @@ def run(
     erp = index_by_pedido(load_snapshot())
 
     files = _collect_files(facturas_dir, limit)
+    manual_overrides = load_overrides()
     run_id = datetime.now(timezone.utc).isoformat()
 
     conn = state.connect(db_path)
@@ -119,16 +121,21 @@ def run(
     latencies: dict[str, float] = {}
     method: dict[str, str] = {}
     costs: dict[str, float] = {}
+    manual_override_count = 0
     t0 = time.monotonic()
     for i, f in enumerate(files, 1):
         s = time.monotonic()
         inv = extractor.extract(f)
+        inv, manually_corrected = apply_override(inv, f, manual_overrides)
         ms = (time.monotonic() - s) * 1000
         invoices.append(inv)
         latencies[inv.file_id] = ms
         # prefer the per-file method the extractor actually took (embedded_text/vision/...)
         method[inv.file_id] = getattr(extractor, "last_method", None) or (
             extractor.name if inv.extraction_ok else f"{extractor.name}(low-conf)")
+        if manually_corrected:
+            method[inv.file_id] = f"{method[inv.file_id]}+human-override"
+            manual_override_count += 1
         costs[inv.file_id] = float(getattr(extractor, "last_cost", 0.0) or 0.0)
         _emit(stream, {"event": "extracted", "i": i, "total": len(files),
                        "file_id": inv.file_id, "ok": inv.extraction_ok, "latency_ms": round(ms, 1)})
@@ -159,6 +166,7 @@ def run(
         "extractor_low_conf": sum(1 for v in method.values() if "low-conf" in v or v == "unavailable"),
         "avg_latency_ms": round(sum(latencies.values()) / len(latencies), 1) if latencies else 0,
         "n_vision": n_vision,
+        "n_manual_overrides": manual_override_count,
         "cost_usd": total_cost,
     }
     state.finish_run(conn, run_id, elapsed_s=elapsed, cost_usd=total_cost, stats=stats)
