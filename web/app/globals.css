@@ -633,6 +633,13 @@ input.search, input.field, select.field {
   min-height: 38px; background: var(--panel); border: 1px solid var(--border-2); color: var(--text);
   border-radius: var(--r-md); padding: var(--sp-2) var(--sp-3); font-size: var(--fs-sm); font-family: inherit; outline: none;
 }
+select.field {
+  appearance: none;
+  padding-right: 34px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none'%3E%3Cpath d='m3 4.5 3 3 3-3' stroke='%23667085' stroke-width='1.25' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-position: right 12px center;
+  background-repeat: no-repeat;
+}
 input.search { width: 260px; }
 input.search::placeholder, input.field::placeholder {
   color: var(--muted); opacity: 1; font-size: var(--fs-base);
