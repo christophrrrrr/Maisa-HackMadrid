@@ -1,5 +1,6 @@
 import "./globals.css";
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Newsreader, Source_Sans_3 } from "next/font/google";
 import Nav from "@/components/Nav";
 
@@ -16,8 +17,9 @@ const serif = Newsreader({
 });
 
 export const metadata: Metadata = {
-  title: "Consola de facturas",
-  description: "Consola de revisi\u00f3n del pipeline de facturas",
+  title: "Otrebla · Consola de facturas",
+  applicationName: "Otrebla",
+  description: "Otrebla: revisi\u00f3n y seguimiento de decisiones sobre facturas.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -25,6 +27,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="es" className={`${sans.variable} ${serif.variable}`}>
       <body>
         <div className="topbar">
+          <Link href="/" className="brand" aria-label="Otrebla, inicio">Otrebla</Link>
           <Nav />
         </div>
         <main className="wrap">{children}</main>
