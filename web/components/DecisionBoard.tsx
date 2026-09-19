@@ -136,9 +136,16 @@ export default function DecisionBoard() {
 
     const es = new EventSource(inboxOnly ? "/api/run?inbox=1" : "/api/run");
     esRef.current = es;
+    let finished = false;
 
     es.onmessage = (e) => {
-      const m = JSON.parse(e.data);
+      let m: Record<string, any>;
+      try {
+        m = JSON.parse(e.data) as Record<string, any>;
+      } catch {
+        setErr("El servidor envio una respuesta de progreso no valida.");
+        return;
+      }
       switch (m.event) {
         case "run_start":
           setP({ done: 0, total: m.total, running: true });
@@ -161,21 +168,28 @@ export default function DecisionBoard() {
           });
           break;
         case "closed":
+          finished = true;
           es.close();
           esRef.current = null;
           setP((s) => ({ ...s, running: false }));
           setOngoing([]);
-          setQueued([]);
+          if (m.code === 0) setQueued([]);
+          if (m.code !== 0) {
+            setErr((current) => current || `El pipeline termino con codigo ${m.code ?? "desconocido"}.`);
+          }
           loadState();
           break;
         case "error":
-          setErr(String(m.message || "Error en la ejecucion"));
+          setErr(String(m.message || `Error en la ejecucion (codigo ${m.code ?? "desconocido"})`));
           break;
         default:
           break;
       }
     };
     es.onerror = () => {
+      if (!finished) {
+        setErr((current) => current || "Se perdio la conexion con el pipeline antes de recibir el resultado.");
+      }
       es.close();
       esRef.current = null;
       setP((s) => ({ ...s, running: false }));

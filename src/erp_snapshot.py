@@ -74,10 +74,18 @@ def load_snapshot(db_path: Path = DEFAULT_DB) -> list[ERPEntry]:
     """Read the cached snapshot back as ERPEntry[] (offline, no ERP needed)."""
     conn = sqlite3.connect(db_path)
     try:
-        rows = conn.execute(
-            "SELECT asiento_id, purchase_order, supplier_id, tax_id, expected_amount, status, date "
-            "FROM erp_asientos"
-        ).fetchall()
+        try:
+            rows = conn.execute(
+                "SELECT asiento_id, purchase_order, supplier_id, tax_id, expected_amount, status, date "
+                "FROM erp_asientos"
+            ).fetchall()
+        except sqlite3.OperationalError as exc:
+            if "no such table" not in str(exc):
+                raise
+            raise RuntimeError(
+                "El snapshot del ERP no esta inicializado. Arranca el ERP local y ejecuta "
+                "`.venv/bin/python -m src.erp_snapshot` desde la raiz del repositorio."
+            ) from exc
     finally:
         conn.close()
     return [

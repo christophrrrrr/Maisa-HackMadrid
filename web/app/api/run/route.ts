@@ -21,15 +21,54 @@ export async function GET(req: Request) {
   if (inbox) args.push("--dir", path.join(repoRoot(), "outputs", "inbox"));
 
   const encoder = new TextEncoder();
+  let child: ReturnType<typeof spawn> | null = null;
+  let streamEnded = false;
   const stream = new ReadableStream({
     start(controller) {
-      const send = (obj: unknown) =>
-        controller.enqueue(encoder.encode(`data: ${JSON.stringify(obj)}\n\n`));
-
-      const child = spawn(pythonCmd(), args, { cwd: repoRoot() });
+      let processEnded = false;
+      let stderr = "";
       let buf = "";
 
-      child.stdout.on("data", (chunk: Buffer) => {
+      const send = (obj: unknown) => {
+        if (streamEnded) return;
+        try {
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify(obj)}\n\n`));
+        } catch {
+          // The browser may disconnect while Python is still shutting down.
+          streamEnded = true;
+        }
+      };
+
+      const finish = (code: number | null, spawnError?: unknown) => {
+        if (processEnded) return;
+        processEnded = true;
+
+        if (buf.trim()) {
+          try { send(JSON.parse(buf.trim())); } catch { send({ event: "log", message: buf.trim() }); }
+        }
+        if (code !== 0) {
+          const detail = stderr.trim() || (spawnError ? String(spawnError) : "");
+          send({
+            event: "error",
+            code,
+            message: detail || `El pipeline termino con codigo ${code ?? "desconocido"}.`,
+          });
+        }
+        send({ event: "closed", code });
+
+        if (!streamEnded) {
+          streamEnded = true;
+          try { controller.close(); } catch { /* already closed by the client */ }
+        }
+      };
+
+      const proc = spawn(pythonCmd(), args, {
+        cwd: repoRoot(),
+        stdio: ["ignore", "pipe", "pipe"],
+      });
+      child = proc;
+
+      proc.stdout.on("data", (chunk: Buffer) => {
         buf += chunk.toString("utf-8");
         const lines = buf.split("\n");
         buf = lines.pop() || "";
@@ -43,20 +82,20 @@ export async function GET(req: Request) {
           }
         }
       });
-      child.stderr.on("data", (chunk: Buffer) =>
-        send({ event: "log", level: "stderr", message: chunk.toString("utf-8") })
-      );
-      child.on("error", (err) => {
-        send({ event: "error", message: String(err) });
-        controller.close();
+      proc.stderr.on("data", (chunk: Buffer) => {
+        stderr = (stderr + chunk.toString("utf-8")).slice(-16_000);
       });
-      child.on("close", (code) => {
-        if (buf.trim()) {
-          try { send(JSON.parse(buf.trim())); } catch { /* ignore */ }
-        }
-        send({ event: "closed", code });
-        controller.close();
+      proc.once("error", (err) => {
+        stderr = (stderr + `\n${String(err)}`).slice(-16_000);
+        finish(null, err);
       });
+      proc.once("close", (code) => {
+        finish(code);
+      });
+    },
+    cancel() {
+      streamEnded = true;
+      if (child && !child.killed) child.kill();
     },
   });
 

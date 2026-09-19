@@ -77,6 +77,13 @@ loads it automatically. Use `.env.example` as the template.
 After creating `.venv` and installing the Python dependencies as shown above:
 
 ```bash
+# In one terminal, start the local ERP and create its snapshot:
+.venv/bin/python challenge/alberto_erp.py --rapido
+
+# In another terminal, still from the repository root:
+.venv/bin/python -m src.erp_snapshot --quiet
+
+# Then start the web console:
 cd web
 npm ci
 npm run dev
@@ -85,6 +92,8 @@ npm run dev
 Open <http://localhost:3000>. The console detects the repository's `.venv`
 automatically, so no `PYTHON` override is needed. This avoids the former `ENOENT`
 failure caused by passing a relative interpreter path to backend processes.
+The ERP snapshot is required before running an invoice batch; if it is missing,
+the console now displays the backend error and exit code instead of failing silently.
 See [`web/README.md`](web/README.md) for state initialization and overrides.
 
 The command writes `outputs/extracted_invoices.jsonl`. Vision results are cached by PDF
