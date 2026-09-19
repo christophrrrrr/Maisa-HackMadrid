@@ -115,6 +115,19 @@ def test_duplicate_pedido_in_batch_is_no_pagar():
     assert all(o.result == "NO_PAGAR" for o in outs)
 
 
+def test_duplicate_pedido_from_previous_batch_is_no_pagar():
+    out = decide_batch(
+        [_invoice()],
+        _biz(),
+        _erp(),
+        today=TODAY,
+        existing_purchase_orders={"PO-2026-0132"},
+    )[0]
+
+    assert out.result == "NO_PAGAR"
+    assert "duplicate_pedido" in out.findings
+
+
 def test_contract_line_is_minimal():
     line = _run(_invoice()).to_contract_line()
     assert set(line.keys()) == {"file_id", "result"}

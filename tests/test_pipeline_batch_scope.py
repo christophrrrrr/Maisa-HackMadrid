@@ -154,3 +154,25 @@ def test_existing_current_decisions_are_backfilled_into_history(tmp_path):
     history = state.run_decisions("legacy-run", db)
 
     assert [item["file_id"] for item in history] == ["legacy.pdf"]
+
+
+def test_purchase_orders_from_lote1_are_available_to_lote2(tmp_path):
+    db = tmp_path / "state.sqlite"
+    conn = state.connect(db)
+    try:
+        state.start_run(conn, "run-lote1", "lote1", "norma-v3")
+        state.record_decision(
+            conn,
+            "run-lote1",
+            Outcome(file_id="old.pdf", result="PAGAR", reason="ok"),
+            extraction_method="test",
+            extraction_ok=True,
+            extracted={"purchase_order": "PO-2026-0132"},
+            latency_ms=1,
+        )
+        state.finish_run(conn, "run-lote1", elapsed_s=1, cost_usd=0, stats={})
+    finally:
+        conn.close()
+
+    assert state.purchase_orders_from_other_batches("lote2", db) == {"PO-2026-0132"}
+    assert state.purchase_orders_from_other_batches("lote1", db) == set()
