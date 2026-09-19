@@ -158,6 +158,42 @@ def normalize_iban(iban: str | None) -> str | None:
     return re.sub(r"\s+", "", str(iban)).upper()
 
 
+def normalize_tax_id(value: str | None) -> str | None:
+    """Strip punctuation/spaces so foreign tax ids still match the master.
+
+    Brazilian CNPJ ships as ``12.345.678/0001-95``; vision often returns digits
+    only. Spanish NIFs like ``A41220987`` are unchanged.
+    """
+    if value is None:
+        return None
+    cleaned = re.sub(r"[^0-9A-Za-z]", "", str(value)).upper()
+    return cleaned or None
+
+
+def _index_supplier_nif(
+    suppliers_by_nif: dict[str, "Supplier"],
+    supplier: "Supplier",
+    warnings: list[str],
+    source: str = "",
+) -> None:
+    raw = (supplier.tax_id or "").strip()
+    if not raw:
+        return
+    keys = {raw}
+    normalized = normalize_tax_id(raw)
+    if normalized:
+        keys.add(normalized)
+    where = f" ({source})" if source else ""
+    for key in keys:
+        existing = suppliers_by_nif.get(key)
+        if existing is not None and existing.id != supplier.id:
+            warnings.append(
+                f"NIF {raw}{where} apunta a mas de un proveedor - se conservo {existing.id}"
+            )
+            continue
+        suppliers_by_nif[key] = supplier
+
+
 def _to_decimal(value) -> Decimal | None:
     if value is None or value == "":
         return None
@@ -237,11 +273,7 @@ def _merge_supplier_source(
                 warnings.append(f"proveedor {supplier.id} de {path.name} duplicado (identico) - de-duplicado")
             continue
         suppliers_by_id[supplier.id] = supplier
-        if supplier.tax_id:
-            if supplier.tax_id in suppliers_by_nif:
-                warnings.append(f"NIF {supplier.tax_id} ({path.name}) apunta a mas de un proveedor - se conservo el existente")
-            else:
-                suppliers_by_nif[supplier.tax_id] = supplier
+        _index_supplier_nif(suppliers_by_nif, supplier, warnings, path.name)
 
 
 def _merge_order_source(
@@ -290,7 +322,14 @@ class BusinessData:
         """Rule 1: a real supplier is matched by NIF (invoices carry NIF, not ID)."""
         if not nif:
             return None
-        return self.suppliers_by_nif.get(nif.strip())
+        stripped = nif.strip()
+        found = self.suppliers_by_nif.get(stripped)
+        if found is not None:
+            return found
+        normalized = normalize_tax_id(stripped)
+        if normalized and normalized != stripped:
+            return self.suppliers_by_nif.get(normalized)
+        return None
 
     def order(self, pedido: str | None) -> PurchaseOrder | None:
         if not pedido:
@@ -337,10 +376,7 @@ def load_business_data(
                 warnings.append(f"proveedor {supplier.id} duplicado (identico) - de-duplicado")
             continue
         suppliers_by_id[supplier.id] = supplier
-        if supplier.tax_id:
-            if supplier.tax_id in suppliers_by_nif:
-                warnings.append(f"NIF {supplier.tax_id} apunta a mas de un proveedor")
-            suppliers_by_nif[supplier.tax_id] = supplier
+        _index_supplier_nif(suppliers_by_nif, supplier, warnings)
 
     # --- purchase orders ---
     orders: dict[str, PurchaseOrder] = {}

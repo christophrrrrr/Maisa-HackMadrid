@@ -47,6 +47,9 @@ def test_foreign_suppliers_are_merged_from_csv():
     # foreign IBAN normalised (spaces stripped, upper-cased), foreign NIF kept
     assert german.iban == "DE89370400440532013000"
     assert biz.supplier_for_invoice("DE812345678") is german
+    brazil = biz.suppliers_by_id["P014"]
+    assert biz.supplier_for_invoice("12.345.678/0001-95") is brazil
+    assert biz.supplier_for_invoice("12345678000195") is brazil
 
 
 def test_new_orders_are_merged_from_csv():

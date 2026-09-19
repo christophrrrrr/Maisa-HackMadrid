@@ -1,8 +1,9 @@
 """Persist the ERP snapshot to SQLite so downstream work is offline & fast.
 
-Idempotent by design: re-running upserts by asiento_id. That matters because on
-Sunday Alberto may change one ERP datum live — we just re-snapshot and the
-changed rows update in place, everything else stays. Each run is also logged in
+Each refresh replaces the asiento table with what the live ERP returns *now*.
+Sunday Alberto may change one datum — re-snapshot and the row updates; asientos
+that disappeared (for example after restarting without the Saturday update)
+are dropped instead of haunting later decisions. Each run is also logged in
 `snapshot_runs` for observability (when, how many, retries, timing).
 """
 from __future__ import annotations
@@ -43,18 +44,14 @@ def save_snapshot(entries: list[ERPEntry], db_path: Path = DEFAULT_DB, stats: di
     conn = sqlite3.connect(db_path)
     try:
         conn.executescript(_SCHEMA)
+        # A snapshot is the ERP *now*. Drop asientos that disappeared (e.g. a
+        # refresh against an ERP without the Saturday update) instead of leaving
+        # stale rows that rules would still treat as live.
+        conn.execute("DELETE FROM erp_asientos")
         conn.executemany(
             """INSERT INTO erp_asientos
                (asiento_id, purchase_order, supplier_id, tax_id, expected_amount, status, date, fetched_at)
-               VALUES (?,?,?,?,?,?,?,?)
-               ON CONFLICT(asiento_id) DO UPDATE SET
-                 purchase_order=excluded.purchase_order,
-                 supplier_id=excluded.supplier_id,
-                 tax_id=excluded.tax_id,
-                 expected_amount=excluded.expected_amount,
-                 status=excluded.status,
-                 date=excluded.date,
-                 fetched_at=excluded.fetched_at""",
+               VALUES (?,?,?,?,?,?,?,?)""",
             [
                 (e.asiento_id, e.purchase_order, e.supplier_id, e.tax_id,
                  str(e.expected_amount), e.status, e.date.isoformat(), now)

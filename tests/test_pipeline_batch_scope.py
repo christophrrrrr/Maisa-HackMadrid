@@ -176,3 +176,55 @@ def test_purchase_orders_from_lote1_are_available_to_lote2(tmp_path):
 
     assert state.purchase_orders_from_other_batches("lote2", db) == {"PO-2026-0132"}
     assert state.purchase_orders_from_other_batches("lote1", db) == set()
+
+
+def test_escalar_purchase_order_does_not_block_a_later_batch(tmp_path):
+    db = tmp_path / "state.sqlite"
+    conn = state.connect(db)
+    try:
+        state.start_run(conn, "run-console", "lote-aaaa", "norma-v3")
+        state.record_decision(
+            conn,
+            "run-console",
+            Outcome(file_id="e08_P012.pdf", result="ESCALAR", reason="iban_mismatch"),
+            extraction_method="test",
+            extraction_ok=True,
+            extracted={"purchase_order": "PO-2026-1308"},
+            latency_ms=1,
+        )
+        state.finish_run(conn, "run-console", elapsed_s=1, cost_usd=0, stats={})
+    finally:
+        conn.close()
+
+    assert state.purchase_orders_from_other_batches("lote1", db) == set()
+
+
+def test_reprocessing_the_same_file_is_not_a_cross_batch_duplicate(tmp_path):
+    db = tmp_path / "state.sqlite"
+    conn = state.connect(db)
+    try:
+        state.start_run(conn, "run-1", "lote-aaaa", "norma-v3")
+        state.record_decision(
+            conn,
+            "run-1",
+            Outcome(file_id="same.pdf", result="PAGAR", reason="ok"),
+            extraction_method="test",
+            extraction_ok=True,
+            extracted={"purchase_order": "PO-2026-0132"},
+            latency_ms=1,
+        )
+        state.finish_run(conn, "run-1", elapsed_s=1, cost_usd=0, stats={})
+    finally:
+        conn.close()
+
+    assert state.purchase_orders_from_other_batches(
+        "lote-bbbb", db, exclude_file_ids={"same.pdf"},
+    ) == set()
+    assert state.purchase_orders_from_other_batches("lote-bbbb", db) == {"PO-2026-0132"}
+
+
+def test_lote1_merges_saturday_csvs_when_present():
+    if not pipeline.LOTE2_SUPPLIERS_CSV.is_file():
+        return
+    assert pipeline.LOTE2_SUPPLIERS_CSV in pipeline.extra_supplier_csvs_for_batch("lote1")
+    assert pipeline.LOTE2_ORDERS_CSV in pipeline.extra_order_csvs_for_batch("lote1")

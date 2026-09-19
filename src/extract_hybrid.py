@@ -60,6 +60,7 @@ class HybridExtractor:
                 use_vision=self.use_vision and bool(spec.get("vision", True)),
                 model=self.model,
                 fallback_models=self.fallback_models,
+                force=self.force,
             )
             self.last_method = method
             self.last_cost = cost

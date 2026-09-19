@@ -502,21 +502,37 @@ def diff_runs(run_a: str, run_b: str, db_path: Path = DEFAULT_DB) -> dict:
     }
 
 
-def purchase_orders_from_other_batches(batch: str, db_path: Path = DEFAULT_DB) -> set[str]:
-    """Purchase orders already seen outside the batch being evaluated."""
+def purchase_orders_from_other_batches(
+    batch: str,
+    db_path: Path = DEFAULT_DB,
+    *,
+    exclude_file_ids: set[str] | None = None,
+) -> set[str]:
+    """Purchase orders already paid outside the batch being evaluated.
+
+    Rule 5 is "never pay the same pedido twice". Only PAGAR counts — an ESCALAR
+    or NO_PAGAR did not pay. Re-processing the same file_id is a replacement of
+    that invoice, not a second one, so those ids can be excluded (console
+    re-runs use a unique batch-name each time and would otherwise NO_PAGAR
+    everything as a false duplicate).
+    """
     conn = connect(db_path)
     try:
         rows = conn.execute(
-            """SELECT h.extracted FROM decision_history h
+            """SELECT h.extracted, h.file_id FROM decision_history h
                JOIN runs r ON r.run_id = h.run_id
-               WHERE h.batch != ? AND r.status = 'done'""",
+               WHERE h.batch != ? AND r.status = 'done' AND h.result = 'PAGAR'""",
             (batch,),
         ).fetchall()
     finally:
         conn.close()
 
+    skip = exclude_file_ids or set()
     purchase_orders: set[str] = set()
     for row in rows:
+        file_id = row[1]
+        if file_id in skip:
+            continue
         try:
             extracted = json.loads(row[0]) if row[0] else {}
         except (json.JSONDecodeError, TypeError):

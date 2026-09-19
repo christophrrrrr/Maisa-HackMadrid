@@ -17,7 +17,7 @@ function runLabel(r: RunRow): string {
 }
 
 function fileHref(fileId: string): string {
-  return `/?file=${encodeURIComponent(fileId)}`;
+  return `/review?file=${encodeURIComponent(fileId)}`;
 }
 
 function Pill({ result }: { result: Result }) {

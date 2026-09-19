@@ -229,7 +229,8 @@ def _has_required(inv: InvoiceData | None) -> bool:
 
 
 def _try_attachment(name: str, blob: bytes, *, use_vision: bool, model: str,
-                    fallback_models: list[str] | None) -> tuple[InvoiceData | None, str, float]:
+                    fallback_models: list[str] | None, force: bool = False
+                    ) -> tuple[InvoiceData | None, str, float]:
     """Run a PDF/image email attachment back through the PDF extractor."""
     suffix = Path(name).suffix.lower()
     if suffix not in _PDF_LIKE | _IMAGE_LIKE:
@@ -237,7 +238,10 @@ def _try_attachment(name: str, blob: bytes, *, use_vision: bool, model: str,
     tmp = Path(tempfile.gettempdir()) / f"maisa_att_{abs(hash(name)) % 10_000}{suffix}"
     try:
         tmp.write_bytes(blob)
-        rec = ax.extract_pdf(tmp, use_vision=use_vision, model=model, fallback_models=fallback_models)
+        rec = ax.extract_pdf(
+            tmp, use_vision=use_vision, model=model,
+            fallback_models=fallback_models, force=force,
+        )
         return rec.invoice, f"email-attachment:{rec.method}", float(getattr(rec, "cost_usd", 0.0) or 0.0)
     except Exception:
         return None, "", 0.0
@@ -298,6 +302,7 @@ def extract_document(
     use_vision: bool = True,
     model: str = ax.DEFAULT_MODEL,
     fallback_models: list[str] | None = None,
+    force: bool = False,
 ) -> tuple[InvoiceData, str, float]:
     """Return (InvoiceData, method, cost_usd). Never raises; always routes."""
     raw = normalize(path)
@@ -315,8 +320,10 @@ def extract_document(
 
     # 0) email attachments that are invoices win outright
     for name, blob in raw.attachments:
-        inv, method, cost = _try_attachment(name, blob, use_vision=use_vision,
-                                             model=model, fallback_models=fallback_models)
+        inv, method, cost = _try_attachment(
+            name, blob, use_vision=use_vision, model=model,
+            fallback_models=fallback_models, force=force,
+        )
         total_cost += cost
         if _has_required(inv):
             inv.file_id = path.name

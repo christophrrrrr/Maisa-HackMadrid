@@ -16,11 +16,14 @@ export async function GET(req: Request) {
   const limit = url.searchParams.get("limit") || "";
   const force = url.searchParams.get("force") === "1";
 
-  // keep prior decisions so recurring batches accumulate on the board and in history
+  // keep prior decisions so recurring batches accumulate on the board and in history.
+  // Write a separate JSONL so a console smoke-test never clobbers the lote1
+  // deliverable at outputs/outcomes.jsonl.
   const args = [
     "-m", "src.pipeline", "--stream",
     "--dir", path.join(repoRoot(), "outputs", "inbox"),
     "--batch-name", `lote-${randomUUID()}`,
+    "--out", path.join(repoRoot(), "outputs", "outcomes_inbox.jsonl"),
   ];
   if (today) args.push("--today", today);
   if (limit) args.push("--limit", limit);

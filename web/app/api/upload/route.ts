@@ -7,9 +7,16 @@ export const dynamic = "force-dynamic";
 export async function POST(req: Request) {
   try {
     const form = await req.formData();
+    const incoming = await collectFormFiles(form);
+    if (incoming.length === 0) {
+      return NextResponse.json(
+        { error: "No hay archivos soportados para procesar." },
+        { status: 400 },
+      );
+    }
     const dest = await resetInbox();
     const files: string[] = [];
-    for (const file of await collectFormFiles(form)) {
+    for (const file of incoming) {
       files.push(await saveInvoice(file.name, file.buf, dest));
     }
     return NextResponse.json({ dir: dest, files });

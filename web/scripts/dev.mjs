@@ -69,6 +69,51 @@ function run(command, args, options = {}) {
   });
 }
 
+async function erpHasLote2Update() {
+  try {
+    const response = await fetch(erpUrl, { signal: AbortSignal.timeout(2_000) });
+    if (!response.ok) return false;
+    const text = await response.text();
+    return /<actualizacion_cargada>\s*SI\s*<\/actualizacion_cargada>/i.test(text);
+  } catch {
+    return false;
+  }
+}
+
+async function killPort(port) {
+  try {
+    if (isWindows) {
+      await run("powershell.exe", [
+        "-NoProfile",
+        "-Command",
+        `Get-NetTCPConnection -LocalPort ${port} -State Listen -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue }`,
+      ]);
+    } else {
+      await run("sh", ["-c", `fuser -k ${port}/tcp >/dev/null 2>&1 || true`]);
+    }
+  } catch {
+    // nothing listening, or no permission — waitForErp will fail loudly later
+  }
+}
+
+async function startErp() {
+  const lote2Csv = path.join(repoRoot, "lote_2_sorpresa", "erp_export_lote2.csv");
+  const erpArgs = ["challenge/alberto_erp.py", "--rapido"];
+  if (await fileExists(lote2Csv)) {
+    erpArgs.push("--lote2", lote2Csv);
+    console.log("[startup] Cargando actualizacion de lote 2 en el ERP.");
+  }
+  erpProcess = spawn(venvPython, erpArgs, {
+    cwd: repoRoot,
+    stdio: "inherit",
+  });
+  erpProcess.once("error", (error) => {
+    console.error(`[startup] No se pudo arrancar el ERP: ${error.message}`);
+    stop(1);
+  });
+  await waitForErp();
+}
+
 function stop(exitCode = 0) {
   if (stopping) return;
   stopping = true;
@@ -87,28 +132,21 @@ async function main() {
     "Faltan las dependencias web. Ejecuta `npm ci` dentro de `web/`.",
   );
 
+  const lote2Csv = path.join(repoRoot, "lote_2_sorpresa", "erp_export_lote2.csv");
+  const wantLote2 = await fileExists(lote2Csv);
+
   if (await erpIsReady()) {
-    console.log(`[startup] ERP disponible en ${erpUrl}`);
+    if (wantLote2 && !(await erpHasLote2Update())) {
+      console.log("[startup] ERP en marcha sin actualizacion de lote 2. Reiniciando con el CSV de sabado...");
+      await killPort(8009);
+      await new Promise((resolve) => setTimeout(resolve, 400));
+      await startErp();
+    } else {
+      console.log(`[startup] ERP disponible en ${erpUrl}`);
+    }
   } else {
     console.log("[startup] Arrancando ERP local...");
-    // Load the Saturday ERP update if its export is present, so the snapshot
-    // carries all asientos (incl. the new/foreign pedidos). Without it, those
-    // pedidos have no ERP entry and every such invoice escalates.
-    const lote2Csv = path.join(repoRoot, "lote_2_sorpresa", "erp_export_lote2.csv");
-    const erpArgs = ["challenge/alberto_erp.py", "--rapido"];
-    if (await fileExists(lote2Csv)) {
-      erpArgs.push("--lote2", lote2Csv);
-      console.log("[startup] Cargando actualizacion de lote 2 en el ERP.");
-    }
-    erpProcess = spawn(venvPython, erpArgs, {
-      cwd: repoRoot,
-      stdio: "inherit",
-    });
-    erpProcess.once("error", (error) => {
-      console.error(`[startup] No se pudo arrancar el ERP: ${error.message}`);
-      stop(1);
-    });
-    await waitForErp();
+    await startErp();
   }
 
   console.log("[startup] Actualizando snapshot del ERP...");

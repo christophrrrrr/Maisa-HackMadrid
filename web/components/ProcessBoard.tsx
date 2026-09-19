@@ -45,6 +45,7 @@ export default function ProcessBoard() {
   const [policy, setPolicy] = useState<Policy | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [scheduling, setScheduling] = useState(false);
+  const [err, setErr] = useState("");
   const esRef = useRef<EventSource | null>(null);
   const pickRef = useRef<HTMLInputElement | null>(null);
   const runningRef = useRef(false);
@@ -75,7 +76,7 @@ export default function ProcessBoard() {
     const pol = policy;
     let stop = false;
     async function scan() {
-      if (stop || runningRef.current) return;
+      if (stop || runningRef.current || firingRef.current) return;
       const handle = await loadWatchHandle();
       if (!handle || stop) return;
       const ok = await ensureRead(handle);
@@ -126,7 +127,8 @@ export default function ProcessBoard() {
       for (const f of batch) form.append("files", f);
       const up = await fetch("/api/upload", { method: "POST", body: form });
       if (!up.ok) {
-        setErr("No se pudieron cargar los archivos.");
+        const body = await up.json().catch(() => ({})) as { error?: string };
+        setErr(body.error || "No se pudieron cargar los archivos.");
         setP({ done: 0, total: 0, running: false });
         setOngoing([]);
         runningRef.current = false;

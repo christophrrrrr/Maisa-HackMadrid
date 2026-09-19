@@ -236,12 +236,18 @@ def run(
         # message instead of deciding on wrong / empty lookups.
         _emit(stream, {"event": "data_error", "scope": "business_data", "error": str(exc)})
         raise
-    assert_snapshot_ready_for_batch(batch, erp_db_path)
+    # Console runs default to batch=lote1, but the Saturday CSVs still need the
+    # updated ERP snapshot (new pedidos). Require actualizacion_cargada=SI
+    # whenever those extras are in play, not only for an explicit --batch lote2.
+    snapshot_batch = "lote2" if (batch == "lote2" or supplier_csvs or order_csvs) else batch
+    assert_snapshot_ready_for_batch(snapshot_batch, erp_db_path)
     erp = index_by_pedido(load_snapshot(erp_db_path))
 
     facturas_dir = facturas_dir or input_dir_for_batch(batch)
     outcomes_path = outcomes_path or outcomes_path_for_batch(batch)
-    files = _collect_files(facturas_dir, limit, include_inbox=(batch == "lote1"))
+    # Console uploads already pass --dir outputs/inbox. Do not silently merge a
+    # leftover inbox into an official lote1 run — that would pollute outcomes.jsonl.
+    files = _collect_files(facturas_dir, limit, include_inbox=False)
     if not files:
         raise RuntimeError(f"no supported invoice files found in {facturas_dir}")
     manual_overrides = load_overrides()
@@ -332,7 +338,9 @@ def run(
     invoices: list[InvoiceData] = [invoices_by_index[i] for i in range(len(files))]
 
     # 2) decide (deterministic, cheap) — needs the whole batch for duplicate detection
-    previous_purchase_orders = state.purchase_orders_from_other_batches(batch_id, db_path)
+    previous_purchase_orders = state.purchase_orders_from_other_batches(
+        batch_id, db_path, exclude_file_ids={file.name for file in files},
+    )
     outcomes = decide_batch(
         invoices,
         biz,

@@ -31,6 +31,7 @@ async function resolveFile(name: string): Promise<string | null> {
     path.join(root, "outputs", "inbox", name),
     path.join(root, "outputs", "facturas", name),
     path.join(root, "challenge", "facturas", name),
+    path.join(root, "lote_2_sorpresa", "facturas", name),
   ];
   for (const p of candidates) {
     try {
