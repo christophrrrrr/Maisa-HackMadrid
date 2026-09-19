@@ -120,6 +120,26 @@ def test_contract_line_is_minimal():
     assert set(line.keys()) == {"file_id", "result"}
 
 
+def test_unknown_rules_version_fails_closed():
+    import pytest
+
+    with pytest.raises(ValueError, match="norma-v4.*not implemented"):
+        evaluate(_invoice(), _biz(), _erp(), today=TODAY, rules_version="norma-v4")
+
+
+def test_business_data_and_engine_versions_must_match():
+    import pytest
+
+    with pytest.raises(ValueError, match="does not match business data"):
+        decide_batch(
+            [_invoice()],
+            _biz(),
+            _erp(),
+            today=TODAY,
+            rules_version="norma-v2",
+        )
+
+
 if __name__ == "__main__":
     import pytest
     raise SystemExit(pytest.main([__file__, "-q"]))

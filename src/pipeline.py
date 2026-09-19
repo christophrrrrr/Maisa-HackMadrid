@@ -19,8 +19,8 @@ from datetime import date, datetime, timezone
 from pathlib import Path
 
 from . import state
-from .business_data import load_business_data
-from .erp_snapshot import index_by_pedido, load_snapshot
+from .business_data import DEFAULT_XLSX, load_business_data
+from .erp_snapshot import DEFAULT_DB as DEFAULT_ERP_DB, index_by_pedido, load_snapshot
 from .extractor import Extractor
 from .manual_overrides import apply_override, load_overrides
 from .models import InvoiceData
@@ -41,6 +41,10 @@ BATCH_INPUT_DIRS = {
 BATCH_OUTCOMES = {
     "lote1": OUTCOMES,
     "lote2": OUTCOMES_LOTE2,
+}
+BATCH_RULES_VERSIONS = {
+    "lote1": "norma-v3",
+    "lote2": "norma-v4",
 }
 
 
@@ -116,6 +120,13 @@ def outcomes_path_for_batch(batch: str) -> Path:
         raise ValueError(f"unknown batch {batch!r}") from exc
 
 
+def rules_version_for_batch(batch: str) -> str:
+    try:
+        return BATCH_RULES_VERSIONS[batch]
+    except KeyError as exc:
+        raise ValueError(f"unknown batch {batch!r}") from exc
+
+
 def write_outcomes(outcomes, path: Path) -> None:
     """Write one batch contract without touching the other batch's artifact."""
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -136,6 +147,9 @@ def run(
     use_vision: bool = True,
     replace_state: bool = False,
     outcomes_path: Path | None = None,
+    rules_version: str | None = None,
+    xlsx_path: Path = DEFAULT_XLSX,
+    erp_db_path: Path = DEFAULT_ERP_DB,
 ) -> dict:
     # reference date + extractor fall back to the editable policy (settings page)
     cfg = load_policy()
@@ -143,8 +157,9 @@ def run(
         today = date.fromisoformat(cfg["today"])
     today = today or date.today()
     extractor = get_extractor(extractor_name or cfg.get("extractor") or "hybrid", use_vision=use_vision)
-    biz = load_business_data()
-    erp = index_by_pedido(load_snapshot())
+    rules_version = rules_version or rules_version_for_batch(batch)
+    biz = load_business_data(xlsx_path, rules_version=rules_version)
+    erp = index_by_pedido(load_snapshot(erp_db_path))
 
     facturas_dir = facturas_dir or input_dir_for_batch(batch)
     outcomes_path = outcomes_path or outcomes_path_for_batch(batch)
@@ -184,7 +199,7 @@ def run(
                        "file_id": inv.file_id, "ok": inv.extraction_ok, "latency_ms": round(ms, 1)})
 
     # 2) decide (deterministic, cheap) — needs the whole batch for duplicate detection
-    outcomes = decide_batch(invoices, biz, erp, today=today)
+    outcomes = decide_batch(invoices, biz, erp, today=today, rules_version=rules_version)
 
     # 3) persist + emit each decision
     if replace_state:
@@ -231,6 +246,9 @@ def _main() -> int:
     ap.add_argument("--dir", help="directory of invoice PDFs (default: challenge/facturas)")
     ap.add_argument("--batch", default="lote1", choices=["lote1", "lote2"])
     ap.add_argument("--out", help="output JSONL path (default: batch-specific artifact)")
+    ap.add_argument("--rules-version", help="rules profile (default: norma-v3 / norma-v4 by batch)")
+    ap.add_argument("--xlsx", default=str(DEFAULT_XLSX), help="business-data workbook")
+    ap.add_argument("--erp-db", default=str(DEFAULT_ERP_DB), help="ERP snapshot SQLite path")
     ap.add_argument("--stream", action="store_true", help="emit JSON progress lines (for the webapp SSE)")
     ap.add_argument("--today", help="reference date YYYY-MM-DD for rule 4 (default: today)")
     ap.add_argument("--limit", type=int, help="process only the first N files (dev)")
@@ -246,7 +264,9 @@ def _main() -> int:
     outcomes_path = Path(args.out) if args.out else outcomes_path_for_batch(args.batch)
     result = run(facturas_dir=facturas_dir, extractor_name=args.extractor, batch=args.batch,
                  stream=args.stream, today=today, limit=args.limit, use_vision=not args.no_vision,
-                 replace_state=args.replace_state, outcomes_path=outcomes_path)
+                 replace_state=args.replace_state, outcomes_path=outcomes_path,
+                 rules_version=args.rules_version, xlsx_path=Path(args.xlsx),
+                 erp_db_path=Path(args.erp_db))
     if not args.stream:
         print(f"run {result['run_id']}: {result['summary']} in {result['elapsed_s']:.2f}s -> {result['outcomes']}")
     return 0
