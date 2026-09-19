@@ -37,8 +37,8 @@ html,body{ margin:0; padding:0; background:var(--papel); color:var(--tinta); }
 
 body{
   font-family:var(--lectura);
-  font-size:10.1pt;
-  line-height:1.45;
+  font-size:10.4pt;
+  line-height:1.47;
   -webkit-font-smoothing:antialiased;
   text-rendering:geometricPrecision;
 }
@@ -46,7 +46,7 @@ body{
 .hoja{
   position:relative;
   width:210mm; height:297mm;
-  padding:14mm 18mm 12mm 18mm;
+  padding:14mm 30mm 12mm 30mm;
   overflow:hidden;
   break-after:page;
   page-break-after:always;
@@ -75,46 +75,26 @@ body{
 }
 .folio{ font-family:var(--forma); font-weight:700; font-size:9pt; color:var(--tinta); }
 
-/* ---------- rejilla: margen + columna de lectura ---------- */
-.cuerpo{
-  display:grid;
-  grid-template-columns:29mm 6mm 112mm 27mm;
-  align-items:start;
-  flex:1 1 auto;
-}
-.margen{
-  grid-column:1;
-  font-family:var(--forma); font-size:7.3pt; line-height:1.32;
-  color:var(--tinta-suave);
-  padding-top:1.2mm;
-  text-align:right;
-}
-.margen .ref{
-  font-family:var(--dato); font-size:6.6pt; color:var(--sello);
-  display:block; overflow-wrap:break-word;
-}
-.margen .cifra{ font-family:var(--forma); font-weight:700; font-size:12pt; color:var(--tinta); display:block; line-height:1.1; }
-.col{ grid-column:3; }
-.ancho{ grid-column:1 / -1; }
-.ancho-d{ grid-column:3 / -1; }
-/* en los bloques anchos la prosa mantiene su medida; las tablas se sueltan */
-.ancho-d > p, .ancho-d > ul{ max-width:118mm; }
-/* la tabla más ancha del documento es la matriz de fallos: ocupa el papel entero */
-table.suelta{ width:174mm; margin-left:-35mm; }
+/* ---------- una sola columna de lectura, centrada (150mm) ---------- */
+.cuerpo{ flex:1 1 auto; }
 
 /* ---------- títulos ---------- */
 h1,h2,h3,h4{ font-family:var(--forma); font-weight:700; margin:0; }
 
 h2{ font-size:16.5pt; line-height:1.06; letter-spacing:-.005em; margin:0 0 2.4mm; }
 h2 .num{ color:var(--sello); margin-right:2.2mm; }
+h2.segunda{ margin-top:7mm; }
 
 h3{
   font-size:10.5pt; letter-spacing:.005em;
-  margin:4.8mm 0 1.2mm;
+  margin:5.2mm 0 1.4mm;
   padding-bottom:.9mm;
   border-bottom:.5pt solid var(--pauta);
 }
-h3:first-child{ margin-top:0; }
+.cuerpo > :first-child > h3:first-child{ margin-top:0; }
+/* la fuente de la sección, a la derecha del título: sustituye a la antigua columna de márgenes */
+h2 .ref,h3 .ref{ float:right; font-weight:400; font-size:7pt; color:var(--sello); letter-spacing:0; margin-top:.6mm; }
+h2 .ref{ margin-top:2.4mm; }
 
 h4{ font-size:9.3pt; margin:3.4mm 0 .8mm; }
 
@@ -129,6 +109,14 @@ code,.ref,.id{ font-family:var(--dato); font-size:.86em; }
 ul{ margin:0 0 2.3mm; padding-left:4.6mm; }
 li{ margin-bottom:1mm; }
 li::marker{ color:var(--sello); }
+
+/* listas con entrada en negrita: sustituyen a las tablas de dos columnas */
+ul.definida{ list-style:none; padding:0; margin:1mm 0 2.5mm; }
+ul.definida li{ margin:0; padding:1.7mm 0 1.9mm; border-bottom:.4pt solid var(--pauta-fina); line-height:1.4; }
+ul.definida li:first-child{ border-top:.8pt solid var(--tinta); }
+ul.definida li:last-child{ border-bottom:.8pt solid var(--pauta); }
+ul.definida b{ font-family:var(--forma); font-size:9pt; display:block; margin-bottom:.4mm; }
+ul.definida.linea b{ display:inline; margin:0 1.2mm 0 0; }
 
 /* ---------- tablas de libro de cuentas ---------- */
 table{ width:100%; border-collapse:collapse; margin:1.5mm 0 2.8mm; }
@@ -148,7 +136,6 @@ td{ font-size:8.7pt; line-height:1.28; }
 td.n,th.n{ text-align:right; font-family:var(--dato); font-size:7.9pt; white-space:nowrap; }
 tbody tr.banda td{ background:var(--banda); }
 table.compacta td{ font-size:8.3pt; padding:.85mm 2.4mm .85mm 0; }
-td .fuente{ font-family:var(--forma); font-size:6.8pt; color:var(--tinta-suave); display:block; }
 
 /* ---------- veredictos ---------- */
 .v{ font-family:var(--forma); font-weight:700; font-size:7.8pt; letter-spacing:.04em; white-space:nowrap; }
@@ -156,8 +143,20 @@ td .fuente{ font-family:var(--forma); font-size:6.8pt; color:var(--tinta-suave);
 .v-nopagar{ color:var(--nopagar); }
 .v-escalar{ color:var(--escalar); }
 
+.veredictos{
+  display:grid; grid-template-columns:repeat(3,1fr);
+  border-top:.8pt solid var(--tinta); border-bottom:.8pt solid var(--pauta);
+  margin:1.5mm 0 3.5mm;
+}
+.veredictos div{ padding:2.8mm 4mm 2.8mm 0; }
+.veredictos div + div{ border-left:.4pt solid var(--pauta-fina); padding-left:4mm; }
+.veredictos .cifra{ font-family:var(--forma); font-weight:700; font-size:22pt; line-height:1; display:block; }
+.veredictos .v{ display:block; margin-top:1.4mm; font-size:8.4pt; }
+.veredictos .euros{ font-family:var(--dato); font-size:7.6pt; color:var(--tinta-suave); display:block; margin-top:.8mm; }
+.veredictos .rotulo{ font-size:8.4pt; display:block; margin-top:1.4mm; line-height:1.32; }
+
 /* ---------- portada ---------- */
-.portada{ padding:16mm 18mm 12mm; }
+.portada{ padding:16mm 30mm 12mm; }
 .portada .firma{
   font-family:var(--forma); font-size:8.4pt; color:var(--tinta-suave);
   border-bottom:.8pt solid var(--tinta); padding-bottom:1.8mm;
@@ -169,7 +168,7 @@ td .fuente{ font-family:var(--forma); font-size:6.8pt; color:var(--tinta-suave);
 .expediente{
   margin-top:10mm;
   border:.8pt solid var(--tinta);
-  display:grid; grid-template-columns:1fr 62mm;
+  display:grid; grid-template-columns:1fr 58mm;
 }
 .exp-doc{ padding:5mm 5mm 4.5mm; border-right:.5pt solid var(--pauta); }
 .exp-rot{ font-family:var(--forma); font-size:7.4pt; color:var(--tinta-suave); margin-bottom:2.4mm; }
@@ -236,10 +235,31 @@ td .fuente{ font-family:var(--forma); font-size:6.8pt; color:var(--tinta-suave);
 .costura .juntura .glosa{ font-family:var(--forma); font-size:6.6pt; color:var(--tinta-suave); margin-top:1.8mm; line-height:1.2; }
 .costura .marca{ font-family:var(--forma); font-size:6.8pt; color:var(--tinta-suave); letter-spacing:.03em; display:block; margin-bottom:1.1mm; }
 
-/* ---------- etapas y reglas numeradas ---------- */
+/* ---------- etapas ---------- */
+ol.etapas{ list-style:none; margin:1mm 0 2.5mm; padding:0; }
+ol.etapas li{
+  display:grid; grid-template-columns:6mm 30mm 1fr; column-gap:2.5mm;
+  margin:0; padding:1.9mm 0; border-bottom:.4pt solid var(--pauta-fina);
+}
+ol.etapas li:first-child{ border-top:.8pt solid var(--tinta); }
+ol.etapas li:last-child{ border-bottom:.8pt solid var(--pauta); }
+ol.etapas .e{ font-family:var(--forma); font-weight:700; font-size:11pt; color:var(--sello); line-height:1.1; }
+ol.etapas .nombre{ font-family:var(--forma); font-weight:700; font-size:8.8pt; line-height:1.2; }
+ol.etapas .nombre .fuente{ font-family:var(--dato); font-size:6.5pt; color:var(--tinta-suave); display:block; font-weight:400; margin-top:.7mm; overflow-wrap:anywhere; }
+ol.etapas .que{ font-size:8.7pt; line-height:1.36; }
+ol.etapas .que .deja{ font-family:var(--forma); font-size:7.4pt; color:var(--sello); margin-right:1mm; }
+
+/* ---------- reparto ---------- */
+.reparto{ display:grid; grid-template-columns:repeat(3,1fr); column-gap:4.5mm; margin:1.5mm 0 3mm; }
+.reparto div{ border-top:.8pt solid var(--tinta); padding-top:1.8mm; }
+.reparto h4{ margin:0 0 .5mm; font-size:9pt; }
+.reparto .cuota{ font-family:var(--dato); font-size:7.2pt; color:var(--sello); display:block; margin-bottom:1.4mm; }
+.reparto p{ font-size:8.4pt; line-height:1.34; margin-bottom:1.1mm; max-width:none; }
+.reparto p:last-child{ margin-bottom:0; color:var(--tinta-suave); }
+
+/* ---------- reglas numeradas ---------- */
 th.e,td.e{ width:6mm; padding-right:1mm; }
 td.e{ font-family:var(--forma); font-weight:700; font-size:10pt; color:var(--sello); }
-table.etapas td strong{ font-family:var(--forma); font-size:8.5pt; }
 
 /* ---------- traza ---------- */
 table.traza td{ font-size:8.2pt; }
@@ -251,6 +271,13 @@ table.traza .ok{ color:var(--pagar); }
 table.traza .no{ color:var(--nopagar); font-weight:700; }
 table.traza td.cmp{ font-family:var(--dato); font-size:7.3pt; line-height:1.25; }
 table.traza td.cmp .src{ font-family:var(--forma); font-size:6.7pt; color:var(--tinta-suave); display:block; }
+
+/* ---------- fallos ---------- */
+dl.fallos{ margin:1mm 0 2.5mm; }
+dl.fallos dt{ font-family:var(--forma); font-weight:700; font-size:9pt; padding-top:1.8mm; border-top:.4pt solid var(--pauta-fina); }
+dl.fallos dt:first-child{ border-top:.8pt solid var(--tinta); }
+dl.fallos dd{ margin:.5mm 0 0; padding-bottom:1.9mm; font-size:8.7pt; line-height:1.38; }
+dl.fallos dd:last-child{ border-bottom:.8pt solid var(--pauta); }
 
 /* ---------- cajas y fórmula ---------- */
 .caja{
@@ -272,7 +299,7 @@ table.traza td.cmp .src{ font-family:var(--forma); font-size:6.7pt; color:var(--
 .adr{ border-top:1.4pt solid var(--tinta); padding-top:2.2mm; margin-bottom:5mm; }
 .adr .rotulo{ font-family:var(--forma); font-size:7.4pt; color:var(--sello); letter-spacing:.04em; margin-bottom:.8mm; }
 .adr h3{ border:0; margin:0 0 1.8mm; padding:0; font-size:12.4pt; line-height:1.12; }
-.adr dl{ margin:0; display:grid; grid-template-columns:23mm 1fr; column-gap:3mm; }
+.adr dl{ margin:0; display:grid; grid-template-columns:23mm 1fr; column-gap:3mm; max-width:none; }
 .adr dt{
   font-family:var(--forma); font-size:7.8pt; font-weight:700;
   padding:1.2mm 0 0; color:var(--tinta-suave);
@@ -287,8 +314,8 @@ table.traza td.cmp .src{ font-family:var(--forma); font-size:6.7pt; color:var(--
 .adr dt:first-of-type,.adr dd:first-of-type{ border-top:0; padding-top:0; }
 
 /* ---------- cierre ---------- */
-.cierre{ margin-top:3.5mm; border-top:1.4pt solid var(--tinta); padding-top:3mm; }
-.cierre .lema{ font-family:var(--forma); font-weight:700; font-size:14pt; line-height:1.14; max-width:130mm; }
+.cierre{ margin-top:6mm; border-top:1.4pt solid var(--tinta); padding-top:3mm; }
+.cierre .lema{ font-family:var(--forma); font-weight:700; font-size:14pt; line-height:1.14; max-width:140mm; }
 </style>
 </head>
 <body>
@@ -299,8 +326,8 @@ table.traza td.cmp .src{ font-family:var(--forma); font-size:6.7pt; color:var(--
 
   <h1>Cuentas<br>claras</h1>
 
-  <p class="bajada">Arquitectura y decisiones del sistema que dice a Alberto qué facturas pagar.
-  <span class="sub">Y que, para cada una, deja por escrito de dónde sale esa respuesta.</span></p>
+  <p class="bajada">El sistema que le dice a Alberto qué facturas pagar.
+  <span class="sub">Y que, para cada una, le enseña de dónde sale la respuesta.</span></p>
 
   <div class="expediente">
     <div class="exp-doc">
@@ -314,9 +341,9 @@ table.traza td.cmp .src{ font-family:var(--forma); font-size:6.7pt; color:var(--
         <tr><td>Total facturado</td><td class="val">2.920,10 €</td></tr>
       </table>
       <div class="exp-fallo">
-        <div><span class="pega">No cuadra con el pedido.</span> 2.920,10 € facturados frente a 2.795,10 € pedidos.</div>
-        <div><span class="pega">No cuadra consigo misma.</span> base más IVA suman 2.795,10 €, no 2.920,10 €.</div>
-        <div><span class="pega">No cuadra con el ERP.</span> el asiento espera 2.795,10 €.</div>
+        <div><span class="pega">No cuadra con el pedido.</span> Factura 2.920,10 €; el pedido dice 2.795,10 €.</div>
+        <div><span class="pega">No cuadra consigo misma.</span> Base más IVA suman 2.795,10 €, no 2.920,10 €.</div>
+        <div><span class="pega">No cuadra con el ERP.</span> El asiento espera 2.795,10 €.</div>
       </div>
     </div>
     <div class="exp-sello">
@@ -326,11 +353,11 @@ table.traza td.cmp .src{ font-family:var(--forma); font-size:6.7pt; color:var(--
           <div class="marco">13 comprobaciones · 3 discrepancias</div>
         </div>
         <p class="exp-nota"><b>Nadie adivinó nada.</b> Las trece comprobaciones de la norma v3 se
-        ejecutaron sobre los campos leídos del PDF y se compararon contra el Excel de pedidos y el
-        asiento del ERP. Tres no pasaron, y las tres van firmadas con su origen.</p>
+        ejecutaron sobre los campos leídos del PDF, el Excel de pedidos y el asiento del ERP. Tres
+        no pasaron. Las tres llevan escrito de dónde sale cada cifra.</p>
       </div>
-      <p class="exp-nota">Decidido en 4,85 ms. Coste en modelos: 0,00 $, porque este PDF traía
-      texto y no hizo falta mirar la imagen.</p>
+      <p class="exp-nota">Decidido en 4,85 ms. Coste en modelos: 0,00 $. El PDF traía texto y
+      nadie tuvo que mirar la imagen.</p>
     </div>
   </div>
 
@@ -346,17 +373,16 @@ table.traza td.cmp .src{ font-family:var(--forma); font-size:6.7pt; color:var(--
     <ol>
       <li class="sec"><span>1 · El trabajo de Alberto</span><span>p. 2</span></li>
       <li class="sec"><span>2 · Arquitectura</span><span>p. 3</span></li>
-      <li><span>2.1 Las etapas, y lo que dejan escrito</span><span>p. 3</span></li>
-      <li><span>2.2 Estado, datos y reparto</span><span>p. 4</span></li>
-      <li><span>2.3 La norma v3, regla a regla</span><span>p. 5</span></li>
-      <li><span>2.4 Seguir una decisión</span><span>p. 6</span></li>
+      <li><span>2.1 Las etapas</span><span>p. 3</span></li>
+      <li><span>2.2 Estado y reparto · 2.3 La norma v3</span><span>p. 4</span></li>
+      <li><span>2.4 Seguir una decisión</span><span>p. 5</span></li>
     </ol>
     <ol>
-      <li><span>2.5 Escala y coste</span><span>p. 7</span></li>
-      <li><span>2.6 Lo que aguanta y lo que no</span><span>p. 8</span></li>
-      <li><span>2.7 Resiliencia y lote 2</span><span>p. 9</span></li>
-      <li class="sec"><span>3 · ADRs y trade-offs</span><span>p. 10</span></li>
-      <li class="sec"><span>4 · Lo que no podemos demostrar</span><span>p. 12</span></li>
+      <li><span>2.5 Escala y coste</span><span>p. 6</span></li>
+      <li><span>2.6 Lo que aguanta y lo que no</span><span>p. 7</span></li>
+      <li><span>2.7 Resiliencia y lote 2</span><span>p. 8</span></li>
+      <li class="sec"><span>3 · ADRs y trade-offs</span><span>p. 9</span></li>
+      <li class="sec"><span>4 · Límites · 5 · La consola</span><span>p. 11</span></li>
     </ol>
   </div>
 </section>
@@ -366,65 +392,60 @@ table.traza td.cmp .src{ font-family:var(--forma); font-size:6.7pt; color:var(--
   <div class="cabecera"><span><b>Cuentas claras</b> · albertitos_plan</span><span>1 · El trabajo de Alberto</span></div>
 
   <div class="cuerpo">
-    <div class="margen">Quién lo usa y qué deja de hacer</div>
     <div class="col ancho-d">
       <h2><span class="num">1</span>El trabajo de Alberto</h2>
-      <p class="entrada">Alberto aprueba pagos. Por cada factura tiene que abrir el PDF, encontrar
-      el pedido en un Excel de catorce hojas, comprobar el NIF y el IBAN contra el maestro de
-      proveedores, sumar base e IVA a mano y entrar en un ERP de 2009 a ver si ese asiento ya está
-      pagado. Seis comprobaciones por documento, y quinientos documentos.</p>
-      <p>El sistema hace esas seis comprobaciones y entrega dos cosas: un veredicto por archivo
-      (<span class="v v-pagar">PAGAR</span>, <span class="v v-nopagar">NO_PAGAR</span> o
-      <span class="v v-escalar">ESCALAR</span>) y, detrás de cada veredicto, el expediente que lo
-      justifica. Alberto no revisa quinientas facturas: revisa treinta y siete, con el motivo y la
-      cifra que no cuadra ya señalados.</p>
-      <h3>Qué salió del lote 1</h3>
-      <table>
-        <thead><tr><th>Veredicto</th><th class="n">Archivos</th><th class="n">Reparto</th><th class="n">Importe</th><th>Qué significa para Alberto</th></tr></thead>
-        <tbody>
-          <tr><td><span class="v v-pagar">PAGAR</span></td><td class="n">452</td><td class="n">90,4 %</td><td class="n">2.450.391,46 €</td><td>Las seis reglas pasan. Se paga sin intervención.</td></tr>
-          <tr><td><span class="v v-nopagar">NO_PAGAR</span></td><td class="n">11</td><td class="n">2,2 %</td><td class="n">19.184,92 €</td><td>Pago duplicado demostrado. No es una duda: es un no.</td></tr>
-          <tr><td><span class="v v-escalar">ESCALAR</span></td><td class="n">37</td><td class="n">7,4 %</td><td class="n">144.119,95 €</td><td>Hace falta una persona o un dato corregido.</td></tr>
-        </tbody>
-      </table>
-    </div>
+      <p class="entrada">Alberto aprueba pagos. Para cada factura abre el PDF, busca el pedido en
+      un Excel de catorce hojas, comprueba NIF e IBAN contra el maestro de proveedores, suma base
+      e IVA y entra en un ERP de 2009 a ver si ya está pagada. Seis comprobaciones por factura.
+      Quinientas facturas.</p>
+      <p>El sistema hace esas seis comprobaciones por él y devuelve un veredicto por archivo con
+      su expediente detrás. Alberto ya no revisa quinientas facturas: revisa treinta y siete, con
+      la cifra que no cuadra ya señalada.</p>
 
-    <div class="margen"><span class="cifra">19.184,92 €</span>en pagos duplicados que el lote habría dejado pasar<span class="ref">outcomes.jsonl</span></div>
+      <div class="veredictos">
+        <div>
+          <span class="cifra">452</span>
+          <span class="v v-pagar">PAGAR · 90,4 %</span>
+          <span class="euros">2.450.391,46 €</span>
+          <span class="rotulo">Las seis reglas pasan. Se paga sin que nadie las mire.</span>
+        </div>
+        <div>
+          <span class="cifra">11</span>
+          <span class="v v-nopagar">NO_PAGAR · 2,2 %</span>
+          <span class="euros">19.184,92 €</span>
+          <span class="rotulo">Pago duplicado demostrado. No es una duda: es un no.</span>
+        </div>
+        <div>
+          <span class="cifra">37</span>
+          <span class="v v-escalar">ESCALAR · 7,4 %</span>
+          <span class="euros">144.119,95 €</span>
+          <span class="rotulo">Hace falta una persona o un dato corregido.</span>
+        </div>
+      </div>
+    </div>
     <div class="col ancho-d">
-      <h3>Lo que el sistema evita, en euros</h3>
-      <p>Los once <span class="v v-nopagar">NO_PAGAR</span> no son anomalías difusas. Nueve son
-      facturas cuyo asiento en el ERP ya está en <code>PAGADA</code>: pagarlas sería pagar dos
-      veces. Los otros dos son el mismo pedido facturado dos veces dentro del propio lote
-      (<span class="id">PO-2026-0492</span>, en <span class="id">2026-0233-A_catering.pdf</span> y
-      <span class="id">factura_41082.pdf</span>), que sólo se ve mirando el lote entero y no
-      factura a factura.</p>
+      <h3>Lo que el sistema evita<span class="ref">outcomes.jsonl</span></h3>
+      <p>Los once <span class="v v-nopagar">NO_PAGAR</span> son dinero concreto. Nueve son facturas
+      cuyo asiento en el ERP ya está en <code>PAGADA</code>: pagarlas sería pagar dos veces. Los
+      otros dos son el mismo pedido (<span class="id">PO-2026-0492</span>) facturado dos veces
+      dentro del propio lote, algo que sólo se ve mirando el lote entero y no factura a factura.</p>
     </div>
-
-    <div class="margen">La cola de revisión, ordenada por lo que cuesta mirarla</div>
     <div class="col ancho-d">
       <h3>Por qué escalan las 37</h3>
-      <table class="compacta">
-        <thead><tr><th style="width:40mm">Motivo</th><th class="n">Archivos</th><th class="n">Importe</th><th>Qué tiene que decidir la persona</th></tr></thead>
-        <tbody>
-          <tr><td><code>iban_mismatch</code></td><td class="n">15</td><td class="n">40.063,85 €</td><td>El IBAN de la factura no es el registrado. Cambio de banco o fraude.</td></tr>
-          <tr><td><code>amount_mismatch</code></td><td class="n">13</td><td class="n">69.486,40 €</td><td>El total no coincide con el pedido ni con el ERP.</td></tr>
-          <tr><td><code>supplier_not_in_master</code></td><td class="n">6</td><td class="n">24.623,50 €</td><td>Un NIF que no está en el maestro de proveedores.</td></tr>
-          <tr><td><code>invalid_date</code></td><td class="n">3</td><td class="n">9.946,20 €</td><td>Fecha de emisión ilegible o imposible.</td></tr>
-        </tbody>
-      </table>
-      <p>El motivo que se muestra es el primero por precedencia, pero el expediente guarda todos
-      los hallazgos: la factura de la portada arrastra tres.</p>
+      <p>Quince traen un IBAN distinto del registrado: cambio de banco o fraude, 40.063,85 € en
+      juego. Trece facturan un total que no coincide con el pedido ni con el ERP: 69.486,40 €.
+      Seis vienen de un NIF que no está en el maestro de proveedores: 24.623,50 €. Tres tienen una
+      fecha de emisión ilegible o imposible: 9.946,20 €.</p>
+      <p>El motivo visible es el primero por precedencia, pero el expediente guarda todos los
+      hallazgos. La factura de la portada arrastra tres.</p>
     </div>
-
-    <div class="margen">Por qué un proceso por lotes y no una aplicación web</div>
     <div class="col ancho-d">
       <h3>El formato que pide el problema</h3>
-      <p>El trabajo de Alberto llega por lotes: una carpeta de PDFs, de golpe. Así que el producto
-      es un <strong>proceso por lotes con una sola orden</strong>, que es lo que se audita, se
-      reejecuta y se mide. Encima hay una <strong>consola de revisión</strong>, pero no para lanzar
-      el trabajo: para atender las 37 excepciones, abrir el PDF al lado de la regla que falló y
-      ajustar la política sin tocar código. Quinientas facturas no necesitan una pantalla;
-      treinta y siete sí.</p>
+      <p>El trabajo llega por lotes: una carpeta de PDFs, de golpe. Así que el producto es un
+      <strong>proceso por lotes con una sola orden</strong>: eso es lo que se audita, se reejecuta
+      y se mide. Encima hay una <strong>consola de revisión</strong>, no para lanzar el trabajo
+      sino para cerrar las 37 excepciones con el PDF al lado de la regla que falló. Quinientas
+      facturas no necesitan una pantalla; treinta y siete sí.</p>
     </div>
   </div>
 
@@ -436,25 +457,22 @@ table.traza td.cmp .src{ font-family:var(--forma); font-size:6.7pt; color:var(--
   <div class="cabecera"><span><b>Cuentas claras</b> · albertitos_plan</span><span>2 · Arquitectura</span></div>
 
   <div class="cuerpo">
-    <div class="margen">La decisión de la que salen todas las demás</div>
     <div class="col ancho-d">
-      <h2><span class="num">2</span>Arquitectura</h2>
+      <h2><span class="num">2</span>Arquitectura<span class="ref">models.py</span></h2>
       <p class="entrada">Todo el diseño sale de una sola línea: leer un documento es un problema
-      probabilístico, decidir un pago no lo es. Separamos las dos cosas con un contrato de datos en
-      medio, y sólo el lado izquierdo tiene permiso para equivocarse.</p>
+      probabilístico; decidir un pago no lo es. Separamos las dos cosas con un contrato de datos
+      en medio, y sólo el lado izquierdo tiene permiso para equivocarse.</p>
     </div>
-
-    <div class="margen">Un contrato en medio<span class="ref">models.py</span></div>
     <div class="col ancho-d">
       <div class="costura">
         <div class="lado">
           <span class="marca">Lado probabilístico</span>
           <h4>Extracción</h4>
           <div class="que">Convierte cualquier documento en campos. Es el único sitio donde
-          gastamos modelos, y el único que puede fallar de forma interesante.</div>
+          gastamos modelos y el único que puede fallar de forma interesante.</div>
           <ul>
             <li>471 PDFs con texto: PyMuPDF y expresiones regulares, seis plantillas.</li>
-            <li>29 escaneados: se rinde a la imagen y llama a un modelo de visión.</li>
+            <li>29 escaneados: un modelo de visión lee la imagen.</li>
             <li>Caché por SHA-256: el mismo documento no se paga dos veces.</li>
           </ul>
         </div>
@@ -469,136 +487,119 @@ table.traza td.cmp .src{ font-family:var(--forma); font-size:6.7pt; color:var(--
           datos, mismo veredicto, siempre. No lee PDFs ni llama a modelos.</div>
           <ul>
             <li>Seis reglas de la norma v3, trece comprobaciones registradas.</li>
-            <li>Compara contra el Excel de proveedores y pedidos y contra el ERP.</li>
+            <li>Compara contra el Excel de proveedores y pedidos, y contra el ERP.</li>
             <li>44 pruebas cubren las ramas sin abrir un solo PDF.</li>
           </ul>
         </div>
       </div>
       <p>Esta costura contesta la pregunta que importa cuando algo sale mal: ¿leímos mal el
-      documento o aplicamos mal la norma? Son dos capas distintas, con dos formas distintas de
-      arreglarse. Y es lo que permite cambiar de proveedor de modelos sin tocar la lógica de pago.</p>
+      documento o aplicamos mal la norma? Son dos capas con dos arreglos distintos. Y es lo que
+      permite cambiar de proveedor de modelos sin tocar la lógica de pago.</p>
     </div>
-
-    <div class="margen">Qué entra, qué hace y qué queda escrito en cada etapa</div>
     <div class="col ancho-d">
-      <h3>2.1 Las etapas, y lo que cada una deja escrito</h3>
-      <table class="etapas compacta">
-        <thead><tr><th class="e"></th><th style="width:28mm">Etapa</th><th>Qué hace</th><th style="width:36mm">Qué deja escrito</th><th style="width:34mm">Si falla</th></tr></thead>
-        <tbody>
-          <tr>
-            <td class="e">0</td>
-            <td><strong>Datos de referencia</strong><span class="fuente">business_data · erp_snapshot</span></td>
-            <td>Limpia el Excel (11 proveedores, 516 pedidos) y baja el ERP entero una vez: 516 asientos en 26 páginas.</td>
-            <td>La foto del ERP en SQLite, y una fila por descarga con sus reintentos.</td>
-            <td>Sin foto del ERP no se decide: el lote se para antes de empezar.</td>
-          </tr>
-          <tr class="banda">
-            <td class="e">1</td>
-            <td><strong>Ingesta</strong><span class="fuente">pipeline._collect_files</span></td>
-            <td>Lista la carpeta y descarta repetidos por nombre y por hash del contenido.</td>
-            <td>La lista de archivos del lote, con su SHA-256.</td>
-            <td>Un archivo ilegible entra igual, y sale escalado.</td>
-          </tr>
-          <tr>
-            <td class="e">2</td>
-            <td><strong>Extracción</strong><span class="fuente">HybridExtractor</span></td>
-            <td>Texto incrustado si hay; visión si no; línea base si el extractor revienta.</td>
-            <td>Campos, método, latencia, coste y el fragmento de página de donde sale cada campo.</td>
-            <td>Cae a la línea base; si tampoco, marca la extracción como no válida.</td>
-          </tr>
-          <tr class="banda">
-            <td class="e">3</td>
-            <td><strong>Decisión</strong><span class="fuente">rules_engine.decide_batch</span></td>
-            <td>Aplica la norma versionada y busca pedidos repetidos en el lote y en los anteriores.</td>
-            <td>Veredicto, motivo, todos los hallazgos, las 13 comprobaciones y la evidencia.</td>
-            <td>Norma desconocida: error inmediato. Nunca cae a otra versión por su cuenta.</td>
-          </tr>
-          <tr>
-            <td class="e">4</td>
-            <td><strong>Estado y entregable</strong><span class="fuente">state · deliverables</span></td>
-            <td>Guarda la decisión vigente y la histórica, y escribe el JSONL de forma atómica.</td>
-            <td>Las tres tablas de estado y <code>outcomes.jsonl</code>, validado línea a línea.</td>
-            <td>Si el volcado falla, el archivo anterior queda intacto: se escribe aparte y se renombra.</td>
-          </tr>
-          <tr class="banda">
-            <td class="e">5</td>
-            <td><strong>Consola</strong><span class="fuente">web/ · Next.js</span></td>
-            <td>Muestra la cola de revisión, el expediente de cada archivo y la política editable.</td>
-            <td>Nada propio: lee y escribe a través de la capa de Python.</td>
-            <td>Si la consola se cae, el proceso por lotes sigue funcionando solo.</td>
-          </tr>
-        </tbody>
-      </table>
-      <p>Las etapas 0 a 4 son una orden de terminal y dos ficheros SQLite. No hay cola de mensajes
-      ni servicio que mantener encendido: nada de eso hacía falta para quinientos archivos, y sí
-      hacía falta poder repetir la ejecución y explicarla. Lo que cambiaría con otro volumen está
-      en las páginas 7 y 8.</p>
+      <h3>2.1 Las etapas</h3>
+      <ol class="etapas">
+        <li>
+          <span class="e">0</span>
+          <span class="nombre">Datos de referencia<span class="fuente">business_data · erp_snapshot</span></span>
+          <span class="que">Limpia el Excel (11 proveedores, 516 pedidos) y baja el ERP entero una
+          vez: 516 asientos en 26 páginas. <span class="deja">DEJA</span>la foto del ERP en SQLite,
+          con fecha y reintentos. Sin foto, el lote no arranca.</span>
+        </li>
+        <li>
+          <span class="e">1</span>
+          <span class="nombre">Ingesta<span class="fuente">pipeline._collect_files</span></span>
+          <span class="que">Lista la carpeta y descarta repetidos por nombre y por hash del
+          contenido. <span class="deja">DEJA</span>la lista del lote con el SHA-256 de cada archivo.</span>
+        </li>
+        <li>
+          <span class="e">2</span>
+          <span class="nombre">Extracción<span class="fuente">HybridExtractor</span></span>
+          <span class="que">Texto incrustado si lo hay; visión si no; línea base si el extractor
+          revienta. <span class="deja">DEJA</span>los campos, el método, la latencia, el coste y el
+          fragmento de página del que sale cada campo.</span>
+        </li>
+        <li>
+          <span class="e">3</span>
+          <span class="nombre">Decisión<span class="fuente">rules_engine</span></span>
+          <span class="que">Aplica la norma versionada y busca pedidos repetidos en este lote y en
+          los anteriores. <span class="deja">DEJA</span>veredicto, motivo, todos los hallazgos, las
+          13 comprobaciones y su evidencia.</span>
+        </li>
+        <li>
+          <span class="e">4</span>
+          <span class="nombre">Estado y entregable<span class="fuente">state · deliverables</span></span>
+          <span class="que">Guarda la decisión vigente y la histórica. Escribe el JSONL en un
+          temporal y lo renombra: o está entero o no está.
+          <span class="deja">DEJA</span>tres tablas de estado y <code>outcomes.jsonl</code>.</span>
+        </li>
+        <li>
+          <span class="e">5</span>
+          <span class="nombre">Consola<span class="fuente">web/ · Next.js</span></span>
+          <span class="que">Cola de revisión, expediente de cada archivo y política editable.
+          <span class="deja">DEJA</span>nada propio: lee y escribe a través de la capa de Python.
+          Si se cae, el lote sigue funcionando solo.</span>
+        </li>
+      </ol>
+      <p>Las etapas 0 a 4 son una orden de terminal y dos ficheros SQLite. Ni cola de mensajes ni
+      servicio encendido: quinientos archivos no lo necesitan. Lo que sí necesitan es poder
+      repetirse y explicarse. Lo que cambiaría con otro volumen está en las páginas 6 y 7.</p>
     </div>
   </div>
 
   <div class="pie"><span>Elequipo · albertitos_plan.pdf</span><span class="folio">3</span></div>
 </section>
 
-<!-- ==================== 4 · ESTADO, DATOS Y REPARTO ==================== -->
+<!-- ==================== 4 · ESTADO, REPARTO Y NORMA ==================== -->
 <section class="hoja">
-  <div class="cabecera"><span><b>Cuentas claras</b> · albertitos_plan</span><span>2.2 · Estado, datos y reparto</span></div>
+  <div class="cabecera"><span><b>Cuentas claras</b> · albertitos_plan</span><span>2.2 · Estado y reparto · 2.3 · La norma v3</span></div>
 
   <div class="cuerpo">
-    <div class="margen">Dónde vive el estado<span class="ref">state.py</span></div>
     <div class="col ancho-d">
-      <h2><span class="num">2.2</span>Estado, datos y reparto del trabajo</h2>
-      <p class="entrada">El estado operativo vive en SQLite; el JSONL es sólo el formato de
-      entrega. Esa distinción es la que permite reprocesar sin duplicar y contestar preguntas que
-      un fichero de texto no contesta.</p>
-      <table class="compacta">
-        <thead><tr><th style="width:32mm">Tabla</th><th class="n" style="width:24mm">Clave</th><th>Qué guarda</th><th style="width:46mm">Para qué sirve</th></tr></thead>
-        <tbody>
-          <tr><td><code>decisions</code></td><td class="n">file_id</td><td>Veredicto, motivo, hallazgos, evidencia, campos extraídos, método, versión de norma, latencia y coste.</td><td>La decisión vigente de cada archivo. Se reescribe por <em>upsert</em>: nunca hay dos.</td></tr>
-          <tr class="banda"><td><code>decision_history</code></td><td class="n">run_id + file_id</td><td>Lo mismo, pero inmutable y con el lote al que pertenece.</td><td>Comparar ejecuciones y ver qué veredicto cambió al cambiar la norma o el ERP.</td></tr>
-          <tr><td><code>runs</code></td><td class="n">run_id</td><td>Estado, recuentos, inicio y fin, segundos, archivos por segundo, coste y estadísticas del extractor.</td><td>La observabilidad del lote, sin instrumentación aparte.</td></tr>
-          <tr class="banda"><td><code>erp_asientos</code></td><td class="n">asiento_id</td><td>Pedido, proveedor, NIF, importe esperado, estado y cuándo se leyó.</td><td>Decidir sin volver a llamar al ERP por cada factura.</td></tr>
-          <tr><td><code>snapshot_runs</code></td><td class="n">run_at</td><td>Total de asientos y estadísticas de la descarga.</td><td>Saber de qué foto del ERP sale una decisión.</td></tr>
-        </tbody>
-      </table>
+      <h2><span class="num">2.2</span>Estado y reparto del trabajo<span class="ref">state.py</span></h2>
+      <p class="entrada">El estado vive en SQLite. El JSONL es el formato de entrega, no la
+      verdad. Esa distinción permite reprocesar sin duplicar.</p>
+      <p>Bastan tres tablas. <code>decisions</code> guarda la decisión vigente de cada archivo,
+      una por <code>file_id</code>: reprocesar la sustituye, nunca la duplica.
+      <code>decision_history</code> guarda todas las anteriores, inmutables y con su lote, para
+      ver qué cambió al cambiar la norma o el ERP. <code>runs</code> guarda cada ejecución:
+      recuentos, segundos, archivos por segundo y coste. La foto del ERP vive al lado, con la
+      fecha de cada descarga.</p>
     </div>
-
-    <div class="margen">Quién decide qué</div>
     <div class="col ancho-d">
-      <h3>El reparto entre modelos, reglas y personas</h3>
-      <table class="compacta">
-        <thead><tr><th style="width:26mm">Quién</th><th style="width:38mm">De qué responde</th><th class="n" style="width:22mm">Volumen</th><th>Y de qué no responde</th></tr></thead>
-        <tbody>
-          <tr><td><strong>Código determinista</strong></td><td>Leer los 471 PDFs con texto y decidir las 500 facturas.</td><td class="n">500 de 500<br>decisiones</td><td>De interpretar imágenes. Si el PDF no trae texto, no lo intenta.</td></tr>
-          <tr class="banda"><td><strong>Modelo de visión</strong></td><td>Convertir 29 escaneos en campos, validados contra el esquema.</td><td class="n">29 de 500<br>extracciones</td><td>De decidir. Su salida entra en las mismas reglas que todo lo demás.</td></tr>
-          <tr><td><strong>Persona</strong></td><td>Resolver los escalados, corregir campos con una anulación firmada y ajustar la política.</td><td class="n">37 de 500<br>revisiones</td><td>De mirar los 452 que cuadran. Ese es justamente el trabajo que se ahorra.</td></tr>
-        </tbody>
-      </table>
-      <p>Las correcciones humanas no se editan sobre la base de datos: se declaran en un fichero y
-      se atan al SHA-256 exacto del PDF. Si el documento cambia, la corrección caduca sola y el
-      archivo vuelve a escalar en vez de heredar un arreglo viejo. En el lote 1 hay una
-      (<span class="id">scan_021.pdf</span>), anotada en la traza como <code>+human-override</code>.</p>
+      <div class="reparto">
+        <div>
+          <h4>Código determinista</h4>
+          <span class="cuota">500 de 500 decisiones</span>
+          <p>Lee los 471 PDFs con texto y decide las 500 facturas.</p>
+          <p>No interpreta imágenes. Si el PDF no trae texto, no lo intenta.</p>
+        </div>
+        <div>
+          <h4>Modelo de visión</h4>
+          <span class="cuota">29 de 500 extracciones</span>
+          <p>Convierte 29 escaneos en campos, validados contra el esquema.</p>
+          <p>No decide. Su salida entra en las mismas reglas que todo lo demás.</p>
+        </div>
+        <div>
+          <h4>Persona</h4>
+          <span class="cuota">37 de 500 revisiones</span>
+          <p>Resuelve los escalados, corrige campos con una anulación firmada y ajusta la política.</p>
+          <p>No mira los 452 que cuadran. Ese es el trabajo que se ahorra.</p>
+        </div>
+      </div>
+      <p>Las correcciones humanas se declaran en un fichero atado al SHA-256 exacto del PDF. Si el
+      documento cambia, la corrección caduca sola y el archivo vuelve a escalar. En el lote 1 hay
+      una (<span class="id">scan_021.pdf</span>), anotada como <code>+human-override</code>.</p>
     </div>
-
-  </div>
-
-  <div class="pie"><span>Elequipo · albertitos_plan.pdf</span><span class="folio">4</span></div>
-</section>
-
-<!-- ==================== 5 · LA NORMA V3 ==================== -->
-<section class="hoja">
-  <div class="cabecera"><span><b>Cuentas claras</b> · albertitos_plan</span><span>2.3 · La norma v3, regla a regla</span></div>
-
-  <div class="cuerpo">
-    <div class="margen">Las seis reglas<span class="ref">rules_engine.py</span></div>
     <div class="col ancho-d">
-      <h2><span class="num">2.3</span>La norma v3, regla a regla</h2>
-      <p class="entrada">La norma de pagos vive en código como seis reglas y trece
-      comprobaciones. Cada comprobación tiene un código, y cada código tiene un veredicto por
-      defecto que Alberto puede cambiar sin que nadie toque el motor.</p>
+      <h2 class="segunda"><span class="num">2.3</span>La norma v3, regla a regla<span class="ref">rules_engine.py</span></h2>
+      <p class="entrada">La norma vive en código como seis reglas y trece comprobaciones. Cada
+      comprobación tiene un código, y cada código un veredicto por defecto que Alberto puede
+      cambiar sin que nadie toque el motor.</p>
       <table class="compacta">
         <thead><tr><th class="e"></th><th style="width:32mm">Regla</th><th>Contra qué se compara</th><th style="width:48mm">Códigos y veredicto por defecto</th></tr></thead>
         <tbody>
-          <tr><td class="e">0</td><td><strong>Extracción completa</strong></td><td>Los campos necesarios para poder aplicar las reglas.</td><td><code>incomplete_extraction</code> <span class="v v-escalar">ESCALAR</span></td></tr>
+          <tr><td class="e">0</td><td><strong>Extracción completa</strong></td><td>Los campos necesarios para aplicar las reglas.</td><td><code>incomplete_extraction</code> <span class="v v-escalar">ESCALAR</span></td></tr>
           <tr class="banda"><td class="e">1</td><td><strong>Proveedor e IBAN</strong></td><td>Maestro de proveedores del Excel, por NIF.</td><td><code>supplier_not_in_master</code>, <code>iban_mismatch</code> <span class="v v-escalar">ESCALAR</span></td></tr>
           <tr><td class="e">2</td><td><strong>Pedido e importe</strong></td><td>Hoja de pedidos: que exista, que sea de ese proveedor y que el total cuadre.</td><td><code>pedido_not_found</code>, <code>pedido_supplier_mismatch</code>, <code>amount_mismatch</code> <span class="v v-escalar">ESCALAR</span></td></tr>
           <tr class="banda"><td class="e">3</td><td><strong>Aritmética del IVA</strong></td><td>La propia factura: base más IVA, y base por tipo.</td><td><code>total_not_base_plus_iva</code>, <code>iva_miscalculated</code> <span class="v v-escalar">ESCALAR</span></td></tr>
@@ -606,39 +607,17 @@ table.traza td.cmp .src{ font-family:var(--forma); font-size:6.7pt; color:var(--
           <tr class="banda"><td class="e">5</td><td><strong>ERP y duplicados</strong></td><td>El asiento del ERP, el resto del lote y los lotes anteriores.</td><td><code>already_paid</code>, <code>duplicate_pedido</code> <span class="v v-nopagar">NO_PAGAR</span>; el resto <span class="v v-escalar">ESCALAR</span></td></tr>
         </tbody>
       </table>
-      <p>La tolerancia de importes es de un céntimo, y la precedencia cuando hay hallazgos que
-      apuntan a sitios distintos es <span class="v v-escalar">ESCALAR</span> &gt;
+      <p>La tolerancia de importes es de un céntimo. Cuando varios hallazgos apuntan a sitios
+      distintos, la precedencia es <span class="v v-escalar">ESCALAR</span> &gt;
       <span class="v v-nopagar">NO_PAGAR</span> &gt; <span class="v v-pagar">PAGAR</span>. El mapa
-      de los 18 códigos a veredictos vive en un fichero de política editable desde la consola:
-      cuando Alberto decida que un IBAN distinto es motivo de rechazo y no de revisión, eso es un
-      cambio de configuración que queda registrado en la ejecución, no un cambio de código.</p>
-    </div>
-
-    <div class="margen">Qué regla decide, en la práctica</div>
-    <div class="col ancho-d">
-      <h3>Cuál de las seis decide cada factura</h3>
-      <table class="compacta">
-        <thead><tr><th class="e">R</th><th style="width:44mm">Motivo principal</th><th class="n">Archivos</th><th style="width:22mm">Veredicto</th><th>Qué lo delata</th></tr></thead>
-        <tbody>
-          <tr><td class="e">—</td><td><code>all_rules_pass</code></td><td class="n">452</td><td><span class="v v-pagar">PAGAR</span></td><td>Las trece comprobaciones pasan.</td></tr>
-          <tr class="banda"><td class="e">1</td><td><code>iban_mismatch</code></td><td class="n">15</td><td><span class="v v-escalar">ESCALAR</span></td><td>El IBAN no es el del maestro de proveedores.</td></tr>
-          <tr><td class="e">2</td><td><code>amount_mismatch</code></td><td class="n">13</td><td><span class="v v-escalar">ESCALAR</span></td><td>El total no coincide con el importe del pedido.</td></tr>
-          <tr class="banda"><td class="e">5</td><td><code>already_paid</code></td><td class="n">9</td><td><span class="v v-nopagar">NO_PAGAR</span></td><td>El asiento del ERP ya está en <code>PAGADA</code>.</td></tr>
-          <tr><td class="e">1</td><td><code>supplier_not_in_master</code></td><td class="n">6</td><td><span class="v v-escalar">ESCALAR</span></td><td>El NIF no está registrado.</td></tr>
-          <tr class="banda"><td class="e">4</td><td><code>invalid_date</code></td><td class="n">3</td><td><span class="v v-escalar">ESCALAR</span></td><td>Fecha de emisión ilegible o imposible.</td></tr>
-          <tr><td class="e">5</td><td><code>duplicate_pedido</code></td><td class="n">2</td><td><span class="v v-nopagar">NO_PAGAR</span></td><td>El mismo pedido aparece dos veces en el lote.</td></tr>
-        </tbody>
-      </table>
-      <p>Sólo siete códigos aparecen como motivo principal en este lote, pero los demás no son
-      código muerto: <code>total_not_base_plus_iva</code> y <code>erp_amount_mismatch</code>
-      aparecen como hallazgos secundarios (la factura de la página 6 arrastra los dos), y los que
-      no se activaron —pedido inexistente, IVA mal calculado, fecha futura, extracción
-      incompleta— están cubiertos por las pruebas del motor. Que un código no se dispare en un
-      lote no significa que no esté defendido.</p>
+      de los 18 códigos a veredictos es un fichero de política editable desde la consola: si
+      Alberto decide que un IBAN distinto es rechazo y no revisión, cambia configuración, no
+      código, y el cambio queda registrado en la ejecución. Los códigos que no se disparan en este
+      lote están cubiertos por las pruebas del motor.</p>
     </div>
   </div>
 
-  <div class="pie"><span>Elequipo · albertitos_plan.pdf</span><span class="folio">5</span></div>
+  <div class="pie"><span>Elequipo · albertitos_plan.pdf</span><span class="folio">4</span></div>
 </section>
 
 <!-- ==================== 5 · SEGUIR UNA DECISIÓN ==================== -->
@@ -646,13 +625,12 @@ table.traza td.cmp .src{ font-family:var(--forma); font-size:6.7pt; color:var(--
   <div class="cabecera"><span><b>Cuentas claras</b> · albertitos_plan</span><span>2.4 · Seguir una decisión</span></div>
 
   <div class="cuerpo">
-    <div class="margen">La factura de la portada, entera</div>
     <div class="col ancho-d">
       <h2><span class="num">2.4</span>Seguir una decisión</h2>
       <p class="entrada">Esto es lo que el sistema guarda de
       <span class="id">2026-0811-B_catering.pdf</span>. No es un resumen escrito para este
-      documento: son las trece comprobaciones tal como salen del motor de reglas, cada una con el
-      valor observado, el esperado y la fuente de ese valor esperado.</p>
+      documento: son las trece comprobaciones tal como salen del motor, cada una con el valor
+      observado, el esperado y la fuente del esperado.</p>
       <table class="traza">
         <thead><tr><th class="regla">R</th><th style="width:28mm">Comprobación</th><th class="est">Resultado</th><th style="width:36mm">Observado</th><th>Esperado, y de dónde sale</th></tr></thead>
         <tbody>
@@ -672,37 +650,28 @@ table.traza td.cmp .src{ font-family:var(--forma); font-size:6.7pt; color:var(--
         </tbody>
       </table>
     </div>
-
-    <div class="margen">Lo que va anotado alrededor<span class="ref">decisions</span></div>
     <div class="col ancho-d">
-      <h3>Y lo que acompaña al veredicto</h3>
-      <table class="compacta">
-        <tbody>
-          <tr><td style="width:34mm">Veredicto y motivo</td><td><span class="v v-escalar">ESCALAR</span> · <code>amount_mismatch</code></td></tr>
-          <tr class="banda"><td>Todos los hallazgos</td><td><code>amount_mismatch</code>, <code>total_not_base_plus_iva</code>, <code>erp_amount_mismatch</code></td></tr>
-          <tr><td>Evidencia</td><td>P005 · PO-2026-0707 · AS-70006 · PENDIENTE</td></tr>
-          <tr class="banda"><td>Cómo se leyó</td><td><code>embedded_text</code>, plantilla <code>narrative</code></td></tr>
-          <tr><td>Versión de norma</td><td><code>norma-v3</code></td></tr>
-          <tr class="banda"><td>Latencia y coste</td><td>4,85 ms · 0,00 $</td></tr>
-          <tr><td>Ejecución</td><td><code>2026-09-19T11:20:35Z</code>, con la foto del ERP de esa misma mañana</td></tr>
-        </tbody>
-      </table>
+      <h3>Y lo que acompaña al veredicto<span class="ref">decisions</span></h3>
+      <p>Junto a las trece filas queda el veredicto con su motivo principal
+      (<span class="v v-escalar">ESCALAR</span> · <code>amount_mismatch</code>), los tres
+      hallazgos completos, la evidencia (P005 · PO-2026-0707 · AS-70006 · PENDIENTE), cómo se leyó
+      el PDF (<code>embedded_text</code>, plantilla <code>narrative</code>), la norma aplicada
+      (<code>norma-v3</code>), la latencia (4,85 ms), el coste (0,00 $) y la hora de ejecución,
+      <code>2026-09-19T11:20:35Z</code>, con la foto del ERP de esa misma mañana.</p>
     </div>
-
-    <div class="margen">Qué se ve mientras el lote corre</div>
     <div class="col ancho-d">
       <h3>Las señales en directo</h3>
       <p>El proceso emite una línea JSON por suceso: <code>run_start</code>,
       <code>extracted</code>, <code>decided</code>, <code>override_skipped</code>,
       <code>data_error</code>, <code>data_warnings</code> y <code>run_done</code> con el resumen.
-      La consola consume ese mismo flujo, así que lo que ve Alberto en la pantalla es exactamente
-      lo que se guarda en la base de datos. No hay dos caminos.</p>
-      <p>El trabajo pendiente tampoco es una métrica aparte: es la consulta
+      La consola consume ese mismo flujo: lo que Alberto ve en pantalla es lo que se guarda en la
+      base de datos. No hay dos caminos.</p>
+      <p>El trabajo pendiente no es una métrica aparte: es la consulta
       <code>result = 'ESCALAR'</code>. Hoy devuelve 37 filas y 144.119,95 €.</p>
     </div>
   </div>
 
-  <div class="pie"><span>Elequipo · albertitos_plan.pdf</span><span class="folio">6</span></div>
+  <div class="pie"><span>Elequipo · albertitos_plan.pdf</span><span class="folio">5</span></div>
 </section>
 
 <!-- ==================== 6 · ESCALA Y COSTE ==================== -->
@@ -710,27 +679,24 @@ table.traza td.cmp .src{ font-family:var(--forma); font-size:6.7pt; color:var(--
   <div class="cabecera"><span><b>Cuentas claras</b> · albertitos_plan</span><span>2.5 · Escala y coste</span></div>
 
   <div class="cuerpo">
-    <div class="margen">Medido, no estimado<span class="ref">runs</span></div>
     <div class="col ancho-d">
-      <h2><span class="num">2.5</span>Escala y coste</h2>
-      <p class="entrada">Lo de esta página está separado en dos: lo que hemos medido en una
-      ejecución real y lo que estimamos a partir de esas medidas. Lo segundo va marcado como
-      estimación.</p>
+      <h2><span class="num">2.5</span>Escala y coste<span class="ref">runs</span></h2>
+      <p class="entrada">Esta página separa dos cosas: lo que medimos en una ejecución real y lo
+      que estimamos a partir de esas medidas. Lo segundo va marcado como estimación.</p>
       <table class="compacta">
         <thead><tr><th style="width:52mm">Medida</th><th class="n" style="width:24mm">Valor</th><th>De dónde sale</th></tr></thead>
         <tbody>
           <tr><td>Lote 1 completo, de carpeta a JSONL</td><td class="n">2,055 s</td><td>Columna <code>elapsed_s</code> de la ejecución.</td></tr>
           <tr class="banda"><td>Rendimiento</td><td class="n">243,3 arch./s</td><td>Columna <code>files_per_s</code>, con los 29 escaneos ya en caché.</td></tr>
-          <tr><td>Latencia de extracción por archivo</td><td class="n">4,1 ms</td><td>Media de 500 filas; mínimo 0,83 ms, máximo 16,64 ms.</td></tr>
+          <tr><td>Extracción por archivo con texto</td><td class="n">4,1 ms</td><td>Media de 500 filas; mínimo 0,83 ms, máximo 16,64 ms.</td></tr>
           <tr class="banda"><td>Extracción por visión, en frío</td><td class="n">5,74 s</td><td>Media de los 29 escaneos; mediana 5,22 s, rango de 4,36 a 8,60 s.</td></tr>
           <tr><td>Descarga completa del ERP</td><td class="n">3,489 s</td><td>516 asientos, 26 páginas, 30 peticiones, 3 reintentos.</td></tr>
           <tr class="banda"><td>Coste en modelos de la ejecución</td><td class="n">0,00 $</td><td>471 archivos no llaman a ningún modelo; los 29 restantes salieron de caché.</td></tr>
-          <tr><td>Hardware</td><td class="n">1 portátil</td><td>Intel Core i5-12500H, 16 hilos, 16 GB, Debian 13, Python 3.13. Un solo proceso.</td></tr>
         </tbody>
       </table>
+      <p>Todo en un portátil: Intel Core i5-12500H, 16 GB, Debian 13, Python 3.13, un solo
+      proceso.</p>
     </div>
-
-    <div class="margen">La fórmula, y por qué el 94 % del lote sale gratis</div>
     <div class="col ancho-d">
       <h3>Coste por lote</h3>
       <div class="formula">
@@ -740,33 +706,24 @@ table.traza td.cmp .src{ font-family:var(--forma); font-size:6.7pt; color:var(--
       </div>
       <p>El término que falta es el que importa: <strong>los documentos con texto no aparecen en la
       fórmula</strong>, porque nunca llaman a un modelo. El coste no crece con el número de
-      facturas, crece con el número de <em>escaneos nuevos</em>. Y como la caché indexa por
-      contenido, reejecutar un lote entero cuesta cero: reprocesar pasa a ser una decisión barata
-      en lugar de una negociación.</p>
-      <p>A 100.000 facturas con la misma proporción de escaneos (5,8 %): <em>estimación</em> de
-      5.800 llamadas de visión, unos 1,74 $ en modelos. A esa escala el coste dominante no es el
-      modelo, es el tiempo.</p>
+      facturas; crece con el número de <em>escaneos nuevos</em>. Y como la caché indexa por
+      contenido, reejecutar un lote entero cuesta cero.</p>
     </div>
-
-    <div class="margen">Estimaciones, marcadas como tales</div>
     <div class="col ancho-d">
-      <h3>Tiempo a 100.000 facturas</h3>
-      <table class="compacta">
-        <thead><tr><th style="width:44mm">Tramo</th><th class="n" style="width:22mm">Estimación</th><th>Cómo se calcula, y qué lo limita</th></tr></thead>
-        <tbody>
-          <tr><td>94.200 con texto</td><td class="n">≈ 6,5 min</td><td>94.200 ÷ 243 arch./s con un solo proceso. Es trabajo por archivo y sin estado compartido: con 8 procesos baja de un minuto.</td></tr>
-          <tr class="banda"><td>5.800 escaneos, en serie</td><td class="n">≈ 9,2 h</td><td>5.800 × 5,74 s. Inaceptable, y es el cuello de botella real del sistema.</td></tr>
-          <tr><td>5.800 escaneos, 16 en paralelo</td><td class="n">≈ 35 min</td><td>Las llamadas son independientes; el techo lo pone la cuota del proveedor, no la máquina.</td></tr>
-          <tr class="banda"><td>Decidir las 100.000</td><td class="n">&lt; 1 min</td><td>Función pura en memoria contra dos índices. No es el problema.</td></tr>
-        </tbody>
-      </table>
-      <p>La conclusión operativa es que escalar este sistema no es escalar la decisión: es
-      administrar la cuota de visión y repartir la extracción entre procesos. Las dos cosas están
-      aisladas en la etapa 2.</p>
+      <h3>A 100.000 facturas</h3>
+      <p>Con la misma proporción de escaneos (5,8 %), <em>estimamos</em> 5.800 llamadas de visión
+      y unos 1,74 $ en modelos. A esa escala el coste dominante no es el modelo: es el tiempo.</p>
+      <p>Las 94.200 facturas con texto tardan unos 6,5 minutos en un solo proceso (94.200 ÷ 243).
+      Es trabajo por archivo sin estado compartido: con 8 procesos baja de un minuto. Los 5.800
+      escaneos son el cuello de botella real: 9,2 horas en serie, 35 minutos con 16 llamadas en
+      paralelo. El techo lo pone la cuota del proveedor, no la máquina. Decidir las 100.000 tarda
+      menos de un minuto: es una función pura en memoria contra dos índices.</p>
+      <p>Escalar este sistema no es escalar la decisión. Es administrar la cuota de visión y
+      repartir la extracción entre procesos. Las dos cosas viven aisladas en la etapa 2.</p>
     </div>
   </div>
 
-  <div class="pie"><span>Elequipo · albertitos_plan.pdf</span><span class="folio">7</span></div>
+  <div class="pie"><span>Elequipo · albertitos_plan.pdf</span><span class="folio">6</span></div>
 </section>
 
 <!-- ==================== 7 · LO QUE AGUANTA ==================== -->
@@ -774,62 +731,53 @@ table.traza td.cmp .src{ font-family:var(--forma); font-size:6.7pt; color:var(--
   <div class="cabecera"><span><b>Cuentas claras</b> · albertitos_plan</span><span>2.6 · Lo que aguanta y lo que no</span></div>
 
   <div class="cuerpo">
-    <div class="margen">Los techos que ya conocemos</div>
     <div class="col ancho-d">
       <h2><span class="num">2.6</span>Lo que aguanta y lo que no</h2>
-      <p class="entrada">Estos son los límites del diseño actual, con lo que haríamos en cada caso.
-      Ninguno es una sorpresa: son consecuencias aceptadas de haber elegido lo más pequeño que
-      resolvía el problema.</p>
-      <table class="compacta">
-        <thead><tr><th style="width:44mm">Límite</th><th>Cuándo aparece, y qué haríamos</th></tr></thead>
-        <tbody>
-          <tr><td><strong>SQLite admite un escritor</strong></td><td>En cuanto haya más de un proceso escribiendo. La capa de estado está aislada en un módulo: se cambia por Postgres sin tocar reglas ni extractores.</td></tr>
-          <tr class="banda"><td><strong>El ERP tolera 10 peticiones/s, y la sesión caduca a los 15 min o 300 usos</strong></td><td>Ya lo esquivamos: se descarga una foto completa con 30 peticiones y las 500 decisiones leen de SQLite. Sin esa foto serían 500 llamadas y una sesión caducada a mitad del lote.</td></tr>
-          <tr><td><strong>El Excel se carga entero en memoria</strong></td><td>Con 516 pedidos es irrelevante. Con millones, pasa a ser una tabla indexada del mismo almacén de estado.</td></tr>
-          <tr class="banda"><td><strong>La cuota del proveedor de visión</strong></td><td>Es el techo del paralelismo. Se reparte entre varios modelos y proveedores, y la caché absorbe las reejecuciones.</td></tr>
-        </tbody>
-      </table>
+      <p class="entrada">Estos son los límites del diseño actual y lo que haríamos en cada caso.
+      Ninguno es una sorpresa: son el precio de elegir lo más pequeño que resolvía el problema.</p>
+      <ul class="definida">
+        <li><b>SQLite admite un solo escritor.</b> Aparece con más de un proceso escribiendo. La
+        capa de estado es un módulo aislado: se cambia por Postgres sin tocar reglas ni extractores.</li>
+        <li><b>El ERP tolera 10 peticiones/s y la sesión caduca a los 15 minutos o 300 usos.</b>
+        Ya lo esquivamos: una foto completa en 30 peticiones, y las 500 decisiones leen de SQLite.
+        Sin esa foto serían 500 llamadas y una sesión caducada a mitad del lote.</li>
+        <li><b>El Excel se carga entero en memoria.</b> Con 516 pedidos da igual. Con millones,
+        pasa a ser una tabla indexada del mismo almacén de estado.</li>
+        <li><b>La cuota del proveedor de visión es el techo del paralelismo.</b> Se reparte entre
+        varios proveedores, y la caché absorbe las reejecuciones.</li>
+      </ul>
     </div>
-
-    <div class="margen">Correos, imágenes, hojas de cálculo</div>
     <div class="col ancho-d">
       <h3>Añadir un tipo de archivo nuevo</h3>
       <p>El punto de extensión es el contrato <code>InvoiceData</code>: un extractor nuevo es una
-      función que devuelve ese objeto, y las reglas no se enteran. Ya hay tres caminos además del
-      PDF (XML de FacturaE y UBL, correos, documentos de texto y hojas de cálculo) detrás de un
-      interruptor en la política que hoy acepta sólo <code>.pdf</code>, para no ampliar la
-      superficie sin necesidad. Aceptar correos en producción es activar ese interruptor y escribir
-      pruebas del extractor nuevo; ni una línea de la lógica de pago cambia. Eso es exactamente lo
-      que compra la costura de la página 3.</p>
+      función que devuelve ese objeto, y las reglas no se enteran. Ya existen tres caminos además
+      del PDF (XML de FacturaE y UBL, correos, y texto u hojas de cálculo), detrás de un
+      interruptor de política que hoy acepta sólo <code>.pdf</code>. Aceptar correos en producción
+      es activar ese interruptor y escribir las pruebas del extractor. Ni una línea de la lógica
+      de pago cambia. Eso es lo que compra la costura de la página 3.</p>
     </div>
-
-    <div class="margen">Por qué no puede haber pagos duplicados</div>
     <div class="col ancho-d">
       <h3>Idempotencia</h3>
       <ul>
         <li>La clave es el <code>file_id</code>: reprocesar sustituye la decisión, no añade otra.</li>
-        <li>La ingesta descarta repetidos por nombre y por hash del contenido.</li>
-        <li>La visión se cachea por SHA-256: el mismo documento no se paga dos veces.</li>
-        <li>Los pedidos de lotes anteriores se leen del historial, así que una factura repetida entre lotes se ve.</li>
+        <li>La ingesta descarta repetidos por nombre y por hash; la visión se cachea por ese mismo hash.</li>
+        <li>Los pedidos de lotes anteriores se leen del historial: una factura repetida entre lotes se ve.</li>
         <li>El JSONL se escribe en un temporal y se renombra: o está entero o no está.</li>
       </ul>
     </div>
-
-    <div class="margen">Qué está comprobado hoy<span class="ref">tests/ · 44 pruebas</span></div>
     <div class="col ancho-d">
-      <h3>Lo que cubren las pruebas</h3>
-      <p>44 pruebas en 2,34 s cubren las ramas del motor de reglas, el aislamiento entre lotes, el
-      contrato del JSONL, las anulaciones atadas al hash, la degradación cuando no hay visión y el
-      bloqueo de una norma no implementada. El motor de reglas se prueba sin abrir un PDF, que era
-      justamente el objetivo de separar las dos capas.</p>
+      <h3>Lo que cubren las pruebas<span class="ref">tests/ · 44 pruebas</span></h3>
+      <p>44 pruebas en 2,34 s cubren las ramas del motor, el aislamiento entre lotes, el contrato
+      del JSONL, las anulaciones atadas al hash, la degradación sin visión y el bloqueo de una
+      norma no implementada. El motor se prueba sin abrir un PDF.</p>
       <p>La precisión de lectura se comprobó a mano sobre 45 documentos: 98,4 % de campos
       correctos, 100 % en los 30 digitales y 95,2 % en los 15 escaneados. Los dos documentos con
       algún campo mal son escaneos degradados a propósito, y los dos acabaron escalados. Ningún
-      error de lectura detectado produjo un <span class="v v-pagar">PAGAR</span> indebido.</p>
+      error de lectura produjo un <span class="v v-pagar">PAGAR</span> indebido.</p>
     </div>
   </div>
 
-  <div class="pie"><span>Elequipo · albertitos_plan.pdf</span><span class="folio">8</span></div>
+  <div class="pie"><span>Elequipo · albertitos_plan.pdf</span><span class="folio">7</span></div>
 </section>
 
 <!-- ==================== 8 · RESILIENCIA Y LOTE 2 ==================== -->
@@ -837,44 +785,58 @@ table.traza td.cmp .src{ font-family:var(--forma); font-size:6.7pt; color:var(--
   <div class="cabecera"><span><b>Cuentas claras</b> · albertitos_plan</span><span>2.7 · Resiliencia y lote 2</span></div>
 
   <div class="cuerpo">
-    <div class="margen">La regla de fondo: fallar en cerrado</div>
     <div class="col ancho-d">
       <h2><span class="num">2.7</span>Resiliencia y recuperación</h2>
       <p class="entrada">Ningún fallo puede convertirse en un pago. Cuando el sistema no sabe,
       escala; cuando no puede, se para. Nunca rellena el hueco con algo plausible.</p>
-      <table class="compacta suelta">
-        <thead><tr><th style="width:40mm">Qué falla</th><th style="width:54mm">Qué hace el sistema</th><th style="width:38mm">Qué se conserva</th><th>Cómo se recupera</th></tr></thead>
-        <tbody>
-          <tr><td><strong>El proveedor de visión no responde</strong></td><td>Tres intentos con espera creciente (0, 1 y 2 s) y salto a los modelos alternativos.</td><td>Los 471 digitales y los escaneos ya en caché.</td><td>Se relanza el lote: sólo se reintentan los escaneos sin resolver.</td></tr>
-          <tr class="banda"><td><strong>Caen todos los proveedores</strong></td><td>La extracción se marca como no disponible y la regla 0 no pasa.</td><td>Todo lo demás, decidido con normalidad.</td><td>Esos archivos salen como <span class="v v-escalar">ESCALAR</span> y aparecen en la cola. No como pagos.</td></tr>
-          <tr><td><strong>El modelo o el extractor devuelven algo que no es una factura</strong></td><td>La salida se valida contra el esquema y se rechaza; si el extractor revienta, cae a la línea base y lo anota en el método.</td><td>Nada contaminado entra en las reglas, y el lote no se interrumpe por un archivo.</td><td>Reintento y, si insiste, escalado. Queda marcado para revisar el extractor con ese documento.</td></tr>
-          <tr><td><strong>El ERP falla como suele fallar</strong></td><td><code>ORA-00600</code>: reintenta la misma llamada, hasta 6 veces. <code>401</code>: vuelve a autenticarse. <code>429</code>: espera lo que diga la cabecera, y de salida no pasamos de 8,3 peticiones/s sobre un techo de 10.</td><td>Las páginas ya descargadas y el progreso de la sesión.</td><td>Automático. Medido: 3 reintentos por <code>ORA-00600</code> en 30 peticiones, sin intervención.</td></tr>
-          <tr class="banda"><td><strong>El ERP no está</strong></td><td>El lote no arranca.</td><td>La foto anterior del ERP, con su fecha.</td><td>Decidir con una foto vieja tiene que ser una elección, no un accidente.</td></tr>
-          <tr><td><strong>Se interrumpe el proceso</strong></td><td>El JSONL se escribe aparte y se renombra al final.</td><td>Las decisiones ya guardadas y la caché de visión.</td><td>Se relanza. Los hashes evitan pagar dos veces por lo ya leído.</td></tr>
-          <tr class="banda"><td><strong>Un PDF corregido a mano cambia</strong></td><td>La anulación está atada al SHA-256 y deja de aplicarse.</td><td>La anulación, inerte, y el aviso <code>override_skipped</code>.</td><td>El archivo vuelve a escalar en vez de heredar una corrección caducada.</td></tr>
-          <tr><td><strong>Se pide una norma que no existe</strong></td><td>Error inmediato. No cae a la versión anterior.</td><td>Todo el estado previo.</td><td>Se implementa la norma: decidir con la norma equivocada es peor que no decidir.</td></tr>
-        </tbody>
-      </table>
-    </div>
+      <dl class="fallos">
+        <dt>El proveedor de visión no responde</dt>
+        <dd>Tres intentos con espera creciente (0, 1 y 2 s) y salto a los modelos alternativos.
+        Los 471 digitales y los escaneos en caché no se enteran. Al relanzar, sólo se reintentan
+        los escaneos sin resolver.</dd>
 
-    <div class="margen">El lote del sábado y la norma nueva</div>
+        <dt>Caen todos los proveedores</dt>
+        <dd>La extracción se marca como no disponible y la regla 0 no pasa. Esos archivos salen
+        como <span class="v v-escalar">ESCALAR</span> y aparecen en la cola. El resto del lote se
+        decide con normalidad. Se corta la clave en directo y esto es lo que se ve.</dd>
+
+        <dt>El modelo devuelve algo que no es una factura</dt>
+        <dd>La salida se valida contra el esquema y se rechaza. Si el extractor revienta, cae a la
+        línea base y lo anota en el método. Nada contaminado entra en las reglas, y un archivo
+        malo no interrumpe el lote: se reintenta y, si insiste, escala.</dd>
+
+        <dt>El ERP falla como suele fallar</dt>
+        <dd><code>ORA-00600</code>: reintenta la misma llamada, hasta 6 veces. <code>401</code>:
+        vuelve a autenticarse. <code>429</code>: espera lo que diga la cabecera, y de salida no
+        pasamos de 8,3 peticiones/s sobre un techo de 10. Medido: 3 reintentos en 30 peticiones,
+        sin intervención.</dd>
+
+        <dt>El ERP no está</dt>
+        <dd>El lote no arranca. Queda la foto anterior con su fecha, pero decidir con una foto
+        vieja tiene que ser una elección, no un accidente.</dd>
+
+        <dt>Se interrumpe el proceso</dt>
+        <dd>Las decisiones ya guardadas y la caché de visión se conservan; el JSONL anterior queda
+        intacto porque se escribe aparte y se renombra al final. Se relanza y los hashes evitan
+        pagar dos veces por lo ya leído.</dd>
+
+        <dt>Se pide una norma que no existe</dt>
+        <dd>Error inmediato. No cae a la versión anterior: decidir con la norma equivocada es peor
+        que no decidir.</dd>
+      </dl>
+    </div>
     <div class="col ancho-d">
       <h3>Qué pasa cuando llega el lote 2</h3>
       <p>El lote 2 no es una ejecución especial: es otro valor de <code>--batch</code>, con su
-      carpeta, su norma y su propia salida. Qué se conserva y qué se reprocesa está decidido de
-      antemano.</p>
-      <table class="compacta">
-        <thead><tr><th style="width:44mm">Qué cambia</th><th>Qué hay que reprocesar, y qué no</th></tr></thead>
-        <tbody>
-          <tr><td><strong>40 facturas nuevas</strong></td><td>Sólo ellas. El lote 1 no se toca y su fichero de salida no se reescribe.</td></tr>
-          <tr class="banda"><td><strong>La norma pasa a v4</strong></td><td>El lote 2 se decide con <code>norma-v4</code> en su propio evaluador. La v3 sigue existiendo, así que el lote 1 continúa siendo reproducible.</td></tr>
-          <tr><td><strong>El ERP se actualiza</strong></td><td>Se baja una foto nueva. El lote 2 se niega a arrancar si la foto no declara la actualización cargada.</td></tr>
-          <tr class="banda"><td><strong>Una factura repite un pedido del lote 1</strong></td><td>Se detecta contra el historial y sale como <span class="v v-nopagar">NO_PAGAR</span>: el caso que sólo se ve si el estado sobrevive entre lotes.</td></tr>
-          <tr><td><strong>Alberto cambia un dato de la Caja</strong></td><td>Se relanza el lote afectado. El historial guarda el veredicto anterior, así que «qué cambió y por qué» es una comparación, no una reconstrucción.</td></tr>
-        </tbody>
-      </table>
+      carpeta, su norma y su salida. Las 40 facturas nuevas se procesan solas; el lote 1 no se
+      toca. La norma v4 se aplica en su propio evaluador y la v3 sigue existiendo, así que el lote
+      1 continúa siendo reproducible. El ERP actualizado se baja como foto nueva, y el lote 2 se
+      niega a arrancar si esa foto no declara la actualización cargada. Si una factura repite un
+      pedido del lote 1, el historial la detecta y sale como <span class="v v-nopagar">NO_PAGAR</span>.
+      Y si Alberto cambia un dato de la Caja el domingo, se relanza el lote afectado y «qué cambió y
+      por qué» es una comparación entre dos filas del historial, no una reconstrucción.</p>
       <div class="caja">
-        <h4>Un ejemplo concreto, con la factura de la página 6</h4>
+        <h4>Un ejemplo concreto, con la factura de la página 5</h4>
         <p>Si el asiento <span class="id">AS-70006</span> pasara a <code>PAGADA</code>, la regla 5
         fallaría por <code>already_paid</code> y el veredicto seguiría siendo
         <span class="v v-escalar">ESCALAR</span>: hay una duda de importe que un pago duplicado no
@@ -884,7 +846,7 @@ table.traza td.cmp .src{ font-family:var(--forma); font-size:6.7pt; color:var(--
     </div>
   </div>
 
-  <div class="pie"><span>Elequipo · albertitos_plan.pdf</span><span class="folio">9</span></div>
+  <div class="pie"><span>Elequipo · albertitos_plan.pdf</span><span class="folio">8</span></div>
 </section>
 
 <!-- ==================== 9 · ADR 1 y 2 ==================== -->
@@ -892,28 +854,25 @@ table.traza td.cmp .src{ font-family:var(--forma); font-size:6.7pt; color:var(--
   <div class="cabecera"><span><b>Cuentas claras</b> · albertitos_plan</span><span>3 · ADRs y trade-offs</span></div>
 
   <div class="cuerpo">
-    <div class="margen">Cuatro decisiones que se pueden discutir</div>
     <div class="col ancho-d">
       <h2><span class="num">3</span>ADRs y trade-offs</h2>
-      <p class="entrada">Estas son las cuatro decisiones de las que depende todo lo anterior. Cada
-      una lleva lo que renunciamos a tener, no sólo lo que ganamos.</p>
+      <p class="entrada">De estas cuatro decisiones depende todo lo anterior. Cada una lleva lo que
+      renunciamos a tener, no sólo lo que ganamos.</p>
     </div>
-
-    <div class="margen">La costura de la página 3</div>
     <div class="col ancho-d">
       <div class="adr">
         <div class="rotulo">ADR-01 · aceptada</div>
         <h3>Separar la lectura del documento de la decisión de pago</h3>
         <dl>
           <dt>Contexto</dt>
-          <dd>Las facturas llegan en seis plantillas distintas y algunas son sólo imagen, así que
-          leerlas exige modelos probabilísticos. Decidir un pago, en cambio, tiene que ser
-          reproducible y defendible ante una norma escrita.</dd>
+          <dd>Las facturas llegan en seis plantillas y algunas son sólo imagen: leerlas exige
+          modelos probabilísticos. Decidir un pago, en cambio, tiene que ser reproducible y
+          defendible ante una norma escrita.</dd>
 
           <dt>Alternativas</dt>
           <dd><ol>
             <li>Un modelo lee la factura y dicta el veredicto en la misma llamada.</li>
-            <li>Sólo expresiones regulares, tanto para leer como para decidir.</li>
+            <li>Sólo expresiones regulares, para leer y para decidir.</li>
             <li>Normalizar todo a un esquema y decidir después con un motor determinista.</li>
           </ol></dd>
 
@@ -929,14 +888,12 @@ table.traza td.cmp .src{ font-family:var(--forma); font-size:6.7pt; color:var(--
           necesarios. Aceptamos las dos cosas.</dd>
 
           <dt>Evidencia</dt>
-          <dd>El motor se prueba sin abrir un PDF. La traza de la página 6 dice, para cada
-          comprobación, si el valor discutido viene de la factura, del Excel o del ERP: ésa es
-          exactamente la pregunta que esta separación deja contestar.</dd>
+          <dd>El motor se prueba sin abrir un PDF. La traza de la página 5 dice, para cada
+          comprobación, si el valor discutido viene de la factura, del Excel o del ERP. Ésa es la
+          pregunta que esta separación deja contestar.</dd>
         </dl>
       </div>
     </div>
-
-    <div class="margen">Por qué 37 y no 48</div>
     <div class="col ancho-d">
       <div class="adr">
         <div class="rotulo">ADR-02 · aceptada</div>
@@ -944,8 +901,8 @@ table.traza td.cmp .src{ font-family:var(--forma); font-size:6.7pt; color:var(--
         <dl>
           <dt>Contexto</dt>
           <dd>Pagar una factura dudosa cuesta dinero. Rechazar toda anomalía bloquea pagos
-          legítimos y desgasta la confianza en el sistema. La norma pide explícitamente revisión
-          humana cuando hay duda razonable.</dd>
+          legítimos y desgasta la confianza en el sistema. La norma pide revisión humana cuando
+          hay duda razonable.</dd>
 
           <dt>Alternativas</dt>
           <dd><ol>
@@ -964,20 +921,20 @@ table.traza td.cmp .src{ font-family:var(--forma); font-size:6.7pt; color:var(--
           <dt>Consecuencias</dt>
           <dd>La cola de revisión es más larga de lo estrictamente necesario, y la precedencia
           puede devolver <span class="v v-escalar">ESCALAR</span> aunque otro hallazgo, por sí
-          solo, ya diga que no se pague. Sale a cuenta si la consola enseña el desajuste exacto, y
-          por eso la consola no es un adorno: es la contrapartida de esta decisión.</dd>
+          solo, ya diga que no se pague. Sale a cuenta si la consola enseña el desajuste exacto.
+          Por eso la consola no es un adorno: es la contrapartida de esta decisión.</dd>
 
           <dt>Evidencia</dt>
           <dd>37 escalados frente a 11 rechazos en el lote 1. Los 11 se apoyan en un estado
           <code>PAGADA</code> del ERP o en un pedido repetido dentro del lote, no en una
-          valoración. Y ningún error de lectura de los detectados en la revisión manual produjo un
+          valoración. Y ningún error de lectura detectado en la revisión manual produjo un
           <span class="v v-pagar">PAGAR</span> indebido.</dd>
         </dl>
       </div>
     </div>
   </div>
 
-  <div class="pie"><span>Elequipo · albertitos_plan.pdf</span><span class="folio">10</span></div>
+  <div class="pie"><span>Elequipo · albertitos_plan.pdf</span><span class="folio">9</span></div>
 </section>
 
 <!-- ==================== 10 · ADR 3 y 4 ==================== -->
@@ -985,7 +942,6 @@ table.traza td.cmp .src{ font-family:var(--forma); font-size:6.7pt; color:var(--
   <div class="cabecera"><span><b>Cuentas claras</b> · albertitos_plan</span><span>3 · ADRs y trade-offs</span></div>
 
   <div class="cuerpo">
-    <div class="margen">29 de 500</div>
     <div class="col ancho-d">
       <div class="adr" style="border-top:0;padding-top:0">
         <div class="rotulo">ADR-03 · aceptada</div>
@@ -999,34 +955,32 @@ table.traza td.cmp .src{ font-family:var(--forma); font-size:6.7pt; color:var(--
           <dt>Alternativas</dt>
           <dd><ol>
             <li>Todo por visión, por uniformidad.</li>
-            <li>Sólo texto incrustado, y las imágenes fuera de alcance.</li>
+            <li>Sólo texto incrustado; las imágenes, fuera de alcance.</li>
             <li>Texto primero, visión como último recurso, y caché por contenido.</li>
           </ol></dd>
 
           <dt>Decisión</dt>
           <dd>La tercera. El umbral es objetivo (100 caracteres útiles de texto), la salida del
           modelo se valida contra el esquema, el resultado se guarda indexado por el SHA-256 del
-          PDF y hay una cadena de modelos alternativos por si el primero no responde. Si no se
-          puede leer con garantías, se marca así y escala.</dd>
+          PDF y hay una cadena de modelos alternativos. Si no se puede leer con garantías, se marca
+          así y escala.</dd>
 
           <dt>Consecuencias</dt>
-          <dd>Hay dos caminos de lectura que deben producir el mismo contrato, y la caché hay que
-          invalidarla cuando cambien el <em>prompt</em> o el esquema. Y la precisión de la ruta de
-          visión es medible pero no perfecta: escaneos degradados a propósito siguen produciendo
-          campos dudosos, que por diseño acaban escalados y no pagados.</dd>
+          <dd>Dos caminos de lectura deben producir el mismo contrato, y la caché hay que
+          invalidarla cuando cambien el <em>prompt</em> o el esquema. La precisión de la ruta de
+          visión es medible pero no perfecta: los escaneos degradados producen campos dudosos,
+          que por diseño acaban escalados y no pagados.</dd>
 
           <dt>Evidencia</dt>
           <dd>94,2 % del lote resuelto sin modelos. 98,4 % de campos correctos sobre 45 documentos
           etiquetados a mano (100 % en los 30 digitales, 95,2 % en los 15 escaneados). Coste del
-          lote: 0,0087 $ a precio de lista y 0,00 $ medido con caché. La ejecución de visión usó
+          lote: 0,0087 $ a precio de lista y 0,00 $ medido con caché. La visión usó
           <code>google/gemini-3.8-flash</code> a través de Vercel AI Gateway, con
-          <code>anthropic/claude-sonnet-4-5</code> y <code>openai/gpt-4o</code> configurados como
+          <code>anthropic/claude-sonnet-4-5</code> y <code>openai/gpt-4o</code> como
           alternativas.</dd>
         </dl>
       </div>
     </div>
-
-    <div class="margen">Una decisión vigente por archivo</div>
     <div class="col ancho-d">
       <div class="adr">
         <div class="rotulo">ADR-04 · aceptada</div>
@@ -1034,9 +988,8 @@ table.traza td.cmp .src{ font-family:var(--forma); font-size:6.7pt; color:var(--
         <dl>
           <dt>Contexto</dt>
           <dd>Hay que saber la decisión vigente de cada archivo, conservar las métricas de cada
-          ejecución y poder reprocesar cuando cambien la norma o los datos de origen. Y la consola
-          y el proceso por lotes tienen que ver lo mismo, sin montar infraestructura para un fin de
-          semana.</dd>
+          ejecución y reprocesar cuando cambien la norma o los datos. La consola y el proceso por
+          lotes tienen que ver lo mismo, sin montar infraestructura para un fin de semana.</dd>
 
           <dt>Alternativas</dt>
           <dd><ol>
@@ -1049,18 +1002,18 @@ table.traza td.cmp .src{ font-family:var(--forma); font-size:6.7pt; color:var(--
           <dt>Decisión</dt>
           <dd>La cuarta: <code>runs</code>, <code>decisions</code> con <code>file_id</code> como
           clave primaria y <code>decision_history</code> inmutable. El JSONL se genera desde ahí.
-          La consola no abre el fichero SQLite: pasa por la misma capa de Python, para que haya un
-          solo dueño del estado.</dd>
+          La consola no abre el fichero SQLite: pasa por la misma capa de Python, para que el
+          estado tenga un solo dueño.</dd>
 
           <dt>Consecuencias</dt>
-          <dd>Un solo escritor, así que en cuanto haya varios trabajadores hay que migrar; lo
-          asumimos porque la capa de estado está aislada y la migración es local. La tabla de
-          decisiones vigentes por sí sola no guarda todas las versiones de una factura, y de ahí
-          el historial. Y una recuperación más fina a mitad de lote exigiría persistir el estado
-          por archivo antes de terminar, que hoy no hacemos.</dd>
+          <dd>Un solo escritor: en cuanto haya varios trabajadores hay que migrar. Lo asumimos
+          porque la capa de estado está aislada y la migración es local. La tabla de decisiones
+          vigentes no guarda las versiones anteriores de una factura; de ahí el historial. Y una
+          recuperación más fina a mitad de lote exigiría persistir por archivo antes de terminar,
+          que hoy no hacemos.</dd>
 
           <dt>Evidencia</dt>
-          <dd>Las métricas de la página 7 son columnas de la tabla <code>runs</code>, no un cálculo
+          <dd>Las métricas de la página 6 son columnas de la tabla <code>runs</code>, no un cálculo
           hecho para este documento. La cola de revisión es una consulta. El «qué cambió» entre
           normas es una comparación entre dos filas del historial.</dd>
         </dl>
@@ -1068,58 +1021,49 @@ table.traza td.cmp .src{ font-family:var(--forma); font-size:6.7pt; color:var(--
     </div>
   </div>
 
-  <div class="pie"><span>Elequipo · albertitos_plan.pdf</span><span class="folio">11</span></div>
+  <div class="pie"><span>Elequipo · albertitos_plan.pdf</span><span class="folio">10</span></div>
 </section>
 
 <!-- ==================== 11 · LÍMITES Y MEJORA ==================== -->
 <section class="hoja">
-  <div class="cabecera"><span><b>Cuentas claras</b> · albertitos_plan</span><span>4 · Lo que no podemos demostrar</span></div>
+  <div class="cabecera"><span><b>Cuentas claras</b> · albertitos_plan</span><span>4 · Lo que no podemos demostrar · 5 · La consola</span></div>
 
   <div class="cuerpo">
-    <div class="margen">Mejor aquí que en una pregunta</div>
     <div class="col ancho-d">
       <h2><span class="num">4</span>Lo que no podemos demostrar</h2>
-      <table class="compacta">
-        <thead><tr><th style="width:52mm">Límite</th><th>Qué implica</th></tr></thead>
-        <tbody>
-          <tr><td>Los datos son sintéticos y no tenemos la referencia privada</td><td>Podemos demostrar que cada decisión es consistente con la norma y con sus fuentes. No podemos demostrar que coincide con la clave del jurado.</td></tr>
-          <tr class="banda"><td>La precisión de lectura sale de 45 documentos etiquetados por una persona</td><td>Es una comprobación por muestreo, no una prueba. El 98,4 % hay que leerlo con ese tamaño de muestra delante.</td></tr>
-          <tr><td>Un solo nodo y un solo escritor</td><td>Sobra para 500 y aguanta 100.000 en un rato. No sirve para varios trabajadores en paralelo sin migrar el almacén.</td></tr>
-          <tr class="banda"><td>El coste de visión es precio de lista</td><td>La ejecución medida costó 0,00 $ por caché y cuota gratuita. La fórmula sirve; el precio unitario es una estimación.</td></tr>
-          <tr><td>La recuperación es por lote, no por archivo</td><td>Relanzar cuesta segundos y cero dólares, así que no hemos invertido en un reanudado más fino. A otra escala sería lo primero que arreglaríamos.</td></tr>
-        </tbody>
-      </table>
+      <ul class="definida">
+        <li><b>Los datos son sintéticos y no tenemos la referencia privada.</b> Podemos demostrar
+        que cada decisión es consistente con la norma y con sus fuentes. No podemos demostrar que
+        coincide con la clave del jurado.</li>
+        <li><b>La precisión de lectura sale de 45 documentos etiquetados por una persona.</b> Es
+        una comprobación por muestreo, no una prueba. El 98,4 % hay que leerlo con ese tamaño de
+        muestra delante.</li>
+        <li><b>Un solo nodo y un solo escritor.</b> Sobra para 500 y aguanta 100.000 en un rato.
+        No sirve para varios trabajadores en paralelo sin migrar el almacén.</li>
+        <li><b>El coste de visión es precio de lista.</b> La ejecución medida costó 0,00 $ por
+        caché y cuota gratuita. La fórmula sirve; el precio unitario es una estimación.</li>
+        <li><b>La recuperación es por lote, no por archivo.</b> Relanzar cuesta segundos y cero
+        dólares, así que no hemos invertido en un reanudado más fino. A otra escala sería lo
+        primero que arreglaríamos.</li>
+      </ul>
     </div>
-
-    <div class="margen">Lo que presentamos como mejora adicional</div>
     <div class="col ancho-d">
-      <h2 style="font-size:13.5pt;margin-top:5mm"><span class="num">5</span>La consola de revisión</h2>
-      <p>El proceso por lotes ya cumple el encargo: 500 veredictos con su expediente. La mejora que
-      presentamos aparte es lo que pasa <em>después</em> del veredicto, que es el trabajo que de
-      verdad ocupa a Alberto.</p>
-      <table class="compacta">
-        <thead><tr><th style="width:46mm">Qué añade</th><th>Qué le resuelve a Alberto</th></tr></thead>
-        <tbody>
-          <tr><td><strong>La cola de revisión con el PDF al lado</strong></td><td>Abre el documento junto a la comprobación que falló, con el valor observado y el esperado. Un escalado deja de ser un aviso y pasa a ser una tarea que se puede cerrar.</td></tr>
-          <tr class="banda"><td><strong>La política editable</strong></td><td>Cambiar la tolerancia, la fecha de referencia o el veredicto de un código es un formulario, no un despliegue. Y queda registrado en la ejecución.</td></tr>
-          <tr><td><strong>La pantalla de indicadores</strong></td><td>Facturas resueltas sin tocar, euros por veredicto, fuga de pago doble evitada, motivos más frecuentes y proveedores que más escalan. 19.184,92 € y 15 IBANes discrepantes son una conversación con el proveedor, no una métrica.</td></tr>
-          <tr class="banda"><td><strong>El historial y el enlace directo</strong></td><td>Cada archivo tiene su URL. «Enséñame la factura 2026-0811-B» es un enlace, incluso en mitad de la defensa.</td></tr>
-        </tbody>
-      </table>
-    </div>
-
-    <div class="margen">Dónde mirar para cada pregunta</div>
-    <div class="col ancho-d">
-      <h3>Y si el jurado pregunta</h3>
-      <table class="compacta">
-        <thead><tr><th style="width:56mm">Pregunta</th><th>Qué se enseña</th></tr></thead>
-        <tbody>
-          <tr><td>Seguidme una decisión real</td><td>La traza de la página 6, y esa misma factura en la consola.</td></tr>
-          <tr class="banda"><td>¿Qué pasa si se cae el proveedor de modelos?</td><td>La tabla de fallos de la página 9, y se corta la clave en directo: el lote termina y esos archivos escalan.</td></tr>
-          <tr><td>¿Cuánto cuesta y cuánto tarda?</td><td>La fórmula y las medidas de la página 7, con las estimaciones marcadas como tales.</td></tr>
-          <tr class="banda"><td>¿Y si cambia un dato de la Caja?</td><td>Se relanza el lote y se compara con el historial: qué veredicto cambió, y por qué.</td></tr>
-        </tbody>
-      </table>
+      <h2 class="segunda"><span class="num">5</span>La consola de revisión</h2>
+      <p class="entrada">El proceso por lotes ya cumple el encargo: 500 veredictos con su
+      expediente. La mejora que presentamos aparte es lo que pasa <em>después</em> del veredicto,
+      que es el trabajo que de verdad ocupa a Alberto.</p>
+      <ul class="definida">
+        <li><b>La cola de revisión con el PDF al lado.</b> Abre el documento junto a la comprobación
+        que falló, con el valor observado y el esperado. Un escalado deja de ser un aviso y pasa a
+        ser una tarea que se puede cerrar.</li>
+        <li><b>La política editable.</b> Cambiar la tolerancia, la fecha de referencia o el veredicto
+        de un código es un formulario, no un despliegue. Y queda registrado en la ejecución.</li>
+        <li><b>La pantalla de indicadores.</b> Facturas resueltas sin tocar, euros por veredicto,
+        pago doble evitado y proveedores que más escalan. 19.184,92 € y 15 IBANes discrepantes son
+        una conversación con el proveedor, no una métrica.</li>
+        <li><b>El historial y el enlace directo.</b> Cada archivo tiene su URL. «Enséñame la factura
+        2026-0811-B» es un enlace, incluso en mitad de la defensa.</li>
+      </ul>
       <div class="cierre">
         <p class="lema">Quinientas facturas decididas en dos segundos importan menos que poder
         explicar una sola de ellas, dos meses después, delante de quien pregunta.</p>
@@ -1127,7 +1071,7 @@ table.traza td.cmp .src{ font-family:var(--forma); font-size:6.7pt; color:var(--
     </div>
   </div>
 
-  <div class="pie"><span>Elequipo · albertitos_plan.pdf · Maisa HackSpain 2026</span><span class="folio">12</span></div>
+  <div class="pie"><span>Elequipo · albertitos_plan.pdf · Maisa HackSpain 2026</span><span class="folio">11</span></div>
 </section>
 
 </body>
