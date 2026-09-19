@@ -122,6 +122,7 @@ def run(
     method: dict[str, str] = {}
     costs: dict[str, float] = {}
     manual_override_count = 0
+    extraction_evidence: dict[str, dict] = {}
     t0 = time.monotonic()
     for i, f in enumerate(files, 1):
         s = time.monotonic()
@@ -144,6 +145,9 @@ def run(
             method[inv.file_id] = f"{method[inv.file_id]}+human-override"
             manual_override_count += 1
         costs[inv.file_id] = float(getattr(extractor, "last_cost", 0.0) or 0.0)
+        extraction_evidence[inv.file_id] = dict(
+            getattr(extractor, "last_evidence", {}) or {}
+        )
         _emit(stream, {"event": "extracted", "i": i, "total": len(files),
                        "file_id": inv.file_id, "ok": inv.extraction_ok, "latency_ms": round(ms, 1)})
 
@@ -161,6 +165,7 @@ def run(
             extraction_method=method.get(o.file_id),
             extraction_ok=bool(inv.extraction_ok) if inv is not None else (o.reason == "all_rules_pass"),
             extracted=inv.model_dump() if inv is not None else None,
+            extraction_evidence=extraction_evidence.get(o.file_id),
             latency_ms=latencies.get(o.file_id),
             cost_usd=costs.get(o.file_id, 0.0),
         )

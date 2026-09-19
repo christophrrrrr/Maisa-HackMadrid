@@ -67,6 +67,11 @@ def test_unknown_supplier_escalates():
 def test_iban_mismatch_escalates():
     out = _run(_invoice(supplier_iban="ES00 0000 0000 0000 0000 0000"))
     assert out.result == "ESCALAR" and "iban_mismatch" in out.findings
+    check = next(c for c in out.checks if c.code == "iban_mismatch")
+    assert check.status == "fail"
+    assert check.actual.value == "ES0000000000000000000000"
+    assert check.expected.value == IBAN_NORM
+    assert check.expected.source == "Excel · Proveedores · P003"
 
 
 def test_pedido_not_found_escalates():
@@ -78,6 +83,9 @@ def test_amount_mismatch_escalates():
     out = _run(_invoice(total=Decimal("7000.00"), base=Decimal("5786.78"),
                         iva_amount=Decimal("1213.22")))
     assert out.result == "ESCALAR" and "amount_mismatch" in out.findings
+    check = next(c for c in out.checks if c.code == "amount_mismatch")
+    assert check.actual.value == Decimal("7000.00")
+    assert check.expected.value == Decimal("6953.04")
 
 
 def test_bad_iva_escalates():

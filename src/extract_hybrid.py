@@ -37,6 +37,7 @@ class HybridExtractor:
         self._baseline = BaselineExtractor()
         self.last_method: str = "hybrid"
         self.last_cost: float = 0.0
+        self.last_evidence: dict = {}
 
     def extract(self, pdf_path: Path) -> InvoiceData:
         kind = kind_for_suffix(pdf_path.suffix)
@@ -46,6 +47,7 @@ class HybridExtractor:
             inv = extract_xml(pdf_path, facturae=bool(spec.get("facturae", True)))
             self.last_method = "xml" if inv.extraction_ok else "xml-incomplete"
             self.last_cost = 0.0
+            self.last_evidence = {}
             return inv
         # universal ingestion: any non-pdf/image/xml file (or an unknown suffix)
         # is normalised -> deterministic parse -> generic LLM -> triaged ESCALAR.
@@ -64,6 +66,7 @@ class HybridExtractor:
         if kind == "image" and not use_vision:
             self.last_method = "unavailable"
             self.last_cost = 0.0
+            self.last_evidence = {}
             return InvoiceData(
                 file_id=pdf_path.name, extraction_ok=False,
                 extraction_note="imagen sin vision",
@@ -77,12 +80,17 @@ class HybridExtractor:
             )
             self.last_method = record.method
             self.last_cost = float(getattr(record, "cost_usd", 0.0) or 0.0)
+            self.last_evidence = {
+                key: item.model_dump()
+                for key, item in record.evidence.items()
+            }
             return record.invoice
         except Exception as exc:  # provider/library failure -> degrade, don't die
             if not self.baseline_on_error:
                 raise
             self.last_method = "baseline-fallback"
             self.last_cost = 0.0
+            self.last_evidence = {}
             inv = self._baseline.extract(pdf_path)
             inv.extraction_note = f"hybrid failed ({exc}); used baseline"
             return inv
