@@ -13,17 +13,10 @@ type ExtractionFilter = "ALL" | "OK" | "LOW";
 type SortDirection = "asc" | "desc";
 type SortKey =
   | "updated_at"
-  | "file_id"
-  | "result"
-  | "reason"
   | "invoice_number"
   | "purchase_order"
-  | "supplier_tax_id"
-  | "supplier_iban"
   | "total"
   | "erp_asiento"
-  | "extraction_method"
-  | "findings"
   | "latency_ms";
 
 function SortMark({ active, direction }: { active: boolean; direction: SortDirection }) {
@@ -113,16 +106,8 @@ function sortValue(d: Decision, key: SortKey): string | number | null {
   switch (key) {
     case "updated_at":
       return Date.parse(d.updated_at) || null;
-    case "file_id":
-      return d.file_id;
-    case "result":
-      return d.result;
-    case "reason":
-      return reasonLabel(d.reason);
     case "invoice_number":
     case "purchase_order":
-    case "supplier_tax_id":
-    case "supplier_iban":
       return textField(d, key) || null;
     case "total": {
       const amount = Number(field(d, "total"));
@@ -132,10 +117,6 @@ function sortValue(d: Decision, key: SortKey): string | number | null {
       const asiento = evidence(d, "erp_asiento");
       return asiento == null || asiento === "" ? null : String(asiento);
     }
-    case "extraction_method":
-      return d.extraction_method || null;
-    case "findings":
-      return d.findings?.length ?? 0;
     case "latency_ms":
       return d.latency_ms;
   }
@@ -464,39 +445,25 @@ export default function DecisionHistory({
                 <SortHeader column="updated_at" active={sortKey === "updated_at"} direction={sortDirection} onSort={changeSort}>
                   Fecha
                 </SortHeader>
-                <SortHeader column="file_id" active={sortKey === "file_id"} direction={sortDirection} onSort={changeSort}>
-                  Archivo
-                </SortHeader>
-                <SortHeader column="result" active={sortKey === "result"} direction={sortDirection} onSort={changeSort}>
-                  Resultado
-                </SortHeader>
-                <SortHeader column="reason" active={sortKey === "reason"} direction={sortDirection} onSort={changeSort}>
-                  Motivo
-                </SortHeader>
+                <th>Archivo</th>
+                <th>Resultado</th>
+                <th>Motivo</th>
                 <SortHeader column="invoice_number" active={sortKey === "invoice_number"} direction={sortDirection} onSort={changeSort}>
                   N. factura
                 </SortHeader>
                 <SortHeader column="purchase_order" active={sortKey === "purchase_order"} direction={sortDirection} onSort={changeSort}>
                   Pedido
                 </SortHeader>
-                <SortHeader column="supplier_tax_id" active={sortKey === "supplier_tax_id"} direction={sortDirection} onSort={changeSort}>
-                  NIF
-                </SortHeader>
-                <SortHeader column="supplier_iban" active={sortKey === "supplier_iban"} direction={sortDirection} onSort={changeSort}>
-                  IBAN
-                </SortHeader>
+                <th>NIF</th>
+                <th>IBAN</th>
                 <SortHeader column="total" active={sortKey === "total"} direction={sortDirection} onSort={changeSort} className="hist-num">
                   Total
                 </SortHeader>
                 <SortHeader column="erp_asiento" active={sortKey === "erp_asiento"} direction={sortDirection} onSort={changeSort}>
                   Asiento
                 </SortHeader>
-                <SortHeader column="extraction_method" active={sortKey === "extraction_method"} direction={sortDirection} onSort={changeSort}>
-                  Extracci&oacute;n
-                </SortHeader>
-                <SortHeader column="findings" active={sortKey === "findings"} direction={sortDirection} onSort={changeSort}>
-                  Hallazgos
-                </SortHeader>
+                <th>Extracci&oacute;n</th>
+                <th>Hallazgos</th>
                 <SortHeader column="latency_ms" active={sortKey === "latency_ms"} direction={sortDirection} onSort={changeSort}>
                   Latencia
                 </SortHeader>
