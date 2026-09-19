@@ -28,6 +28,46 @@ def test_collect_files_deduplicates_renamed_identical_upload(tmp_path, monkeypat
     ]
 
 
+def test_each_batch_has_an_isolated_default_input_and_output():
+    assert pipeline.input_dir_for_batch("lote1") != pipeline.input_dir_for_batch("lote2")
+    assert pipeline.outcomes_path_for_batch("lote1").name == "outcomes.jsonl"
+    assert pipeline.outcomes_path_for_batch("lote2").name == "outcomes_lote2.jsonl"
+
+
+def test_writing_lote2_does_not_overwrite_lote1(tmp_path):
+    lote1 = tmp_path / "outcomes.jsonl"
+    lote2 = tmp_path / "outcomes_lote2.jsonl"
+    pipeline.write_outcomes(
+        [Outcome(file_id="lote1.pdf", result="PAGAR", reason="test")],
+        lote1,
+    )
+    original = lote1.read_text(encoding="utf-8")
+
+    pipeline.write_outcomes(
+        [Outcome(file_id="lote2.pdf", result="ESCALAR", reason="test")],
+        lote2,
+    )
+
+    assert lote1.read_text(encoding="utf-8") == original
+    assert '"file_id": "lote2.pdf"' in lote2.read_text(encoding="utf-8")
+
+
+def test_lote2_collection_never_inherits_lote1_inbox(tmp_path, monkeypatch):
+    missing_lote2 = tmp_path / "missing-lote2"
+    inbox = tmp_path / "inbox"
+    inbox.mkdir()
+    (inbox / "lote1-upload.pdf").write_bytes(b"lote 1")
+    monkeypatch.setattr(pipeline, "INBOX_DIR", inbox)
+
+    files = pipeline._collect_files(
+        missing_lote2,
+        limit=None,
+        include_inbox=False,
+    )
+
+    assert files == []
+
+
 def test_retain_decisions_removes_files_from_previous_batch(tmp_path):
     db = tmp_path / "state.sqlite"
     conn = state.connect(db)
