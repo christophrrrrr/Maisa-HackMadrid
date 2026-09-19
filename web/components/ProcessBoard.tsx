@@ -45,6 +45,7 @@ export default function ProcessBoard() {
   const [policy, setPolicy] = useState<Policy | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [scheduling, setScheduling] = useState(false);
+  const [err, setErr] = useState("");
   const esRef = useRef<EventSource | null>(null);
   const pickRef = useRef<HTMLInputElement | null>(null);
   const runningRef = useRef(false);
