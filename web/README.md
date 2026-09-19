@@ -21,27 +21,22 @@ calls the Python CLI, so there are no native Node DB builds.
 uv venv
 uv pip install -r requirements.txt
 
-# Start the local ERP and keep this terminal open:
-.venv/bin/python challenge/alberto_erp.py --rapido
-```
-
-In another terminal:
-
-```bash
-.venv/bin/python -m src.erp_snapshot --quiet
 cd web
 npm ci
 npm run dev                         # http://localhost:3000
 ```
 
-The ERP snapshot must exist before processing a batch. If the ERP bridge is
-already running and `outputs/erp_snapshot.sqlite` is initialized, the first two
-ERP commands can be skipped.
+That single command performs the complete startup sequence:
 
-```bash
-# Useful health check from the repository root:
-.venv/bin/python -c 'from src.erp_snapshot import load_snapshot; print(len(load_snapshot()))'
-```
+1. Detects the Python interpreter in the repository's `.venv`.
+2. Starts the local ERP on port 8009 if it is not already running.
+3. Waits for the ERP health endpoint and refreshes the SQLite snapshot.
+4. Starts Next.js on port 3000.
+5. Stops the ERP process it owns when the command is terminated.
+
+If the ERP is already running, it is reused and left running on shutdown. Use
+`npm run dev:web` only when intentionally starting Next.js without the automatic
+ERP and snapshot bootstrap.
 
 The console automatically uses `<repo>/.venv/bin/python` (or
 `<repo>/.venv/Scripts/python.exe` on Windows), resolving it to an absolute path
