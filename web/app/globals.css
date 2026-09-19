@@ -839,15 +839,6 @@ input.field:focus, select.field:focus, input.search:focus { border-color: var(--
 }
 .folder-picker strong { font-size: var(--fs-xs); }
 .folder-picker span { margin-top: 3px; color: var(--faint); font-size: var(--fs-micro); }
-.policy-card { min-width: 0; }
-.policy-list { padding: 0 18px; }
-.policy-item { padding: 15px 0; border-bottom: 1px solid var(--border); }
-.policy-item:last-child { border-bottom: 0; }
-.policy-item-top { display: flex; align-items: center; gap: 9px; }
-.policy-item-top strong { font-size: var(--fs-sm); line-height: 1.35; }
-.policy-item p { margin: 5px 0 11px; color: var(--faint); font-size: var(--fs-xs); line-height: 1.4; }
-.policy-item .seg { display: grid; grid-template-columns: repeat(3, 1fr); width: 100%; }
-.policy-item .seg button { min-width: 0; }
 .rules-heading-actions { display: flex; align-items: center; gap: var(--sp-4); }
 .rules-page .settings-heading { margin-bottom: var(--sp-5); padding-bottom: 0; border-bottom: 0; }
 .rules-list { padding: 0 18px; }

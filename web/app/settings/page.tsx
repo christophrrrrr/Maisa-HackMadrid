@@ -1,12 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import type { FileKind, FileTypeConfig, Policy, Result } from "@/lib/types";
+import type { FileKind, FileTypeConfig, Policy } from "@/lib/types";
 import {
   clearWatchHandle, pickDirectory, saveWatchHandle, withFileDefaults,
 } from "@/lib/files";
 
-const RESULTS: Result[] = ["PAGAR", "NO_PAGAR", "ESCALAR"];
 // must stay in sync with src/policy.py file_type_meta / default_file_types
 const KIND_ORDER: FileKind[] = ["pdf", "image", "xml", "email", "docx", "spreadsheet", "text"];
 const KIND_GROUPS: { title: string; help: string; kinds: FileKind[] }[] = [
@@ -96,17 +95,12 @@ export default function Settings() {
     const today = toIso(date.d, date.m, date.y);
     return policy.tolerance !== draft.tolerance
       || (policy.today ?? null) !== (today ?? null)
-      || JSON.stringify(policy.reason_outcomes) !== JSON.stringify(draft.reason_outcomes)
       || JSON.stringify(policy.file_types) !== JSON.stringify(draft.file_types)
       || JSON.stringify(policy.watch) !== JSON.stringify(draft.watch);
   }, [policy, draft, date]);
 
   function patch(p: Partial<Policy>) {
     setDraft((d) => (d ? { ...d, ...p } : d));
-    setSaved(false);
-  }
-  function setOutcome(code: string, outcome: Result) {
-    setDraft((d) => (d ? { ...d, reason_outcomes: { ...d.reason_outcomes, [code]: outcome } } : d));
     setSaved(false);
   }
   function patchType(kind: FileKind, next: Partial<FileTypeConfig>) {
@@ -164,7 +158,6 @@ export default function Settings() {
     const body = {
       tolerance: draft.tolerance,
       today,
-      reason_outcomes: draft.reason_outcomes,
       file_types: draft.file_types,
       watch: draft.watch,
     };
@@ -183,7 +176,6 @@ export default function Settings() {
 
   if (!draft) return <div className="muted">Cargando configuración...</div>;
 
-  const codes = Object.keys(draft.reason_outcomes);
   const metaKeys = Object.keys(draft.file_type_meta) as FileKind[];
   const kinds: FileKind[] = [
     ...KIND_ORDER.filter((k) => metaKeys.includes(k) || Boolean(draft.file_types[k])),
@@ -205,7 +197,7 @@ export default function Settings() {
         <div>
           <div className="settings-eyebrow">Preferencias del sistema</div>
           <h1>Configuración</h1>
-          <p>Define cómo se procesan, validan y clasifican las facturas.</p>
+          <p>Define cómo se procesan y validan las facturas.</p>
         </div>
         <div className={"settings-status" + (dirty ? " dirty" : "")}>
           <span />
@@ -213,7 +205,7 @@ export default function Settings() {
         </div>
       </header>
 
-      <div className="settings-layout">
+      <div className="settings-layout settings-layout-single">
         <div className="settings-stack">
           <section className="settings-card">
             <div className="settings-card-head">
@@ -490,43 +482,6 @@ export default function Settings() {
             </div>
           </section>
         </div>
-
-        <section className="settings-card policy-card">
-          <div className="settings-card-head">
-            <div className="settings-card-icon" aria-hidden="true">04</div>
-            <div>
-              <h2>Política de decisión</h2>
-              <p>Asigna el resultado que corresponde a cada regla.</p>
-            </div>
-          </div>
-          <div className="policy-list">
-            {codes.map((code) => {
-              const meta = draft.reasons[code];
-              const current = draft.reason_outcomes[code];
-              return (
-                <div key={code} className="policy-item">
-                  <div className="policy-item-top">
-                    <span className="rule-tag">regla {meta?.rule ?? "-"}</span>
-                    <strong>{meta?.label ?? code}</strong>
-                  </div>
-                  <p>{meta?.help ?? code}</p>
-                  <div className="seg">
-                    {RESULTS.map((r) => (
-                      <button
-                        type="button"
-                        key={r}
-                        className={current === r ? `on ${r}` : ""}
-                        onClick={() => setOutcome(code, r)}
-                      >
-                        {r === "NO_PAGAR" ? "NO PAGAR" : r}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </section>
       </div>
 
       <div className="savebar settings-savebar">
