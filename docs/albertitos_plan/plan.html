@@ -1013,14 +1013,14 @@
       <h1>Otrebla<span class="punto">.</span></h1>
       <div class="lema-wrap">
         <p class="lema">Qué facturas pagar, y por qué.</p>
-        <p class="tesis">Sistema determinista de seis filtros para quinientas facturas: 452 pagos inmediatos, 11
-          duplicados detenidos y 37 expedientes con la anomalía identificada para revisión humana.</p>
+        <p class="tesis">Un mismo sistema para dos entregas: 500 facturas iniciales y 40 de sorpresa,
+          con nuevos proveedores, formatos, foto del ERP y norma versionada; cada veredicto conserva el porqué.</p>
       </div>
     </div>
 
     <div class="portada-matriz-box">
       <div class="matriz-header">
-        <span><b>FIG. 1 · MATRIZ DETERMINISTA DEL LOTE</b> (500 facturas en retícula 25 × 20)</span>
+        <span><b>FIG. 1 · MATRIZ DETERMINISTA DEL LOTE 1</b> (500 facturas en retícula 25 × 20)</span>
         <span class="gate-info">2,06 s · 0,00 $ MODELOS · 100 % DETERMINISTA</span>
       </div>
       <svg viewBox="0 0 660 215" width="100%" height="auto" class="matriz-svg" xmlns="http://www.w3.org/2000/svg">
@@ -1760,10 +1760,10 @@
 
     <div class="portada-pie">
       <div class="telemetria">
-        <span><b>500</b> facturas auditadas</span>
-        <span><b>2,06 s</b> tiempo total</span>
-        <span><b>0,00 $</b> coste en LLMs</span>
-        <span><b>1</b> portátil monoproceso</span>
+        <span><b>540</b> facturas en dos lotes</span>
+        <span><b>2</b> artefactos aislados</span>
+        <span><b>8</b> hilos de extracción</span>
+        <span><b>58</b> pruebas automáticas</span>
       </div>
       <span class="colofon">Elequipo · albertitos_plan · 11 páginas de especificación</span>
     </div>
@@ -1826,12 +1826,12 @@
           hallazgos. La factura de la página 5 arrastra tres.</p>
       </div>
       <div class="col ancho-d">
-        <h3>El formato que pide el problema</h3>
-        <p>El trabajo llega por lotes: una carpeta de PDFs, de golpe. Así que el producto es un
-          <strong>proceso por lotes con una sola orden</strong>: eso es lo que se audita, se reejecuta
-          y se mide. Encima hay una <strong>consola de revisión</strong>, no para lanzar el trabajo
-          sino para cerrar las 37 excepciones con el PDF al lado de la regla que falló. Quinientas
-          facturas no necesitan una pantalla; treinta y siete sí.
+        <h3>El sábado dejó de ser una hipótesis<span class="ref">outcomes_lote2.jsonl</span></h3>
+        <p>El segundo lote añade 40 facturas, una exportación nueva del ERP, 40 pedidos y cuatro
+          proveedores internacionales. Llegan plantillas nuevas, idiomas distintos y 17 documentos
+          que necesitan visión. Se ejecutan con <code>--batch lote2</code>, se contrastan también con
+          los pedidos ya vistos y escriben un artefacto propio sin tocar <code>outcomes.jsonl</code>.
+          La misma consola permite procesar el lote, seguirlo y cerrar sus excepciones.
         </p>
       </div>
     </div>
@@ -1991,7 +1991,7 @@
               <text x="12" y="32" font-family="'TeX Gyre Heros Cn', sans-serif" font-weight="700" font-size="15"
                 fill="#17211d">Decisión</text>
               <text x="12" y="44" font-family="'Noto Sans Mono', monospace" font-size="6.2" fill="#256a4a">función pura
-                · norma v3 · 0 % alucinación</text>
+                · norma v3/v4 · 0 % alucinación</text>
 
               <!-- 6 Gates Sieve Pipeline -->
               <g transform="translate(12, 70)">
@@ -2077,9 +2077,9 @@
           <li>
             <span class="e">0</span>
             <span class="nombre">Datos de referencia<span class="fuente">business_data<br>erp_snapshot</span></span>
-            <span class="que">Limpia el Excel (11 proveedores, 516 pedidos) y baja el ERP entero una
-              vez: 516 asientos en 26 páginas. <span class="deja">DEJA</span>la foto del ERP en SQLite,
-              con fecha y reintentos. Sin foto, el lote no arranca.</span>
+            <span class="que">Limpia el Excel, fusiona los CSV incrementales del sábado y baja el ERP
+              entero. <span class="deja">DEJA</span>la foto versionada en SQLite, con fecha, avisos y
+              reintentos. Lote 2 exige que la actualización conste como cargada.</span>
           </li>
           <li>
             <span class="e">1</span>
@@ -2090,9 +2090,9 @@
           <li>
             <span class="e">2</span>
             <span class="nombre">Extracción<span class="fuente">HybridExtractor</span></span>
-            <span class="que">Texto incrustado si lo hay; visión si no; línea base si el extractor
-              revienta. <span class="deja">DEJA</span>los campos, el método, la latencia, el coste y el
-              fragmento de página del que sale cada campo.</span>
+            <span class="que">Ocho hilos y un extractor aislado por hilo: texto local; visión para
+              escaneos o texto incompleto; línea base si falla. <span class="deja">DEJA</span>campos,
+              método, latencia, coste y evidencia, conservando el orden estable de entrada.</span>
           </li>
           <li>
             <span class="e">3</span>
@@ -2106,7 +2106,7 @@
             <span class="nombre">Estado y entregable<span class="fuente">state · deliverables</span></span>
             <span class="que">Guarda la decisión vigente y la histórica. Escribe el JSONL en un
               temporal y lo renombra: o está entero o no está.
-              <span class="deja">DEJA</span>tres tablas de estado y <code>outcomes.jsonl</code>.</span>
+              <span class="deja">DEJA</span>tres tablas y un artefacto aislado por lote.</span>
           </li>
           <li>
             <span class="e">5</span>
@@ -2116,9 +2116,9 @@
               Si se cae, el lote sigue funcionando solo.</span>
           </li>
         </ol>
-        <p>Las etapas 0 a 4 son una orden de terminal y dos ficheros SQLite. Ni cola de mensajes ni
-          servicio encendido: quinientos archivos no lo necesitan. Lo que sí necesitan es poder
-          repetirse y explicarse. Lo que cambiaría con otro volumen está en las páginas 6 y 7.</p>
+        <p>Las etapas 0 a 4 siguen siendo una orden y dos SQLite. No hay cola distribuida: el
+          paralelismo útil vive dentro de la extracción, que espera red; la decisión y la escritura
+          permanecen deterministas. Lo que cambiaría con otro volumen está en las páginas 6 y 7.</p>
       </div>
     </div>
 
@@ -2127,8 +2127,8 @@
 
   <!-- ==================== 4 · ESTADO, REPARTO Y NORMA ==================== -->
   <section class="hoja">
-    <div class="cabecera"><span><b>Otrebla</b> · albertitos_plan</span><span>2.2 · Estado y reparto · 2.3 · La
-        norma v3</span></div>
+    <div class="cabecera"><span><b>Otrebla</b> · albertitos_plan</span><span>2.2 · Estado y reparto · 2.3 · Norma
+        versionada</span></div>
 
     <div class="cuerpo">
       <div class="col ancho-d">
@@ -2147,21 +2147,21 @@
         <div class="reparto">
           <div>
             <h4>Código determinista</h4>
-            <span class="cuota">500 de 500 decisiones</span>
-            <p>Lee los 471 PDFs con texto y decide las 500 facturas.</p>
+            <span class="cuota">540 de 540 decisiones</span>
+            <p>Lee los documentos digitales y decide las facturas de ambos lotes.</p>
             <p>No interpreta imágenes. Si el PDF no trae texto, no lo intenta.</p>
           </div>
           <div>
             <h4>Modelo de visión</h4>
-            <span class="cuota">29 de 500 extracciones</span>
-            <p>Convierte 29 escaneos en campos, validados contra el esquema.</p>
+            <span class="cuota">46 rutas de visión</span>
+            <p>Convierte 29 escaneos del lote 1 y 17 formatos del lote 2 en campos validados.</p>
             <p>No decide. Su salida entra en las mismas reglas que todo lo demás.</p>
           </div>
           <div>
             <h4>Persona</h4>
-            <span class="cuota">37 de 500 revisiones</span>
-            <p>Resuelve los escalados, corrige campos con una anulación firmada y ajusta la política.</p>
-            <p>No mira los 452 que cuadran. Ese es el trabajo que se ahorra.</p>
+            <span class="cuota">Sólo las excepciones</span>
+            <p>Resuelve escalados, corrige campos con una anulación firmada y ajusta la política.</p>
+            <p>No revisa lo que pasa las reglas. Ese es el trabajo que se ahorra.</p>
           </div>
         </div>
         <p>Las correcciones humanas se declaran en un fichero atado al SHA-256 exacto del PDF. Si el
@@ -2169,11 +2169,12 @@
           una (<span class="id">scan_021.pdf</span>), anotada como <code>+human-override</code>.</p>
       </div>
       <div class="col ancho-d">
-        <h2 class="segunda"><span class="num">2.3</span>La norma v3, regla a regla<span
+        <h2 class="segunda"><span class="num">2.3</span>La norma versionada, regla a regla<span
             class="ref">rules_engine.py</span></h2>
-        <p class="entrada">La norma vive en código como seis reglas y trece comprobaciones. Cada
-          comprobación tiene un código, y cada código un veredicto por defecto que Alberto puede
-          cambiar sin que nadie toque el motor.</p>
+        <p class="entrada">La v3 vive en código como seis reglas y trece comprobaciones. Como el
+          material del sábado no incluyó el texto oficial de v4, <code>norma-v4</code> es un alias
+          explícito de esa lógica: queda estampado como v4 y emite un aviso; v5 o cualquier versión
+          desconocida falla de inmediato. No hay degradación silenciosa.</p>
         <table class="compacta">
           <thead>
             <tr>
@@ -2437,8 +2438,8 @@
             </tr>
           </tbody>
         </table>
-        <p>Todo en un portátil: Intel Core i5-12500H, 16 GB, Debian 13, Python 3.13, un solo
-          proceso.</p>
+        <p>Todo en un portátil: Intel Core i5-12500H, 16 GB, Debian 13 y Python 3.13. Sigue siendo un
+          solo proceso, ahora con ocho hilos para solapar la espera de red de la visión.</p>
       </div>
       <div class="col ancho-d">
         <h3>Coste por lote</h3>
@@ -2455,9 +2456,11 @@
       <div class="col ancho-d">
         <h3>A 100.000 facturas</h3>
         <p>Con la misma proporción de escaneos (5,8 %), <em>estimamos</em> 5.800 llamadas de visión
-          y unos 1,74 $ en modelos. A esa escala el coste dominante no es el modelo: es el tiempo.</p>
+          y unos 1,74 $ en modelos. A esa escala el coste dominante no es el modelo: es el tiempo.
+          El pool ya es configurable con <code>--workers</code> o <code>MAISA_EXTRACT_WORKERS</code>;
+          se reduce ante cuotas agresivas.</p>
         <p>Las 94.200 facturas con texto tardan unos 6,5 minutos en un solo proceso (94.200 ÷ 243).
-          Es trabajo por archivo sin estado compartido: con 8 procesos baja de un minuto. Los 5.800
+          Es trabajo por archivo sin estado compartido: con 8 trabajadores baja de un minuto. Los 5.800
           escaneos son el cuello de botella real: 9,2 horas en serie, 35 minutos con 16 llamadas en
           paralelo. El techo lo pone la cuota del proveedor, no la máquina. Decidir las 100.000 tarda
           menos de un minuto: es una función pura en memoria contra dos índices.</p>
@@ -2485,7 +2488,7 @@
           <li><b>El ERP tolera 10 peticiones/s y la sesión caduca a los 15 minutos o 300 usos.</b>
             Ya lo esquivamos: una foto completa en 30 peticiones, y las 500 decisiones leen de SQLite.
             Sin esa foto serían 500 llamadas y una sesión caducada a mitad del lote.</li>
-          <li><b>El Excel se carga entero en memoria.</b> Con 516 pedidos da igual. Con millones,
+          <li><b>El Excel y los CSV incrementales se cargan enteros en memoria.</b> Con cientos da igual. Con millones,
             pasa a ser una tabla indexada del mismo almacén de estado.</li>
           <li><b>La cuota del proveedor de visión es el techo del paralelismo.</b> Se reparte entre
             varios proveedores, y la caché absorbe las reejecuciones.</li>
@@ -2493,12 +2496,12 @@
       </div>
       <div class="col ancho-d">
         <h3>Añadir un tipo de archivo nuevo</h3>
-        <p>El punto de extensión es el contrato <code>InvoiceData</code>: un extractor nuevo es una
-          función que devuelve ese objeto, y las reglas no se enteran. Ya existen tres caminos además
-          del PDF (XML de FacturaE y UBL, correos, y texto u hojas de cálculo), detrás de un
-          interruptor de política que hoy acepta sólo <code>.pdf</code>. Aceptar correos en producción
-          es activar ese interruptor y escribir las pruebas del extractor. Ni una línea de la lógica
-          de pago cambia. Eso es lo que compra la costura de la página 3.</p>
+        <p>El punto de extensión sigue siendo <code>InvoiceData</code>, pero el interruptor ya está
+          conectado. La política habilita PDF e imágenes, FacturaE/UBL, EML/MSG y adjuntos, DOCX,
+          XLSX/CSV, texto, HTML y JSON. Cada adaptador normaliza; un primer pase determinista intenta
+          leerlo, un segundo pase de modelo recupera lo incompleto y, si no es factura, lo enruta a
+          <code>out_of_scope</code>, <code>unreadable</code> o <code>unknown_format</code>. Nunca
+          convierte un formato desconocido en un pago.</p>
       </div>
       <div class="col ancho-d">
         <h3>Idempotencia</h3>
@@ -2510,10 +2513,10 @@
         </ul>
       </div>
       <div class="col ancho-d">
-        <h3>Lo que cubren las pruebas<span class="ref">tests/ · 44 pruebas</span></h3>
-        <p>44 pruebas en 2,34 s cubren las ramas del motor, el aislamiento entre lotes, el contrato
-          del JSONL, las anulaciones atadas al hash, la degradación sin visión y el bloqueo de una
-          norma no implementada. El motor se prueba sin abrir un PDF.</p>
+        <h3>Lo que cubren las pruebas<span class="ref">tests/ · 58 pruebas</span></h3>
+        <p>58 pruebas en 2,41 s cubren el motor, los maestros del lote 2, el aislamiento entre
+          artefactos, XML/formatos, política, historial, diferencias entre ejecuciones, caché y norma
+          versionada. El motor se prueba sin abrir un PDF.</p>
         <p>La precisión de lectura se comprobó a mano sobre 45 documentos: 98,4 % de campos
           correctos, 100 % en los 30 digitales y 95,2 % en los 15 escaneados. Los dos documentos con
           algún campo mal son escaneos degradados a propósito, y los dos acabaron escalados. Ningún
@@ -2537,8 +2540,8 @@
         <dl class="fallos">
           <dt>El proveedor de visión no responde</dt>
           <dd>Tres intentos con espera creciente (0, 1 y 2 s) y salto a los modelos alternativos.
-            Los 471 digitales y los escaneos en caché no se enteran. Al relanzar, sólo se reintentan
-            los escaneos sin resolver.</dd>
+            Los caminos locales y los documentos en caché no se enteran. Al relanzar, sólo se
+            reintentan los documentos sin resolver.</dd>
 
           <dt>Caen todos los proveedores</dt>
           <dd>La extracción se marca como no disponible y la regla 0 no pasa. Esos archivos salen
@@ -2563,32 +2566,28 @@
           <dt>Se interrumpe el proceso</dt>
           <dd>Las decisiones ya guardadas y la caché de visión se conservan; el JSONL anterior queda
             intacto porque se escribe aparte y se renombra al final. Se relanza y los hashes evitan
-            pagar dos veces por lo ya leído.</dd>
+            pagar dos veces por lo ya leído. Para medir o corregir una extracción existe
+            <code>--force</code>: omite la caché; borrar un lote desde la consola también la purga.</dd>
 
-          <dt>Se pide una norma que no existe</dt>
-          <dd>Error inmediato. No cae a la versión anterior: decidir con la norma equivocada es peor
-            que no decidir.</dd>
+          <dt>Se pide una norma desconocida</dt>
+          <dd>Error inmediato. La única excepción declarada es <code>norma-v4</code>: ante la ausencia
+            del texto oficial, reutiliza v3 con etiqueta v4 y aviso visible. Una v5 no cae hacia atrás.</dd>
         </dl>
       </div>
       <div class="col ancho-d">
-        <h3>Qué pasa cuando llega el lote 2</h3>
-        <p>El lote 2 no es una ejecución especial: es otro valor de <code>--batch</code>, con su
-          carpeta, su norma y su salida. Las 40 facturas nuevas se procesan solas; el lote 1 no se
-          toca. La norma v4 se aplica en su propio evaluador y la v3 sigue existiendo, así que el lote
-          1 continúa siendo reproducible. El ERP actualizado se baja como foto nueva, y el lote 2 se
-          niega a arrancar si esa foto no declara la actualización cargada. Si una factura repite un
-          pedido del lote 1, el historial la detecta y sale como <span class="v v-nopagar">NO_PAGAR</span>.
-          Y si Alberto cambia un dato de la Caja el domingo, se relanza el lote afectado y «qué cambió y
-          por qué» es una comparación entre dos filas del historial, no una reconstrucción.</p>
-        <div class="caja">
-          <h4>Un ejemplo concreto, con la factura de la página 5</h4>
-          <p>Si el asiento <span class="id">AS-70006</span> pasara a <code>PAGADA</code>, la regla 5
-            fallaría por <code>already_paid</code> y el veredicto seguiría siendo
-            <span class="v v-escalar">ESCALAR</span>: hay una duda de importe que un pago duplicado no
-            resuelve. Si además cuadrara el importe, pasaría a
-            <span class="v v-nopagar">NO_PAGAR</span>.
-          </p>
-        </div>
+        <h3>Qué ocurrió con el lote 2 real</h3>
+        <p><code>--batch lote2</code> selecciona sus 40 PDFs, <code>norma-v4</code>, la foto actualizada
+          del ERP y <code>outcomes_lote2.jsonl</code>; el lote 1 queda intacto. Los CSV del sábado
+          añaden 40 pedidos y los proveedores P012–P015 con NIF e IBAN no españoles, y se fusionan en
+          cualquier ejecución de la consola para que una subida manual vea el mismo universo.</p>
+        <p>De los 40 documentos, 23 salen por texto y 17 por visión/cache. La visión ya no se reserva
+          a PDFs sin texto: si una plantilla digital nueva o multilingüe deja campos obligatorios
+          incompletos, se rasteriza y se adopta la lectura visual sólo si recupera más campos. Cada
+          hilo tiene su extractor para que método, coste y evidencia no se mezclen; el resultado final
+          recupera el orden original.</p>
+        <p>Antes de decidir se consultan los pedidos históricos de otros lotes. Después, la pantalla
+          <em>Cambios</em> compara dos ejecuciones inmutables y enumera transiciones de veredicto,
+          motivos, altas y bajas: adaptar norma, ERP o maestro deja un impacto verificable.</p>
       </div>
     </div>
 
@@ -2750,36 +2749,34 @@
         <h2><span class="num">4</span>Lo que no podemos demostrar</h2>
         <ul class="definida">
           <li><b>Los datos son sintéticos y no tenemos la referencia privada.</b> Podemos demostrar
-            que cada decisión es consistente con la norma y con sus fuentes. No podemos demostrar que
-            coincide con la clave del jurado.</li>
+            consistencia con norma y fuentes, no coincidencia con la clave del jurado.</li>
           <li><b>La precisión de lectura sale de 45 documentos etiquetados por una persona.</b> Es
-            una comprobación por muestreo, no una prueba. El 98,4 % hay que leerlo con ese tamaño de
-            muestra delante.</li>
-          <li><b>Un solo nodo y un solo escritor.</b> Sobra para 500 y aguanta 100.000 en un rato.
-            No sirve para varios trabajadores en paralelo sin migrar el almacén.</li>
+            una comprobación por muestreo; el 98,4 % debe leerse con ese tamaño delante.</li>
+          <li><b>Un solo nodo y un solo escritor.</b> Los ocho hilos sólo extraen; SQLite se escribe
+            después, en serie. Para varios nodos habría que migrar el almacén.</li>
           <li><b>El coste de visión es precio de lista.</b> La ejecución medida costó 0,00 $ por
             caché y cuota gratuita. La fórmula sirve; el precio unitario es una estimación.</li>
-          <li><b>La recuperación es por lote, no por archivo.</b> Relanzar cuesta segundos y cero
-            dólares, así que no hemos invertido en un reanudado más fino. A otra escala sería lo
-            primero que arreglaríamos.</li>
+          <li><b>La recuperación es por lote, no por archivo.</b> La caché evita repetir visión,
+            pero no hay cola durable por documento.</li>
+          <li><b>La automatización de escritorio necesita la consola abierta.</b> La carpeta vigilada
+            y los lotes programados se disparan desde el navegador; no son un planificador de servidor.</li>
         </ul>
       </div>
       <div class="col ancho-d">
         <h2 class="segunda"><span class="num">5</span>La consola de revisión</h2>
-        <p class="entrada">El proceso por lotes ya cumple el encargo: 500 veredictos con su
-          expediente. La mejora que presentamos aparte es lo que pasa <em>después</em> del veredicto,
-          que es el trabajo que de verdad ocupa a Alberto.</p>
+        <p class="entrada">La consola cubre el antes, el durante y el después del veredicto sin crear
+          un segundo camino de decisión.</p>
         <ul class="definida">
-          <li><b>La cola de revisión con el PDF al lado.</b> Abre el documento junto a la comprobación
-            que falló, con el valor observado y el esperado. Un escalado deja de ser un aviso y pasa a
-            ser una tarea que se puede cerrar.</li>
-          <li><b>La política editable.</b> Cambiar la tolerancia, la fecha de referencia o el veredicto
-            de un código es un formulario, no un despliegue. Y queda registrado en la ejecución.</li>
-          <li><b>La pantalla de indicadores.</b> Facturas resueltas sin tocar, euros por veredicto,
-            pago doble evitado y proveedores que más escalan. 19.184,92 € y 15 IBANes discrepantes son
-            una conversación con el proveedor, no una métrica.</li>
-          <li><b>El historial y el enlace directo.</b> Cada archivo tiene su URL. «Enséñame la factura
-            2026-0811-B» es un enlace, incluso en mitad de la defensa.</li>
+          <li><b>Entrada operativa.</b> Lotes manuales, programados o por carpeta vigilada; selección
+            de formatos; progreso SSE; y reextracción explícita sin caché.</li>
+          <li><b>Revisión resoluble.</b> PDF y traza al lado, borrador para proveedor por correo,
+            Gmail, Outlook o WhatsApp, y estado <em>pendiente / enviado / resuelto</em>.</li>
+          <li><b>Reglas y proveedores.</b> La política de veredictos vive en su pestaña; configuración
+            controla fecha, tolerancia y formatos; el maestro fusionado se consulta en Proveedores.</li>
+          <li><b>Historial, enlace y comparación.</b> Cada factura y ejecución tiene URL; borrar una
+            ejecución restaura la decisión anterior; Cambios explica qué se movió y por qué.</li>
+          <li><b>Indicadores accionables.</b> Euros por veredicto, duplicados evitados, motivos,
+            proveedores problemáticos y cola pendiente, filtrables por lote.</li>
         </ul>
         <div class="cierre">
           <p class="lema">De nada, Alberto. Ahora lo difícil será explicarle a tu jefe por qué antes tardabas tanto.
