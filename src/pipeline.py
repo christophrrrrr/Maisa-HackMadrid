@@ -74,17 +74,15 @@ BATCH_RULES_VERSIONS = {
     "lote1": "norma-v3",
     "lote2": "norma-v4",
 }
-# Extra business-data sources merged on top of the master Excel per batch. lote2
-# ships brand-new suppliers/orders as CSVs (foreign P012-P015 + new pedidos) that
-# never made it into the workbook; without these they'd be invisible to the rules.
-BATCH_EXTRA_SUPPLIER_CSVS: dict[str, list[Path]] = {
-    "lote1": [],
-    "lote2": [LOTE2_SUPPLIERS_CSV],
-}
-BATCH_EXTRA_ORDER_CSVS: dict[str, list[Path]] = {
-    "lote1": [],
-    "lote2": [LOTE2_ORDERS_CSV],
-}
+# Additive master data shipped as CSVs (new/foreign suppliers P012-P015 and the
+# new purchase orders) that were never folded into the Excel. They describe the
+# CURRENT supplier/order universe, so we merge them on EVERY run — including the
+# ad-hoc uploads the console sends through outputs/inbox — not only `--batch
+# lote2`. Only files that actually exist are loaded, so a checkout without the
+# Saturday package stays clean, and the original 500 invoices never reference
+# these ids so lote1 decisions are unchanged.
+EXTRA_SUPPLIER_CSVS: list[Path] = [LOTE2_SUPPLIERS_CSV]
+EXTRA_ORDER_CSVS: list[Path] = [LOTE2_ORDERS_CSV]
 
 
 def _emit(stream: bool, obj: dict) -> None:
@@ -167,11 +165,12 @@ def rules_version_for_batch(batch: str) -> str:
 
 
 def extra_supplier_csvs_for_batch(batch: str) -> list[Path]:
-    return list(BATCH_EXTRA_SUPPLIER_CSVS.get(batch, []))
+    # batch kept for signature symmetry; the extra masters apply to every batch.
+    return [path for path in EXTRA_SUPPLIER_CSVS if path.is_file()]
 
 
 def extra_order_csvs_for_batch(batch: str) -> list[Path]:
-    return list(BATCH_EXTRA_ORDER_CSVS.get(batch, []))
+    return [path for path in EXTRA_ORDER_CSVS if path.is_file()]
 
 
 def write_outcomes(outcomes, path: Path) -> None:

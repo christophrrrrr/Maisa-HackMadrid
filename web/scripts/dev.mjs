@@ -31,6 +31,15 @@ async function requireFile(file, hint) {
   }
 }
 
+async function fileExists(file) {
+  try {
+    await access(file);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 async function erpIsReady() {
   try {
     const response = await fetch(erpUrl, { signal: AbortSignal.timeout(1_000) });
@@ -82,7 +91,16 @@ async function main() {
     console.log(`[startup] ERP disponible en ${erpUrl}`);
   } else {
     console.log("[startup] Arrancando ERP local...");
-    erpProcess = spawn(venvPython, ["challenge/alberto_erp.py", "--rapido"], {
+    // Load the Saturday ERP update if its export is present, so the snapshot
+    // carries all asientos (incl. the new/foreign pedidos). Without it, those
+    // pedidos have no ERP entry and every such invoice escalates.
+    const lote2Csv = path.join(repoRoot, "lote_2_sorpresa", "erp_export_lote2.csv");
+    const erpArgs = ["challenge/alberto_erp.py", "--rapido"];
+    if (await fileExists(lote2Csv)) {
+      erpArgs.push("--lote2", lote2Csv);
+      console.log("[startup] Cargando actualizacion de lote 2 en el ERP.");
+    }
+    erpProcess = spawn(venvPython, erpArgs, {
       cwd: repoRoot,
       stdio: "inherit",
     });
