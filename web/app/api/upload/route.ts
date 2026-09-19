@@ -16,7 +16,9 @@ function archiveDir(): string {
 }
 
 function safeName(name: string): string {
-  return path.basename(name).replace(/[^\w.\- ()[\]]/g, "_");
+  return path.basename(name)
+    .normalize("NFC")
+    .replace(/[^\p{L}\p{N}._\- ()\[\]]/gu, "_");
 }
 
 export async function POST(req: Request) {

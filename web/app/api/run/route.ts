@@ -14,7 +14,10 @@ export async function GET(req: Request) {
   const today = url.searchParams.get("today") || "";
   const limit = url.searchParams.get("limit") || "";
 
-  const args = ["-m", "src.pipeline", "--stream", "--dir", path.join(repoRoot(), "outputs", "inbox")];
+  const args = [
+    "-m", "src.pipeline", "--stream", "--replace-state",
+    "--dir", path.join(repoRoot(), "outputs", "inbox"),
+  ];
   if (today) args.push("--today", today);
   if (limit) args.push("--limit", limit);
 

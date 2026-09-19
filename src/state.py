@@ -109,6 +109,25 @@ def record_decision(
     )
 
 
+def retain_decisions(conn: sqlite3.Connection, file_ids) -> None:
+    """Keep only decisions belonging to the current replacement batch.
+
+    The temporary table avoids SQLite's parameter limit for large batches. The
+    caller controls the transaction, so a failed extraction cannot wipe the
+    last successful board.
+    """
+    conn.execute("CREATE TEMP TABLE IF NOT EXISTS current_batch_files (file_id TEXT PRIMARY KEY)")
+    conn.execute("DELETE FROM current_batch_files")
+    conn.executemany(
+        "INSERT OR IGNORE INTO current_batch_files (file_id) VALUES (?)",
+        ((file_id,) for file_id in file_ids),
+    )
+    conn.execute(
+        "DELETE FROM decisions WHERE file_id NOT IN (SELECT file_id FROM current_batch_files)"
+    )
+    conn.execute("DROP TABLE current_batch_files")
+
+
 def finish_run(conn: sqlite3.Connection, run_id: str, *, elapsed_s: float, cost_usd: float, stats: dict) -> None:
     counts = dict(conn.execute(
         "SELECT result, COUNT(*) n FROM decisions WHERE run_id=? GROUP BY result", (run_id,)
