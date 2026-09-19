@@ -100,6 +100,9 @@ async function main() {
   nextProcess = spawn(nextBin, ["dev", "-p", "3000"], {
     cwd: webRoot,
     stdio: "inherit",
+    // Node >=20 on Windows refuses to spawn a .cmd/.bat shim without a shell
+    // (EINVAL); run through the shell there. On POSIX the bin is a real exec.
+    shell: isWindows,
     env: {
       ...process.env,
       PYTHON: venvPython,

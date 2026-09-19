@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import type { Decision } from "@/lib/types";
 import DecisionTrace from "./DecisionTrace";
 import { previewKind } from "@/lib/files";
+import { reasonLabel } from "@/lib/reasons";
 
 export default function DecisionModal({ d, onClose }: { d: Decision; onClose: () => void }) {
   useEffect(() => {
@@ -26,7 +27,7 @@ export default function DecisionModal({ d, onClose }: { d: Decision; onClose: ()
         <div className="modal-head">
           <div className="dcard-main">
             <div className="modal-file">{d.file_id}</div>
-            <div className="dcard-sub">{d.reason || "sin motivo"}</div>
+            <div className="dcard-sub">{reasonLabel(d.reason) || "sin motivo"}</div>
           </div>
           <span className={`pill ${d.result}`}>{d.result}</span>
           <button className="btn ghost sm" onClick={onClose}>Cerrar</button>

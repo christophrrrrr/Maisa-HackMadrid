@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Decision, Policy, Result, StateSnapshot } from "@/lib/types";
+import { reasonLabel } from "@/lib/reasons";
 import DecisionModal from "./DecisionModal";
 import {
   acceptAttr, ensureRead, filesFromDir, imageMaxMb, loadWatchHandle,
@@ -20,23 +21,25 @@ function partial(file_id: string, result: Result, reason: string): Decision {
   };
 }
 
-function haystack(d: Decision): string {
+function haystack(d: Decision, policy: Policy | null): string {
   const ex = (d.extracted ?? {}) as Record<string, unknown>;
   const ev = (d.evidence ?? {}) as Record<string, unknown>;
+  const findings = d.findings || [];
   return [
-    d.file_id, d.reason, d.result, ...(d.findings || []),
+    d.file_id, d.reason, reasonLabel(d.reason, policy), d.result,
+    ...findings, ...findings.map((f) => reasonLabel(f, policy)),
     ex.invoice_number, ex.purchase_order, ex.supplier_tax_id, ex.supplier_iban, ex.total,
     ev.pedido, ev.supplier_id, ev.erp_asiento, ev.erp_status,
   ].map((x) => (x == null ? "" : String(x))).join(" ").toLowerCase();
 }
 
-function DecisionCard({ d, onOpen }: { d: Decision; onOpen: () => void }) {
+function DecisionCard({ d, onOpen, policy }: { d: Decision; onOpen: () => void; policy: Policy | null }) {
   return (
     <div className="dcard">
       <div className="dcard-head" onClick={onOpen}>
         <div className="dcard-main">
           <div className="dcard-file">{d.file_id}</div>
-          <div className="dcard-sub">{d.reason}</div>
+          <div className="dcard-sub">{reasonLabel(d.reason, policy)}</div>
         </div>
       </div>
     </div>
@@ -222,15 +225,15 @@ export default function DecisionBoard() {
   const all = useMemo(() => [...decisions.values()], [decisions]);
   const reasons = useMemo(() => {
     const s = new Set(all.map((d) => d.reason).filter(Boolean));
-    return [...s].sort();
-  }, [all]);
+    return [...s].sort((a, b) => reasonLabel(a, policy).localeCompare(reasonLabel(b, policy), "es"));
+  }, [all, policy]);
 
   const needle = q.trim().toLowerCase();
   const match = (d: Decision) => {
     if (reason !== "ALL" && d.reason !== reason) return false;
     if (conf === "OK" && !d.extraction_ok) return false;
     if (conf === "LOW" && d.extraction_ok) return false;
-    if (needle && !haystack(d).includes(needle)) return false;
+    if (needle && !haystack(d, policy).includes(needle)) return false;
     return true;
   };
 
@@ -289,7 +292,7 @@ export default function DecisionBoard() {
         />
         <select className="field" value={reason} onChange={(e) => setReason(e.target.value)}>
           <option value="ALL">Todos los motivos</option>
-          {reasons.map((r) => <option key={r} value={r}>{r}</option>)}
+          {reasons.map((r) => <option key={r} value={r}>{reasonLabel(r, policy)}</option>)}
         </select>
         <select className="field" value={conf} onChange={(e) => setConf(e.target.value as Conf)}>
           <option value="ALL">{"Toda extracci\u00f3n"}</option>
@@ -335,19 +338,19 @@ export default function DecisionBoard() {
         <Column title="Pagar" dot="pagar" count={pagar.length}>
           {pagar.length === 0
             ? <div className="col-empty">Sin facturas</div>
-            : pagar.map((d) => <DecisionCard key={d.file_id} d={d} onOpen={() => setSelectedId(d.file_id)} />)}
+            : pagar.map((d) => <DecisionCard key={d.file_id} d={d} policy={policy} onOpen={() => setSelectedId(d.file_id)} />)}
         </Column>
 
         <Column title="No pagar" dot="nopagar" count={nopagar.length}>
           {nopagar.length === 0
             ? <div className="col-empty">Sin facturas</div>
-            : nopagar.map((d) => <DecisionCard key={d.file_id} d={d} onOpen={() => setSelectedId(d.file_id)} />)}
+            : nopagar.map((d) => <DecisionCard key={d.file_id} d={d} policy={policy} onOpen={() => setSelectedId(d.file_id)} />)}
         </Column>
 
         <Column title="Revisar" dot="revise" count={revise.length}>
           {revise.length === 0
             ? <div className="col-empty">Sin incidencias</div>
-            : revise.map((d) => <DecisionCard key={d.file_id} d={d} onOpen={() => setSelectedId(d.file_id)} />)}
+            : revise.map((d) => <DecisionCard key={d.file_id} d={d} policy={policy} onOpen={() => setSelectedId(d.file_id)} />)}
         </Column>
       </div>
 
