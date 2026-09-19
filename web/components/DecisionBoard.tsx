@@ -110,7 +110,12 @@ export default function DecisionBoard({ mode = "process" }: { mode?: BoardMode }
   const [queued, setQueued] = useState<File[]>([]);
   const [ongoing, setOngoing] = useState<Ongoing[]>([]);
   const [p, setP] = useState<Progress>({ done: 0, total: 0, running: false });
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  // deep-link: a decision is shareable via ?file=<file_id>; open it on load.
+  const [selectedId, setSelectedId] = useState<string | null>(
+    () => (typeof window !== "undefined"
+      ? new URLSearchParams(window.location.search).get("file")
+      : null),
+  );
   const [q, setQ] = useState("");
   const [reason, setReason] = useState("ALL");
   const [conf, setConf] = useState<Conf>("ALL");
@@ -130,6 +135,14 @@ export default function DecisionBoard({ mode = "process" }: { mode?: BoardMode }
   }, []);
 
   useEffect(() => { loadState(); }, [loadState]);
+  // keep the URL in sync with the open decision so it can be shared / bookmarked
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const url = new URL(window.location.href);
+    if (selectedId) url.searchParams.set("file", selectedId);
+    else url.searchParams.delete("file");
+    window.history.replaceState(null, "", url.toString());
+  }, [selectedId]);
   useEffect(() => {
     fetch("/api/policy").then((r) => r.json()).then((pol: Policy) => setPolicy(withFileDefaults(pol))).catch(() => {});
   }, []);

@@ -56,12 +56,12 @@ Ground truth is established by a human reading each source document (embedded te
 | Method | Docs | Field accuracy | Fully-correct docs |
 | --- | ---: | ---: | ---: |
 | Digital (PyMuPDF + regex) | 30 | 100.0% | 30 / 30 |
-| Vision (Gemini) | 15 | 94.3% | 12 / 15 |
-| **All** | **45** | **98.1%** | **42 / 45** |
+| Vision (Gemini) | 15 | 95.2% | 13 / 15 |
+| **All** | **45** | **98.4%** | **43 / 45** |
 
 ### The pattern that matters
 
-Extraction errors are rare and cluster on deliberately-degraded scans (fax/copy artefacts). Crucially, when an error does occur it fails safe: in the one labeled case where a misread flipped an outcome (`scan_011`, an IBAN digit misread), it turned a PAGAR into an `ESCALAR` - a document sent to a human, never a wrongful payment. The other faulty scans already escalate on independent grounds, and the confidence gate escalates anything unreadable. No labeled error produced an incorrect PAGAR.
+Extraction errors are rare and cluster on deliberately-degraded scans (fax/copy artefacts). The two labeled documents with extraction errors are routed to `ESCALAR`, and the confidence gate escalates anything unreadable. No labeled error produced an incorrect `PAGAR`.
 
 ## Honest limits
 

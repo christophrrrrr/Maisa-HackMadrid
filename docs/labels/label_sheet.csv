@@ -42,5 +42,5 @@ scan_007.pdf,vision_cache,-,PAGAR,all_rules_pass,outputs/label_imgs/scan_007.pdf
 scan_008.pdf,vision_cache,-,PAGAR,all_rules_pass,outputs/label_imgs/scan_008.pdf.png,PO-2026-0484,B90233808,ES9368884400123588900142,2026-05-29,1698.74,356.74,2055.48,none,
 scan_009.pdf,vision_cache,-,PAGAR,all_rules_pass,outputs/label_imgs/scan_009.pdf.png,PO-2026-0485,B90233808,ES9368884400123588900142,2026-03-08,834.24,175.19,1009.43,none,
 scan_010.pdf,vision_cache,-,PAGAR,all_rules_pass,outputs/label_imgs/scan_010.pdf.png,PO-2026-0486,B90233808,ES9368884400123588900142,2026-02-28,221.55,46.53,268.08,none,
-scan_011.pdf,vision_cache,-,ESCALAR,iban_mismatch,outputs/label_imgs/scan_011.pdf.png,PO-2026-0487,B90233808,ES8368884400123588900142,2026-01-13,1255.20,263.59,1518.79,iban,"vision misread IBAN ES93->ES83; real IBAN matches master, so true outcome is PAGAR (false ESCALAR, safe direction)"
+scan_011.pdf,vision_cache,-,ESCALAR,iban_mismatch,outputs/label_imgs/scan_011.pdf.png,PO-2026-0487,B90233808,ES8368884400123588900142,2026-01-13,1255.20,263.59,1518.79,none,"verified against the scan: IBAN ES83 is extracted correctly; it differs from the ES93 supplier-master IBAN, so ESCALAR is correct"
 scan_012.pdf,vision_cache,-,PAGAR,all_rules_pass,outputs/label_imgs/scan_012.pdf.png,PO-2026-0488,B98120774,ES4414650100951704302211,2026-05-06,725.31,152.32,877.63,none,
