@@ -51,6 +51,17 @@ function IconInsights() {
   );
 }
 
+function IconCambios() {
+  return (
+    <svg className="tab-icon" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M4 8h13" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+      <path d="M14 5l3 3-3 3" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M20 16H7" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+      <path d="M10 13l-3 3 3 3" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 function IconSettings() {
   return (
     <svg className="tab-icon" viewBox="0 0 24 24" aria-hidden="true">
@@ -74,6 +85,7 @@ const RECORDS: Tab[] = [
 ];
 
 const REPORTING: Tab[] = [
+  { href: "/cambios", label: "Cambios", Icon: IconCambios },
   { href: "/insights", label: "Análisis", Icon: IconInsights },
 ];
 

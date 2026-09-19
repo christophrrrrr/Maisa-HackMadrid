@@ -394,6 +394,114 @@ def run_decisions(run_id: str, db_path: Path = DEFAULT_DB) -> list[dict]:
         conn.close()
 
 
+def _run_row(conn: sqlite3.Connection, run_id: str) -> dict | None:
+    r = conn.execute("SELECT * FROM runs WHERE run_id=?", (run_id,)).fetchone()
+    if not r:
+        return None
+    d = dict(r)
+    if d.get("stats"):
+        try:
+            d["stats"] = json.loads(d["stats"])
+        except (json.JSONDecodeError, TypeError):
+            pass
+    return d
+
+
+def list_runs(db_path: Path = DEFAULT_DB) -> list[dict]:
+    """All runs, newest first - feeds the run picker for the change-diff view."""
+    conn = connect(db_path)
+    try:
+        rows = conn.execute("SELECT * FROM runs ORDER BY started_at DESC").fetchall()
+        out: list[dict] = []
+        for r in rows:
+            d = dict(r)
+            if d.get("stats"):
+                try:
+                    d["stats"] = json.loads(d["stats"])
+                except (json.JSONDecodeError, TypeError):
+                    pass
+            out.append(d)
+        return out
+    finally:
+        conn.close()
+
+
+def diff_runs(run_a: str, run_b: str, db_path: Path = DEFAULT_DB) -> dict:
+    """Compare two runs (run_a = before, run_b = after).
+
+    Reads the immutable decision_history so the comparison stays valid even after
+    later batches overwrote the live `decisions` table. Surfaces which files
+    changed result (the headline), which only changed reason, files added/removed
+    between the runs, and a transition breakdown (e.g. ESCALAR -> PAGAR x12).
+
+    This is how a rule change (v3 -> v4) or an ERP/master update is made
+    auditable: you can see exactly which decisions moved and why.
+    """
+    conn = connect(db_path)
+    try:
+        meta_a = _run_row(conn, run_a)
+        meta_b = _run_row(conn, run_b)
+        rows_a = conn.execute(
+            "SELECT file_id, result, reason FROM decision_history WHERE run_id=?", (run_a,)
+        ).fetchall()
+        rows_b = conn.execute(
+            "SELECT file_id, result, reason FROM decision_history WHERE run_id=?", (run_b,)
+        ).fetchall()
+    finally:
+        conn.close()
+
+    a = {r["file_id"]: r for r in rows_a}
+    b = {r["file_id"]: r for r in rows_b}
+    common = a.keys() & b.keys()
+
+    result_changes: list[dict] = []
+    reason_changes: list[dict] = []
+    transitions: dict[tuple[str, str], int] = {}
+    for fid in sorted(common):
+        ra, rb = a[fid], b[fid]
+        if ra["result"] != rb["result"]:
+            result_changes.append({
+                "file_id": fid,
+                "from": {"result": ra["result"], "reason": ra["reason"]},
+                "to": {"result": rb["result"], "reason": rb["reason"]},
+            })
+            key = (ra["result"], rb["result"])
+            transitions[key] = transitions.get(key, 0) + 1
+        elif ra["reason"] != rb["reason"]:
+            reason_changes.append({
+                "file_id": fid,
+                "result": rb["result"],
+                "from_reason": ra["reason"],
+                "to_reason": rb["reason"],
+            })
+
+    added = sorted(b.keys() - a.keys())
+    removed = sorted(a.keys() - b.keys())
+    transition_list = [
+        {"from": k[0], "to": k[1], "count": v}
+        for k, v in sorted(transitions.items(), key=lambda kv: (-kv[1], kv[0]))
+    ]
+
+    return {
+        "run_a": meta_a,
+        "run_b": meta_b,
+        "summary": {
+            "files_a": len(a),
+            "files_b": len(b),
+            "common": len(common),
+            "result_changed": len(result_changes),
+            "reason_changed": len(reason_changes),
+            "added": len(added),
+            "removed": len(removed),
+        },
+        "transitions": transition_list,
+        "result_changes": result_changes,
+        "reason_changes": reason_changes,
+        "added": added,
+        "removed": removed,
+    }
+
+
 def purchase_orders_from_other_batches(batch: str, db_path: Path = DEFAULT_DB) -> set[str]:
     """Purchase orders already seen outside the batch being evaluated."""
     conn = connect(db_path)
@@ -443,12 +551,15 @@ def _main() -> int:
     ap = argparse.ArgumentParser(description="Pipeline state store (read side / CLI for the webapp).")
     ap.add_argument(
         "cmd",
-        choices=["json", "decision", "history", "run", "clear"],
-        help="json = snapshot; decision = current file; history = audit trail; run = run trace; clear = wipe",
+        choices=["json", "decision", "history", "run", "runs", "diff", "clear"],
+        help="json = snapshot; decision = current file; history = audit trail; "
+             "run = preserved run trace; runs = list runs; diff = compare two runs; clear = wipe",
     )
     ap.add_argument("--file-id")
     ap.add_argument("--run-id")
     ap.add_argument("--limit", type=int, default=500)
+    ap.add_argument("--run-a")
+    ap.add_argument("--run-b")
     ap.add_argument("--db", default=str(DEFAULT_DB))
     args = ap.parse_args()
 
@@ -462,6 +573,12 @@ def _main() -> int:
         if not args.run_id:
             ap.error("run requires --run-id")
         print(json.dumps(run_decisions(args.run_id, Path(args.db)), default=str))
+    elif args.cmd == "runs":
+        print(json.dumps(list_runs(Path(args.db)), default=str))
+    elif args.cmd == "diff":
+        if not args.run_a or not args.run_b:
+            ap.error("diff requires --run-a and --run-b")
+        print(json.dumps(diff_runs(args.run_a, args.run_b, Path(args.db)), default=str))
     else:
         print(json.dumps(decision(args.file_id, Path(args.db)), default=str))
     return 0

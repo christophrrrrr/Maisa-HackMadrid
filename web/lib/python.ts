@@ -1,7 +1,7 @@
 import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import path from "node:path";
-import type { StateSnapshot, Decision, Policy } from "./types";
+import type { StateSnapshot, Decision, Policy, RunRow, RunDiff } from "./types";
 
 // The Python backend lives in the repo root (parent of web/). `next dev` runs
 // with cwd = web/, so the repo root is one level up. Override with REPO_ROOT.
@@ -97,4 +97,22 @@ export function savePolicy(patch: Partial<Policy>): Policy {
 
 export function clearState(): { ok: boolean } {
   return pyJson<{ ok: boolean }>(["-m", "src.state", "clear"]);
+}
+
+/** All runs (newest first) for the change-diff run picker. */
+export function getRuns(): RunRow[] {
+  try {
+    return pyJson<RunRow[]>(["-m", "src.state", "runs"]);
+  } catch {
+    return [];
+  }
+}
+
+/** Compare two runs (a = before, b = after) over the immutable decision history. */
+export function getDiff(runA: string, runB: string): RunDiff | null {
+  try {
+    return pyJson<RunDiff>(["-m", "src.state", "diff", "--run-a", runA, "--run-b", runB]);
+  } catch {
+    return null;
+  }
 }

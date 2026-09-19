@@ -332,6 +332,32 @@ tbody tr:hover { background: var(--panel-2); }
   .compare-arrow { display: none; }
 }
 
+/* ---------- change diff (compare two runs) ---------- */
+.cd-pickers { display: flex; align-items: flex-end; gap: var(--sp-3); flex-wrap: wrap; margin: var(--sp-5) 0 var(--sp-2); }
+.cd-pick { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.cd-pick > span { color: var(--muted); font-size: var(--fs-micro); font-weight: 600; text-transform: uppercase; letter-spacing: .07em; }
+.cd-pick .field { min-width: 320px; max-width: 460px; }
+.cd-vs { color: var(--faint); font-size: var(--fs-lg); padding-bottom: 8px; }
+.cd-trans { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+.cd-tchip {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: var(--panel-2); border: 1px solid var(--border); border-radius: var(--r-full);
+  padding: 5px 12px 5px 10px; font-size: var(--fs-xs);
+}
+.cd-tchip b { font-family: var(--mono); color: var(--text); margin-left: 2px; }
+.cd-details { border-top: 1px solid var(--border); margin-top: var(--sp-5); padding-top: var(--sp-4); }
+.cd-details summary {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3);
+  cursor: pointer; list-style: none; font-size: var(--fs-base); font-weight: 600;
+}
+.cd-details summary::-webkit-details-marker { display: none; }
+.cd-details summary::before { content: "\203A"; color: var(--muted); margin-right: 7px; transition: transform .15s; }
+.cd-details[open] summary::before { transform: rotate(90deg); }
+.cd-details summary span { margin-left: auto; color: var(--faint); font-family: var(--mono); font-size: var(--fs-xs); font-weight: 400; }
+.cd-lists { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-4); margin-top: var(--sp-4); }
+.cd-lists a.chip:hover { color: var(--text); border-color: var(--border-2); }
+@media (max-width: 720px) { .cd-lists { grid-template-columns: 1fr; } .cd-pick .field { min-width: 220px; } }
+
 /* ---------- decision timeline (end-to-end trace) ---------- */
 .dtl { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
 .dtl-step { position: relative; padding: 0 0 var(--sp-4) 30px; }

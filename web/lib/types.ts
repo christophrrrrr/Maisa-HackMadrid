@@ -60,6 +60,44 @@ export interface StateSnapshot {
   decisions: Decision[];
 }
 
+export interface ResultChange {
+  file_id: string;
+  from: { result: Result; reason: string };
+  to: { result: Result; reason: string };
+}
+
+export interface ReasonChange {
+  file_id: string;
+  result: Result;
+  from_reason: string;
+  to_reason: string;
+}
+
+export interface Transition {
+  from: Result;
+  to: Result;
+  count: number;
+}
+
+export interface RunDiff {
+  run_a: RunRow | null;
+  run_b: RunRow | null;
+  summary: {
+    files_a: number;
+    files_b: number;
+    common: number;
+    result_changed: number;
+    reason_changed: number;
+    added: number;
+    removed: number;
+  };
+  transitions: Transition[];
+  result_changes: ResultChange[];
+  reason_changes: ReasonChange[];
+  added: string[];
+  removed: string[];
+}
+
 export type FileKind = "pdf" | "image" | "xml";
 
 export interface FileTypeConfig {
