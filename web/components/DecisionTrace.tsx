@@ -1,5 +1,6 @@
 import type { CheckValue, Decision, RuleCheck } from "@/lib/types";
 import { reasonLabel } from "@/lib/reasons";
+import DecisionTimeline from "./DecisionTimeline";
 
 const FIELDS: [string, string][] = [
   ["invoice_number", "N. factura"],
@@ -94,6 +95,8 @@ export default function DecisionTrace({ d }: { d: Decision }) {
         <h2>{summary}</h2>
         <p>{action}</p>
       </section>
+
+      <DecisionTimeline d={d} />
 
       {failed.length > 0 && (
         <section className="trace-section">

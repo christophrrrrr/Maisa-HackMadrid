@@ -19,7 +19,7 @@ from datetime import date, datetime, timezone
 from pathlib import Path
 
 from . import state
-from .business_data import DEFAULT_XLSX, load_business_data
+from .business_data import BusinessDataError, DEFAULT_XLSX, load_business_data
 from .deliverables import validate_outcomes
 from .erp_snapshot import (
     DEFAULT_DB as DEFAULT_ERP_DB,
@@ -166,7 +166,14 @@ def run(
     today = today or date.today()
     extractor = get_extractor(extractor_name or cfg.get("extractor") or "hybrid", use_vision=use_vision)
     rules_version = rules_version or rules_version_for_batch(batch)
-    biz = load_business_data(xlsx_path, rules_version=rules_version)
+    try:
+        biz = load_business_data(xlsx_path, rules_version=rules_version)
+    except BusinessDataError as exc:
+        # the master Excel is structurally unreadable (a required sheet/column is
+        # missing or renamed beyond recognition). fail loudly with an actionable
+        # message instead of deciding on wrong / empty lookups.
+        _emit(stream, {"event": "data_error", "scope": "business_data", "error": str(exc)})
+        raise
     assert_snapshot_ready_for_batch(batch, erp_db_path)
     erp = index_by_pedido(load_snapshot(erp_db_path))
 
@@ -182,6 +189,10 @@ def run(
     state.start_run(conn, run_id, batch, biz.rules_version)
     _emit(stream, {"event": "run_start", "run_id": run_id, "total": len(files),
                    "extractor": extractor.name, "rules_version": biz.rules_version})
+    # surface master data-quality issues (dup suppliers, conflicting rows, bad
+    # amounts, NIF -> multiple ids). these don't stop the run but must be visible.
+    if biz.warnings:
+        _emit(stream, {"event": "data_warnings", "scope": "business_data", "warnings": biz.warnings})
 
     # 1) extract (the slow, probabilistic part) — measure per file
     invoices: list[InvoiceData] = []
@@ -258,6 +269,7 @@ def run(
         "n_manual_overrides": manual_override_count,
         "prior_purchase_orders_checked": len(previous_purchase_orders),
         "cost_usd": total_cost,
+        "data_warnings": biz.warnings,
     }
     state.finish_run(conn, run_id, elapsed_s=elapsed, cost_usd=total_cost, stats=stats)
 
