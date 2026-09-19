@@ -4,9 +4,10 @@ Python owns ALL database access. The Next.js console never opens SQLite directly
 it calls the CLI (`python -m src.state json`) and gets JSON. This keeps one owner
 for the schema and avoids native Node sqlite builds on Windows.
 
-Two tables:
+Three tables:
   runs      — one row per batch run (counts, timing, cost, retries, status)
   decisions — current decision per file_id (result, reason, evidence, trace)
+  decision_history — immutable per-run trace, including superseded batches
 """
 from __future__ import annotations
 
@@ -53,6 +54,24 @@ CREATE TABLE IF NOT EXISTS decisions (
 );
 CREATE INDEX IF NOT EXISTS idx_decisions_result ON decisions(result);
 CREATE INDEX IF NOT EXISTS idx_decisions_run ON decisions(run_id);
+CREATE TABLE IF NOT EXISTS decision_history (
+    run_id             TEXT NOT NULL,
+    batch              TEXT NOT NULL,
+    file_id            TEXT NOT NULL,
+    result             TEXT NOT NULL,
+    reason             TEXT NOT NULL,
+    findings           TEXT NOT NULL,
+    evidence           TEXT NOT NULL,
+    rules_version      TEXT NOT NULL,
+    extraction_method  TEXT,
+    extraction_ok      INTEGER NOT NULL DEFAULT 1,
+    extracted          TEXT,
+    latency_ms         REAL,
+    cost_usd           REAL NOT NULL DEFAULT 0,
+    updated_at         TEXT NOT NULL,
+    PRIMARY KEY (run_id, file_id)
+);
+CREATE INDEX IF NOT EXISTS idx_history_batch ON decision_history(batch, run_id);
 """
 
 
@@ -61,6 +80,18 @@ def connect(db_path: Path = DEFAULT_DB) -> sqlite3.Connection:
     conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row
     conn.executescript(_SCHEMA)
+    # One-time, idempotent migration for state created before per-run history
+    # existed. This preserves lote 1 before lote 2 replaces the visible board.
+    conn.execute(
+        """INSERT OR IGNORE INTO decision_history
+           (run_id, batch, file_id, result, reason, findings, evidence, rules_version,
+            extraction_method, extraction_ok, extracted, latency_ms, cost_usd, updated_at)
+           SELECT d.run_id, COALESCE(r.batch, 'unknown'), d.file_id, d.result, d.reason,
+                  d.findings, d.evidence, d.rules_version, d.extraction_method,
+                  d.extraction_ok, d.extracted, d.latency_ms, d.cost_usd, d.updated_at
+           FROM decisions d LEFT JOIN runs r ON r.run_id = d.run_id"""
+    )
+    conn.commit()
     return conn
 
 
@@ -88,6 +119,14 @@ def record_decision(
     latency_ms: float | None,
     cost_usd: float = 0.0,
 ) -> None:
+    batch_row = conn.execute("SELECT batch FROM runs WHERE run_id=?", (run_id,)).fetchone()
+    if batch_row is None:
+        raise ValueError(f"run {run_id!r} must be started before recording decisions")
+    batch = batch_row[0]
+    now = _now()
+    findings = json.dumps(outcome.findings)
+    evidence = json.dumps(outcome.evidence)
+    extracted_json = json.dumps(extracted or {}, default=str)
     conn.execute(
         """INSERT INTO decisions
            (file_id, run_id, result, reason, findings, evidence, rules_version,
@@ -102,9 +141,20 @@ def record_decision(
              updated_at=excluded.updated_at""",
         (
             outcome.file_id, run_id, outcome.result, outcome.reason,
-            json.dumps(outcome.findings), json.dumps(outcome.evidence), outcome.rules_version,
-            extraction_method, int(extraction_ok), json.dumps(extracted or {}, default=str),
-            latency_ms, cost_usd, _now(),
+            findings, evidence, outcome.rules_version,
+            extraction_method, int(extraction_ok), extracted_json,
+            latency_ms, cost_usd, now,
+        ),
+    )
+    conn.execute(
+        """INSERT OR REPLACE INTO decision_history
+           (run_id, batch, file_id, result, reason, findings, evidence, rules_version,
+            extraction_method, extraction_ok, extracted, latency_ms, cost_usd, updated_at)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+        (
+            run_id, batch, outcome.file_id, outcome.result, outcome.reason,
+            findings, evidence, outcome.rules_version, extraction_method,
+            int(extraction_ok), extracted_json, latency_ms, cost_usd, now,
         ),
     )
 
@@ -194,11 +244,25 @@ def decision(file_id: str, db_path: Path = DEFAULT_DB) -> dict | None:
         conn.close()
 
 
+def run_decisions(run_id: str, db_path: Path = DEFAULT_DB) -> list[dict]:
+    """Return the preserved trace for a specific run, even after later batches."""
+    conn = connect(db_path)
+    try:
+        rows = conn.execute(
+            "SELECT * FROM decision_history WHERE run_id=? ORDER BY file_id",
+            (run_id,),
+        ).fetchall()
+        return [_row_to_decision(row) for row in rows]
+    finally:
+        conn.close()
+
+
 def clear(db_path: Path = DEFAULT_DB) -> dict:
     """wipe runs + decisions so the console can start from a blank board."""
     conn = connect(db_path)
     try:
         conn.execute("DELETE FROM decisions")
+        conn.execute("DELETE FROM decision_history")
         conn.execute("DELETE FROM runs")
         conn.commit()
     finally:
@@ -215,8 +279,13 @@ def _main() -> int:
     import argparse
 
     ap = argparse.ArgumentParser(description="Pipeline state store (read side / CLI for the webapp).")
-    ap.add_argument("cmd", choices=["json", "decision", "clear"], help="json = full snapshot; decision = one file; clear = wipe")
+    ap.add_argument(
+        "cmd",
+        choices=["json", "decision", "run", "clear"],
+        help="json = snapshot; decision = current file; run = preserved run trace; clear = wipe",
+    )
     ap.add_argument("--file-id")
+    ap.add_argument("--run-id")
     ap.add_argument("--db", default=str(DEFAULT_DB))
     args = ap.parse_args()
 
@@ -224,6 +293,10 @@ def _main() -> int:
         print(json.dumps(snapshot(Path(args.db)), default=str))
     elif args.cmd == "clear":
         print(json.dumps(clear(Path(args.db)), default=str))
+    elif args.cmd == "run":
+        if not args.run_id:
+            ap.error("run requires --run-id")
+        print(json.dumps(run_decisions(args.run_id, Path(args.db)), default=str))
     else:
         print(json.dumps(decision(args.file_id, Path(args.db)), default=str))
     return 0
