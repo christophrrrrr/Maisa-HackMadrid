@@ -227,10 +227,11 @@ def render_report(stats: dict, acc: dict, n_labeled: int) -> str:
 
     L.append("### The pattern that matters\n")
     L.append(
-        "Extraction errors concentrate on documents that escalate anyway. The heavily-degraded scans that "
-        "produce OCR mistakes still route to `ESCALAR` on independent grounds (supplier not in master, "
-        "unconfirmable IBAN), so a wrong field never silently flips an outcome, and the confidence gate "
-        "escalates anything unreadable.\n"
+        "Extraction errors are rare and cluster on deliberately-degraded scans (fax/copy artefacts). "
+        "Crucially, when an error does occur it fails safe: in the one labeled case where a misread flipped an "
+        "outcome (`scan_011`, an IBAN digit misread), it turned a PAGAR into an `ESCALAR` - a document sent to a "
+        "human, never a wrongful payment. The other faulty scans already escalate on independent grounds, and "
+        "the confidence gate escalates anything unreadable. No labeled error produced an incorrect PAGAR.\n"
     )
 
     L.append("## Honest limits\n")
