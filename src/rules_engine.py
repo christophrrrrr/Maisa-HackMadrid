@@ -91,7 +91,7 @@ def _iva_rate_fraction(rate: Decimal | None) -> Decimal | None:
     return rate / Decimal(100) if rate > 1 else rate
 
 
-def evaluate(
+def _evaluate_v3(
     invoice: InvoiceData,
     biz: BusinessData,
     erp_by_pedido: dict[str, ERPEntry],
@@ -119,7 +119,9 @@ def evaluate(
             actual=_value("Estado de extracción", "baja confianza", "Factura"),
             expected=_value("Estado requerido", "correcta", "Política de extracción"),
         )
-        return _aggregate(invoice, findings, evidence, checks)  # trust A's flag; don't guess
+        return _aggregate(
+            invoice, findings, evidence, checks, "norma-v3"
+        )  # trust A's flag; don't guess
     required = {"purchase_order": invoice.purchase_order,
                 "supplier_tax_id": invoice.supplier_tax_id,
                 "total": invoice.total}
@@ -133,7 +135,7 @@ def evaluate(
             actual=_value("Campos ausentes", ", ".join(missing), "Factura"),
             expected=_value("Campos requeridos", "pedido, NIF y total", "Política de extracción"),
         )
-        return _aggregate(invoice, findings, evidence, checks)
+        return _aggregate(invoice, findings, evidence, checks, "norma-v3")
     _check(
         checks, rule="filtro", code="incomplete_extraction",
         label="Extracción completa", status="pass",
@@ -377,7 +379,7 @@ def evaluate(
             status="pass", message="El pedido aparece una sola vez en el lote.",
         )
 
-    return _aggregate(invoice, findings, evidence, checks)
+    return _aggregate(invoice, findings, evidence, checks, "norma-v3")
 
 
 def _aggregate(
@@ -385,11 +387,12 @@ def _aggregate(
     findings: list[Finding],
     evidence: dict,
     checks: list[RuleCheck],
+    rules_version: str,
 ) -> Outcome:
     if not findings:
         return Outcome(file_id=invoice.file_id, result="PAGAR", reason="all_rules_pass",
-                       detail="all Norma v3 checks passed", evidence=evidence,
-                       checks=checks, rules_version=RULES_VERSION)
+                       detail=f"all {rules_version} checks passed", evidence=evidence,
+                       checks=checks, rules_version=rules_version)
     # result = most severe finding (ESCALAR > NO_PAGAR)
     result = max((f.result for f in findings), key=lambda r: _PRECEDENCE[r])
     # primary reason = first finding whose result equals the chosen result
@@ -402,7 +405,36 @@ def _aggregate(
         findings=[f.code for f in findings],
         evidence=evidence,
         checks=checks,
-        rules_version=RULES_VERSION,
+        rules_version=rules_version,
+    )
+
+
+def evaluate(
+    invoice: InvoiceData,
+    biz: BusinessData,
+    erp_by_pedido: dict[str, ERPEntry],
+    *,
+    today: date | None = None,
+    duplicate: bool = False,
+    rules_version: str = RULES_VERSION,
+) -> Outcome:
+    """Dispatch explicitly to a versioned evaluator; unknown versions fail closed."""
+    evaluators = {
+        "norma-v3": _evaluate_v3,
+    }
+    try:
+        evaluator = evaluators[rules_version]
+    except KeyError as exc:
+        raise ValueError(
+            f"rules engine {rules_version!r} is not implemented; "
+            f"available: {', '.join(sorted(evaluators))}"
+        ) from exc
+    return evaluator(
+        invoice,
+        biz,
+        erp_by_pedido,
+        today=today,
+        duplicate=duplicate,
     )
 
 
@@ -412,15 +444,28 @@ def decide_batch(
     erp_by_pedido: dict[str, ERPEntry],
     *,
     today: date | None = None,
+    rules_version: str | None = None,
+    existing_purchase_orders: set[str] | None = None,
 ) -> list[Outcome]:
     """Decide a whole batch, handling cross-invoice duplicate-pedido detection
     (rule 5: never pay the same pedido twice)."""
+    version = rules_version or biz.rules_version
+    if version != biz.rules_version:
+        raise ValueError(
+            f"rules engine version {version!r} does not match business data "
+            f"version {biz.rules_version!r}"
+        )
     counts: dict[str, int] = {}
+    existing_purchase_orders = existing_purchase_orders or set()
     for inv in invoices:
         if inv.purchase_order:
             counts[inv.purchase_order] = counts.get(inv.purchase_order, 0) + 1
     return [
         evaluate(inv, biz, erp_by_pedido, today=today,
-                 duplicate=bool(inv.purchase_order and counts.get(inv.purchase_order, 0) > 1))
+                 duplicate=bool(inv.purchase_order and (
+                     counts.get(inv.purchase_order, 0) > 1
+                     or inv.purchase_order in existing_purchase_orders
+                 )),
+                 rules_version=version)
         for inv in invoices
     ]

@@ -28,10 +28,53 @@ def test_collect_files_deduplicates_renamed_identical_upload(tmp_path, monkeypat
     ]
 
 
+def test_each_batch_has_an_isolated_default_input_and_output():
+    assert pipeline.input_dir_for_batch("lote1") != pipeline.input_dir_for_batch("lote2")
+    assert pipeline.outcomes_path_for_batch("lote1").name == "outcomes.jsonl"
+    assert pipeline.outcomes_path_for_batch("lote2").name == "outcomes_lote2.jsonl"
+    assert pipeline.rules_version_for_batch("lote1") == "norma-v3"
+    assert pipeline.rules_version_for_batch("lote2") == "norma-v4"
+
+
+def test_writing_lote2_does_not_overwrite_lote1(tmp_path):
+    lote1 = tmp_path / "outcomes.jsonl"
+    lote2 = tmp_path / "outcomes_lote2.jsonl"
+    pipeline.write_outcomes(
+        [Outcome(file_id="lote1.pdf", result="PAGAR", reason="test")],
+        lote1,
+    )
+    original = lote1.read_text(encoding="utf-8")
+
+    pipeline.write_outcomes(
+        [Outcome(file_id="lote2.pdf", result="ESCALAR", reason="test")],
+        lote2,
+    )
+
+    assert lote1.read_text(encoding="utf-8") == original
+    assert '"file_id": "lote2.pdf"' in lote2.read_text(encoding="utf-8")
+
+
+def test_lote2_collection_never_inherits_lote1_inbox(tmp_path, monkeypatch):
+    missing_lote2 = tmp_path / "missing-lote2"
+    inbox = tmp_path / "inbox"
+    inbox.mkdir()
+    (inbox / "lote1-upload.pdf").write_bytes(b"lote 1")
+    monkeypatch.setattr(pipeline, "INBOX_DIR", inbox)
+
+    files = pipeline._collect_files(
+        missing_lote2,
+        limit=None,
+        include_inbox=False,
+    )
+
+    assert files == []
+
+
 def test_retain_decisions_removes_files_from_previous_batch(tmp_path):
     db = tmp_path / "state.sqlite"
     conn = state.connect(db)
     try:
+        state.start_run(conn, "run-1", "lote1", "norma-v3")
         for file_id in ("keep.pdf", "stale.pdf"):
             state.record_decision(
                 conn,
@@ -48,3 +91,88 @@ def test_retain_decisions_removes_files_from_previous_batch(tmp_path):
         conn.close()
 
     assert [item["file_id"] for item in state.snapshot(db)["decisions"]] == ["keep.pdf"]
+
+
+def test_decision_history_preserves_same_file_across_batches(tmp_path):
+    db = tmp_path / "state.sqlite"
+    conn = state.connect(db)
+    try:
+        state.start_run(conn, "run-lote1", "lote1", "norma-v3")
+        state.record_decision(
+            conn,
+            "run-lote1",
+            Outcome(file_id="same.pdf", result="PAGAR", reason="v3"),
+            extraction_method="test",
+            extraction_ok=True,
+            extracted={},
+            latency_ms=1,
+        )
+        state.start_run(conn, "run-lote2", "lote2", "norma-v4")
+        state.record_decision(
+            conn,
+            "run-lote2",
+            Outcome(
+                file_id="same.pdf",
+                result="ESCALAR",
+                reason="v4",
+                rules_version="norma-v4",
+            ),
+            extraction_method="test",
+            extraction_ok=True,
+            extracted={},
+            latency_ms=1,
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+    assert state.decision("same.pdf", db)["result"] == "ESCALAR"
+    assert state.run_decisions("run-lote1", db)[0]["result"] == "PAGAR"
+    assert state.run_decisions("run-lote2", db)[0]["rules_version"] == "norma-v4"
+
+
+def test_existing_current_decisions_are_backfilled_into_history(tmp_path):
+    db = tmp_path / "state.sqlite"
+    conn = state.connect(db)
+    try:
+        state.start_run(conn, "legacy-run", "lote1", "norma-v3")
+        state.record_decision(
+            conn,
+            "legacy-run",
+            Outcome(file_id="legacy.pdf", result="PAGAR", reason="legacy"),
+            extraction_method="test",
+            extraction_ok=True,
+            extracted={},
+            latency_ms=1,
+        )
+        conn.commit()
+        conn.execute("DROP TABLE decision_history")
+        conn.commit()
+    finally:
+        conn.close()
+
+    history = state.run_decisions("legacy-run", db)
+
+    assert [item["file_id"] for item in history] == ["legacy.pdf"]
+
+
+def test_purchase_orders_from_lote1_are_available_to_lote2(tmp_path):
+    db = tmp_path / "state.sqlite"
+    conn = state.connect(db)
+    try:
+        state.start_run(conn, "run-lote1", "lote1", "norma-v3")
+        state.record_decision(
+            conn,
+            "run-lote1",
+            Outcome(file_id="old.pdf", result="PAGAR", reason="ok"),
+            extraction_method="test",
+            extraction_ok=True,
+            extracted={"purchase_order": "PO-2026-0132"},
+            latency_ms=1,
+        )
+        state.finish_run(conn, "run-lote1", elapsed_s=1, cost_usd=0, stats={})
+    finally:
+        conn.close()
+
+    assert state.purchase_orders_from_other_batches("lote2", db) == {"PO-2026-0132"}
+    assert state.purchase_orders_from_other_batches("lote1", db) == set()

@@ -123,9 +123,42 @@ def test_duplicate_pedido_in_batch_is_no_pagar():
     assert all(o.result == "NO_PAGAR" for o in outs)
 
 
+def test_duplicate_pedido_from_previous_batch_is_no_pagar():
+    out = decide_batch(
+        [_invoice()],
+        _biz(),
+        _erp(),
+        today=TODAY,
+        existing_purchase_orders={"PO-2026-0132"},
+    )[0]
+
+    assert out.result == "NO_PAGAR"
+    assert "duplicate_pedido" in out.findings
+
+
 def test_contract_line_is_minimal():
     line = _run(_invoice()).to_contract_line()
     assert set(line.keys()) == {"file_id", "result"}
+
+
+def test_unknown_rules_version_fails_closed():
+    import pytest
+
+    with pytest.raises(ValueError, match="norma-v4.*not implemented"):
+        evaluate(_invoice(), _biz(), _erp(), today=TODAY, rules_version="norma-v4")
+
+
+def test_business_data_and_engine_versions_must_match():
+    import pytest
+
+    with pytest.raises(ValueError, match="does not match business data"):
+        decide_batch(
+            [_invoice()],
+            _biz(),
+            _erp(),
+            today=TODAY,
+            rules_version="norma-v2",
+        )
 
 
 if __name__ == "__main__":
