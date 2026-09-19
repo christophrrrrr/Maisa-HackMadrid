@@ -98,7 +98,21 @@ export interface RunDiff {
   removed: string[];
 }
 
-export type FileKind = "pdf" | "image" | "xml" | "email" | "docx" | "spreadsheet" | "text";
+export interface ScheduledJob {
+  id: string;
+  when: string;
+  files: string[];
+  created_at: string;
+}
+
+export type FileKind =
+  | "pdf"
+  | "image"
+  | "xml"
+  | "email"
+  | "docx"
+  | "spreadsheet"
+  | "text";
 
 export interface FileTypeConfig {
   enabled: boolean;
@@ -118,13 +132,19 @@ export interface WatchConfig {
   folder_name: string | null;
 }
 
+export interface RuleDefinition {
+  label: string;
+  rule: string;
+  help: string;
+}
+
 export interface Policy {
   rules_version: string;
   tolerance: string;
   extractor: string;
   today: string | null;
   reason_outcomes: Record<string, Result>;
-  reasons: Record<string, { label: string; rule: string; help: string }>;
+  reasons: Record<string, RuleDefinition>;
   results: Result[];
   file_types: Record<FileKind, FileTypeConfig>;
   file_type_meta: Record<FileKind, FileTypeMeta>;

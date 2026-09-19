@@ -2,8 +2,8 @@ import type { FileKind, FileTypeConfig, FileTypeMeta, Policy, WatchConfig } from
 
 export const DEFAULT_WATCH: WatchConfig = { enabled: false, folder_name: null };
 
-// Keep these in sync with src/policy.py (DEFAULT_FILE_TYPES / FILE_TYPE_META).
-// They are only a fallback: the live values come from the backend via /api/policy.
+// keep these in sync with src/policy.py (default_file_types / file_type_meta).
+// they are only a fallback: the live values come from the backend via /api/policy.
 export const DEFAULT_FILE_TYPES: Record<FileKind, FileTypeConfig> = {
   pdf: { enabled: true, vision: true },
   image: { enabled: false, vision: true, max_mb: 12 },
@@ -19,14 +19,13 @@ export const DEFAULT_FILE_TYPE_META: Record<FileKind, FileTypeMeta> = {
   image: { label: "Imagen", exts: [".jpg", ".jpeg", ".png", ".webp", ".tif", ".tiff"], help: "fotos y escaneos sueltos" },
   xml: { label: "XML", exts: [".xml", ".xsig"], help: "FacturaE / UBL" },
   email: { label: "Email", exts: [".eml", ".msg"], help: "correos con o sin adjuntos" },
-  docx: { label: "Word", exts: [".docx", ".doc"], help: "documentos de Word" },
-  spreadsheet: { label: "Hoja de c\u00e1lculo", exts: [".xlsx", ".xls", ".csv"], help: "Excel / CSV" },
+  docx: { label: "Word", exts: [".docx"], help: "documentos de Word" },
+  spreadsheet: { label: "Hoja de c\u00e1lculo", exts: [".xlsx", ".csv"], help: "Excel / CSV" },
   text: { label: "Texto", exts: [".txt", ".md", ".htm", ".html", ".json"], help: "texto plano / HTML" },
 };
 
 export function withFileDefaults(p: Policy): Policy {
-  // merge over EVERY kind the backend knows about (plus our local defaults) so a
-  // format added in policy.py automatically shows up instead of being dropped.
+  // merge every kind the backend knows about so new formats are not dropped.
   const metaKeys = Object.keys(p.file_type_meta ?? DEFAULT_FILE_TYPE_META) as FileKind[];
   const defaultKeys = Object.keys(DEFAULT_FILE_TYPES) as FileKind[];
   const kinds = Array.from(new Set<FileKind>([...defaultKeys, ...metaKeys]));
@@ -37,7 +36,7 @@ export function withFileDefaults(p: Policy): Policy {
   return {
     ...p,
     file_types,
-    file_type_meta: p.file_type_meta ?? DEFAULT_FILE_TYPE_META,
+    file_type_meta: { ...DEFAULT_FILE_TYPE_META, ...(p.file_type_meta ?? {}) },
     watch: { ...DEFAULT_WATCH, ...(p.watch ?? {}) },
   };
 }
@@ -159,7 +158,10 @@ export async function filesFromDir(
   const out: File[] = [];
   const image = new Set([".jpg", ".jpeg", ".png", ".webp", ".tif", ".tiff"]);
   const cap = maxImageMb * 1024 * 1024;
-  for await (const [, entry] of handle.entries()) {
+  const directory = handle as FileSystemDirectoryHandle & {
+    entries(): AsyncIterableIterator<[string, FileSystemHandle]>;
+  };
+  for await (const [, entry] of directory.entries()) {
     if (entry.kind !== "file") continue;
     const file = await (entry as FileSystemFileHandle).getFile();
     if (!matchesExt(file.name, exts)) continue;

@@ -18,7 +18,24 @@ export type SupplierRow = {
   nif: string;
   escalar: number;
   euros: number;
-  topFinding: string;
+  totalInvoices: number;
+  lowConfidence: number;
+  findingCount: number;
+  invoices: Array<{
+    fileId: string;
+    invoiceNumber: string;
+    purchaseOrder: string;
+    issueDate: string;
+    total: number;
+    reason: string;
+    extractionOk: boolean;
+  }>;
+  findings: Array<{
+    code: string;
+    label: string;
+    n: number;
+    pct: number;
+  }>;
 };
 
 export type InsightsData = {
@@ -88,13 +105,8 @@ function supplierKey(d: Decision): { key: string; nif: string; name: string } {
   const name = String(field(d, "supplier_name") ?? "").trim();
   if (nif) return { key: nif, nif, name: name || nif };
   if (id) return { key: id, nif: id, name: name || id };
+  if (name) return { key: `name:${name.toLocaleLowerCase("es")}`, nif: "sin NIF", name };
   return { key: "sin-nif", nif: "sin NIF", name: name || "Sin proveedor" };
-}
-
-function topCode(codes: string[]): string {
-  const n = new Map<string, number>();
-  for (const c of codes) n.set(c, (n.get(c) ?? 0) + 1);
-  return [...n.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0]?.[0] ?? "";
 }
 
 export function buildInsights(decisions: Decision[], policy: Policy | null): InsightsData {
@@ -125,27 +137,66 @@ export function buildInsights(decisions: Decision[], policy: Policy | null): Ins
       d.reason === "incomplete_extraction" || (d.findings || []).includes("incomplete_extraction");
     if (d.result === "ESCALAR" && extractFail) extractN += 1;
 
-    if (d.result === "ESCALAR") {
-      const { key, nif, name } = supplierKey(d);
-      const cur = bySupplier.get(key) ?? {
-        row: { key, name, nif, escalar: 0, euros: 0, topFinding: "" },
+    const { key, nif, name } = supplierKey(d);
+    const cur = bySupplier.get(key) ?? {
+      row: {
+        key,
+        name,
+        nif,
+        escalar: 0,
+        euros: 0,
+        totalInvoices: 0,
+        lowConfidence: 0,
+        findingCount: 0,
+        invoices: [],
         findings: [],
-      };
+      },
+      findings: [],
+    };
+    cur.row.totalInvoices += 1;
+    if (!d.extraction_ok) cur.row.lowConfidence += 1;
+
+    if (d.result === "ESCALAR") {
       cur.row.escalar += 1;
       cur.row.euros += moneyOf(d);
-      const fired = (d.findings || []).filter(Boolean);
-      cur.findings.push(...(fired.length ? fired : d.reason ? [d.reason] : []));
-      bySupplier.set(key, cur);
+      cur.row.invoices.push({
+        fileId: d.file_id,
+        invoiceNumber: String(field(d, "invoice_number") ?? "").trim(),
+        purchaseOrder: String(field(d, "purchase_order") ?? "").trim(),
+        issueDate: String(field(d, "issue_date") ?? "").trim(),
+        total: moneyOf(d),
+        reason: labelOf(d.reason, policy),
+        extractionOk: d.extraction_ok,
+      });
     }
+
+    const fired = (d.findings || []).filter(Boolean);
+    cur.findings.push(...(fired.length ? fired : d.result === "ESCALAR" && d.reason ? [d.reason] : []));
+    bySupplier.set(key, cur);
   }
 
   const suppliers = [...bySupplier.values()]
-    .map(({ row, findings: fs }) => ({
-      ...row,
-      topFinding: labelOf(topCode(fs), policy) || "-",
-    }))
-    .sort((a, b) => b.euros - a.euros || b.escalar - a.escalar || a.name.localeCompare(b.name))
-    .slice(0, 8);
+    .map(({ row, findings: fs }) => {
+      const findingCounts = new Map<string, number>();
+      fs.forEach((code) => findingCounts.set(code, (findingCounts.get(code) ?? 0) + 1));
+      const rankedFindings = [...findingCounts.entries()]
+        .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+        .map(([code, n]) => ({
+          code,
+          label: labelOf(code, policy),
+          n,
+          pct: fs.length ? Math.round((n / fs.length) * 100) : 0,
+        }));
+      return {
+        ...row,
+        invoices: row.invoices.sort((a, b) =>
+          b.issueDate.localeCompare(a.issueDate) || a.fileId.localeCompare(b.fileId)
+        ),
+        findingCount: fs.length,
+        findings: rankedFindings,
+      };
+    })
+    .sort((a, b) => b.euros - a.euros || b.escalar - a.escalar || a.name.localeCompare(b.name));
 
   const total = decisions.length;
   const auto = counts.PAGAR + counts.NO_PAGAR;
@@ -166,10 +217,6 @@ export function buildInsights(decisions: Decision[], policy: Policy | null): Ins
 
 export function euros(n: number): string {
   return n.toLocaleString("es-ES", { style: "currency", currency: "EUR" });
-}
-
-export function pctBar(n: number, max: number): string {
-  return max ? `${Math.round((n / max) * 100)}%` : "0%";
 }
 
 export function usd(n: number): string {

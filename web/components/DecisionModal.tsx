@@ -1,12 +1,15 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import type { Decision } from "@/lib/types";
 import DecisionTrace from "./DecisionTrace";
+import IncidentResolver from "./IncidentResolver";
 import { previewKind } from "@/lib/files";
 import { reasonLabel } from "@/lib/reasons";
 
 export default function DecisionModal({ d, onClose }: { d: Decision; onClose: () => void }) {
+  const [showResolver, setShowResolver] = useState(false);
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
     document.addEventListener("keydown", onKey);
@@ -29,7 +32,11 @@ export default function DecisionModal({ d, onClose }: { d: Decision; onClose: ()
             <div className="modal-file">{d.file_id}</div>
             <div className="dcard-sub">{reasonLabel(d.reason) || "sin motivo"}</div>
           </div>
-          <span className={`pill ${d.result}`}>{d.result}</span>
+          {d.result === "ESCALAR" ? (
+            <button className="btn" onClick={() => setShowResolver(true)}>Resolver incidencia</button>
+          ) : (
+            <span className={`pill ${d.result}`}>{d.result}</span>
+          )}
           <button className="btn ghost sm" onClick={onClose}>Cerrar</button>
         </div>
         <div className="modal-split">
@@ -41,6 +48,7 @@ export default function DecisionModal({ d, onClose }: { d: Decision; onClose: ()
             )}
           </div>
           <div className="modal-body">
+            {showResolver && <IncidentResolver d={d} onClose={() => setShowResolver(false)} />}
             <DecisionTrace d={d} />
           </div>
         </div>

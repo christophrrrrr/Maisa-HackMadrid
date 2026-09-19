@@ -18,7 +18,7 @@ const mono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Factu",
+  title: "Otrebla",
   description: "Consola de revisión del pipeline de facturas",
 };
 

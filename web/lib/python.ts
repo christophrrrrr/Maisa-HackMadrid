@@ -99,7 +99,7 @@ export function clearState(): { ok: boolean } {
   return pyJson<{ ok: boolean }>(["-m", "src.state", "clear"]);
 }
 
-/** All runs (newest first) for the change-diff run picker. */
+/** all runs (newest first) for the change-diff run picker. */
 export function getRuns(): RunRow[] {
   try {
     return pyJson<RunRow[]>(["-m", "src.state", "runs"]);
@@ -108,11 +108,15 @@ export function getRuns(): RunRow[] {
   }
 }
 
-/** Compare two runs (a = before, b = after) over the immutable decision history. */
+/** compare two runs (a = before, b = after) over the immutable decision history. */
 export function getDiff(runA: string, runB: string): RunDiff | null {
   try {
     return pyJson<RunDiff>(["-m", "src.state", "diff", "--run-a", runA, "--run-b", runB]);
   } catch {
     return null;
   }
+}
+
+export function deleteRun(runId: string): { ok: boolean; error?: string; run_id?: string } {
+  return pyJson(["-m", "src.state", "delete", "--run-id", runId]);
 }

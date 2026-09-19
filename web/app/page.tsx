@@ -1,42 +1,61 @@
 import Link from "next/link";
 import { getState } from "@/lib/python";
 import { reasonLabel } from "@/lib/reasons";
-import type { Decision, RunRow } from "@/lib/types";
+import { batchLabel, fmtWhen, runErrors, runWarnings, statusLabel, statusTone } from "@/lib/runs";
+import type { Decision } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
-function fmtWhen(iso: string | null | undefined) {
-  if (!iso) return "—";
-  return new Date(iso).toLocaleString("es-ES", {
-    day: "2-digit", month: "2-digit", year: "numeric",
-    hour: "2-digit", minute: "2-digit",
-  });
+function fmtDate(iso: string) {
+  const [year, month, day] = iso.split("-");
+  return year && month && day ? `${day}/${month}/${year}` : iso;
 }
 
-function runErrors(run: RunRow | null): string[] {
-  if (!run) return [];
-  const stats = typeof run.stats === "object" && run.stats ? run.stats : {};
-  const raw = (stats as Record<string, unknown>).errors;
-  if (!Array.isArray(raw)) return [];
-  return raw.map((e) => String(e)).filter(Boolean);
+function invoiceDate(decision: Decision): string | null {
+  const value = decision.extracted?.issue_date;
+  return typeof value === "string" && value ? value : null;
 }
 
-function statusLabel(status: string) {
-  if (status === "done") return "Completada";
-  if (status === "running") return "En curso";
-  if (status === "error") return "Error";
-  return status;
+function urgencyDate(decision: Decision): string {
+  return invoiceDate(decision) || decision.updated_at || "9999-12-31";
+}
+
+function relatedDecision(message: string, decisions: Decision[], runId: string): Decision | null {
+  const text = message.toLocaleLowerCase("es");
+  const runDecisions = decisions.filter((decision) => decision.run_id === runId);
+  const candidates = runDecisions.length ? runDecisions : decisions;
+
+  return candidates.find((decision) => text.includes(decision.file_id.toLocaleLowerCase("es")))
+    ?? candidates.find((decision) => {
+      const extracted = decision.extracted ?? {};
+      const evidence = decision.evidence ?? {};
+      return [
+        extracted.invoice_number,
+        extracted.purchase_order,
+        extracted.supplier_tax_id,
+        evidence.pedido,
+        evidence.supplier_id,
+      ].some((value) => {
+        const token = value == null ? "" : String(value).trim().toLocaleLowerCase("es");
+        return token.length >= 3 && text.includes(token);
+      });
+    })
+    ?? null;
 }
 
 function ReviewRow({ d }: { d: Decision }) {
+  const issuedAt = invoiceDate(d);
   return (
-    <Link href="/review" className="home-row">
+    <div className="home-row">
       <div>
         <div className="home-row-title">{d.file_id}</div>
-        <div className="meta">{reasonLabel(d.reason)}</div>
+        <div className="meta">
+          {issuedAt ? `Factura del ${fmtDate(issuedAt)}` : `Pendiente desde ${fmtWhen(d.updated_at)}`}
+          {" · "}{reasonLabel(d.reason)}
+        </div>
       </div>
       <span className={`pill ${d.result}`}>{d.result}</span>
-    </Link>
+    </div>
   );
 }
 
@@ -44,16 +63,24 @@ export default function HomePage() {
   const { latest_run, recent_runs, summary, decisions } = getState();
   const review = decisions
     .filter((d) => d.result === "ESCALAR")
-    .sort((a, b) => (b.updated_at || "").localeCompare(a.updated_at || ""))
+    .sort((a, b) => urgencyDate(a).localeCompare(urgencyDate(b)))
     .slice(0, 6);
-  const errors = runErrors(latest_run);
   const runs = (recent_runs?.length ? recent_runs : latest_run ? [latest_run] : []).slice(0, 5);
+  const issues = (recent_runs?.length ? recent_runs : latest_run ? [latest_run] : [])
+    .flatMap((run) => [
+      ...runErrors(run).map((message) => ({ message, type: "Error", run })),
+      ...runWarnings(run).map((message) => ({ message, type: "Aviso", run })),
+    ])
+    .map((issue) => ({
+      ...issue,
+      decision: relatedDecision(issue.message, decisions, issue.run.run_id),
+    }))
+    .slice(0, 8);
 
   return (
     <div>
       <div className="page-heading">
         <h1>Inicio</h1>
-        <div className="subtitle">Estado reciente del procesamiento y alertas</div>
       </div>
 
       <div className="grid cards">
@@ -72,11 +99,11 @@ export default function HomePage() {
           <div className="v NO_PAGAR">{summary.NO_PAGAR}</div>
           <div className="sub">no emitir pago</div>
         </div>
-        <div className="card">
+        <Link className="card interactive-card" href="/review">
           <div className="k">En revisión</div>
           <div className="v ESCALAR">{summary.ESCALAR}</div>
           <div className="sub">requieren inspección</div>
-        </div>
+        </Link>
       </div>
 
       <div className="home-actions">
@@ -92,7 +119,7 @@ export default function HomePage() {
           {latest_run ? (
             <>
               <div className="home-run-meta">
-                <span className={`pill ${latest_run.status === "error" ? "ESCALAR" : latest_run.status === "done" ? "PAGAR" : "NO_PAGAR"}`}>
+                <span className={`pill ${statusTone(latest_run.status)}`}>
                   {statusLabel(latest_run.status)}
                 </span>
                 <span className="meta">{fmtWhen(latest_run.started_at)}</span>
@@ -105,27 +132,47 @@ export default function HomePage() {
                 <div className="k">Duración</div>
                 <div>{latest_run.elapsed_s != null ? `${latest_run.elapsed_s.toFixed(1)} s` : "—"}</div>
               </div>
-              {errors.length > 0 && (
-                <div className="home-errors">
-                  <div className="section-title" style={{ marginTop: 16 }}>Errores del lote</div>
-                  {errors.map((err) => (
-                    <div key={err} className="errline">{err}</div>
-                  ))}
-                </div>
-              )}
             </>
           ) : (
             <div className="an-empty">Aún no hay ejecuciones registradas.</div>
           )}
         </section>
 
-        <section className="card">
+        <Link className="card interactive-card" href="/review">
           <div className="k">Pendientes de revisión</div>
           {review.length === 0 ? (
             <div className="an-empty">No hay facturas en revisión.</div>
           ) : (
             <div className="home-list">
               {review.map((d) => <ReviewRow key={d.file_id} d={d} />)}
+            </div>
+          )}
+        </Link>
+
+        <section className="card home-span">
+          <div className="k">Errores e incidencias</div>
+          {issues.length === 0 ? (
+            <div className="an-empty">No se han registrado errores ni incidencias.</div>
+          ) : (
+            <div className="home-list">
+              {issues.map(({ message, type, run, decision }, index) => (
+                <Link
+                  key={`${run.run_id}-${type}-${index}`}
+                  className="home-row"
+                  href={decision
+                    ? `/review?file=${encodeURIComponent(decision.file_id)}`
+                    : `/insights?run=${encodeURIComponent(run.run_id)}`}
+                >
+                  <div>
+                    <div className="home-row-title">{message}</div>
+                    <div className="meta">
+                      {fmtWhen(run.started_at)} · {batchLabel(run)}
+                      {" · "}{decision ? `Ver factura ${decision.file_id}` : "Ver ejecución"}
+                    </div>
+                  </div>
+                  <span className={`pill ${type === "Error" ? "ESCALAR" : "NO_PAGAR"}`}>{type}</span>
+                </Link>
+              ))}
             </div>
           )}
         </section>
@@ -147,7 +194,7 @@ export default function HomePage() {
                         {runErrs.length ? ` · ${runErrs.length} error${runErrs.length === 1 ? "" : "es"}` : ""}
                       </div>
                     </div>
-                    <span className={`pill ${run.status === "error" ? "ESCALAR" : run.status === "done" ? "PAGAR" : "NO_PAGAR"}`}>
+                    <span className={`pill ${statusTone(run.status)}`}>
                       {statusLabel(run.status)}
                     </span>
                   </div>

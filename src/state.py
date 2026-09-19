@@ -316,7 +316,7 @@ def _row_to_run(r: sqlite3.Row | None) -> dict | None:
     return run
 
 
-def recent_runs(conn: sqlite3.Connection, limit: int = 20) -> list[dict]:
+def recent_runs(conn: sqlite3.Connection, limit: int = 200) -> list[dict]:
     rows = conn.execute(
         "SELECT * FROM runs ORDER BY started_at DESC LIMIT ?", (limit,)
     ).fetchall()
@@ -351,7 +351,7 @@ def snapshot(db_path: Path = DEFAULT_DB) -> dict:
     """Everything the console needs, as one JSON-able dict."""
     conn = connect(db_path)
     try:
-        runs = recent_runs(conn, limit=20)
+        runs = recent_runs(conn, limit=200)
         latest = runs[0] if runs else None
         decisions = [_row_to_decision(r) for r in
                      conn.execute("SELECT * FROM decisions ORDER BY result, file_id").fetchall()]
@@ -527,6 +527,50 @@ def purchase_orders_from_other_batches(batch: str, db_path: Path = DEFAULT_DB) -
     return purchase_orders
 
 
+def delete_run(run_id: str, db_path: Path = DEFAULT_DB) -> dict:
+    """remove one batch and restore the previous decision for each affected file."""
+    conn = connect(db_path)
+    try:
+        run = conn.execute("SELECT run_id FROM runs WHERE run_id=?", (run_id,)).fetchone()
+        if run is None:
+            return {"ok": False, "error": "not found"}
+        affected = [
+            row["file_id"]
+            for row in conn.execute("SELECT file_id FROM decisions WHERE run_id=?", (run_id,))
+        ]
+        conn.execute("DELETE FROM decision_history WHERE run_id=?", (run_id,))
+        conn.execute("DELETE FROM runs WHERE run_id=?", (run_id,))
+        for file_id in affected:
+            prev = conn.execute(
+                """SELECT * FROM decision_history
+                   WHERE file_id=?
+                   ORDER BY recorded_at DESC, run_id DESC
+                   LIMIT 1""",
+                (file_id,),
+            ).fetchone()
+            conn.execute("DELETE FROM decisions WHERE file_id=?", (file_id,))
+            if prev is None:
+                continue
+            conn.execute(
+                """INSERT INTO decisions
+                   (file_id, run_id, result, reason, detail, findings, evidence, checks,
+                    rules_version, extraction_method, extraction_ok, extracted,
+                    extraction_evidence, latency_ms, cost_usd, updated_at)
+                   VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                (
+                    prev["file_id"], prev["run_id"], prev["result"], prev["reason"],
+                    prev["detail"], prev["findings"], prev["evidence"], prev["checks"] or "[]",
+                    prev["rules_version"], prev["extraction_method"], prev["extraction_ok"],
+                    prev["extracted"], prev["extraction_evidence"] or "{}",
+                    prev["latency_ms"], prev["cost_usd"], prev["recorded_at"] or _now(),
+                ),
+            )
+        conn.commit()
+        return {"ok": True, "run_id": run_id}
+    finally:
+        conn.close()
+
+
 def clear(db_path: Path = DEFAULT_DB) -> dict:
     """wipe runs + decisions so the console can start from a blank board."""
     conn = connect(db_path)
@@ -551,9 +595,10 @@ def _main() -> int:
     ap = argparse.ArgumentParser(description="Pipeline state store (read side / CLI for the webapp).")
     ap.add_argument(
         "cmd",
-        choices=["json", "decision", "history", "run", "runs", "diff", "clear"],
+        choices=["json", "decision", "history", "run", "runs", "diff", "clear", "delete"],
         help="json = snapshot; decision = current file; history = audit trail; "
-             "run = preserved run trace; runs = list runs; diff = compare two runs; clear = wipe",
+             "run = preserved run trace; runs = list runs; diff = compare two runs; "
+             "clear = wipe; delete = one batch",
     )
     ap.add_argument("--file-id")
     ap.add_argument("--run-id")
@@ -579,6 +624,10 @@ def _main() -> int:
         if not args.run_a or not args.run_b:
             ap.error("diff requires --run-a and --run-b")
         print(json.dumps(diff_runs(args.run_a, args.run_b, Path(args.db)), default=str))
+    elif args.cmd == "delete":
+        if not args.run_id:
+            ap.error("delete requires --run-id")
+        print(json.dumps(delete_run(args.run_id, Path(args.db)), default=str))
     else:
         print(json.dumps(decision(args.file_id, Path(args.db)), default=str))
     return 0

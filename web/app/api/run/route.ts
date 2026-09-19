@@ -1,4 +1,5 @@
 import { spawn } from "node:child_process";
+import { randomUUID } from "node:crypto";
 import path from "node:path";
 import { pythonCmd, repoRoot } from "@/lib/python";
 
@@ -18,6 +19,7 @@ export async function GET(req: Request) {
   const args = [
     "-m", "src.pipeline", "--stream",
     "--dir", path.join(repoRoot(), "outputs", "inbox"),
+    "--batch-name", `lote-${randomUUID()}`,
   ];
   if (today) args.push("--today", today);
   if (limit) args.push("--limit", limit);

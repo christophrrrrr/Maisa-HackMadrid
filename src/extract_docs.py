@@ -11,8 +11,8 @@ with a precise triage code, so the deterministic rules engine ESCALATES it with
 a reason (out_of_scope / unreadable / unknown_format). The LLM is only ever an
 *extraction* fallback - it never makes the payment decision.
 
-Supported here: .txt/.md/.json/.html, .csv, .xlsx/.xls, .docx, .eml (+ .msg if
-`extract-msg` is installed). PDFs and images keep using `invoice_extractor`.
+Supported here: .txt/.md/.json/.html, .csv, .xlsx, .docx, .eml and .msg.
+PDFs and images keep using `invoice_extractor`.
 Email attachments that are PDFs/images are run back through the PDF path, so an
 invoice hidden inside an email is still decided.
 """
@@ -34,8 +34,8 @@ CLIENT_CIF = "A58231074"
 _TEXT_EXTS = {".txt", ".md", ".json", ".log"}
 _HTML_EXTS = {".htm", ".html"}
 _CSV_EXTS = {".csv"}
-_XLSX_EXTS = {".xlsx", ".xls"}
-_DOCX_EXTS = {".docx", ".doc"}
+_XLSX_EXTS = {".xlsx"}
+_DOCX_EXTS = {".docx"}
 _EML_EXTS = {".eml"}
 _MSG_EXTS = {".msg"}
 _PDF_LIKE = {".pdf"}

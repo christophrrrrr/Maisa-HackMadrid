@@ -7,7 +7,7 @@ import {
 } from "@/lib/files";
 
 const RESULTS: Result[] = ["PAGAR", "NO_PAGAR", "ESCALAR"];
-// must stay in sync with src/policy.py FILE_TYPE_META / DEFAULT_FILE_TYPES
+// must stay in sync with src/policy.py file_type_meta / default_file_types
 const KIND_ORDER: FileKind[] = ["pdf", "image", "xml", "email", "docx", "spreadsheet", "text"];
 const KIND_GROUPS: { title: string; help: string; kinds: FileKind[] }[] = [
   {
@@ -273,6 +273,7 @@ export default function Settings() {
               <div>
                 <h2>Tipos de archivo</h2>
                 <p>{"Elige los formatos que el lote acepta y c\u00f3mo se leen."}</p>
+                <p>Los tipos desactivados se excluyen de cargas, lotes programados y carpetas vigiladas.</p>
               </div>
               <span className="file-type-count">{enabledCount} de {kinds.length} activos</span>
             </div>

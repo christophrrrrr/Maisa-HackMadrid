@@ -71,12 +71,21 @@ function IconSettings() {
   );
 }
 
+function IconRules() {
+  return (
+    <svg className="tab-icon" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M5 4h14v16H5zM8 8h8M8 12h8M8 16h5" fill="none" stroke="currentColor" strokeWidth="1.7" />
+      <path d="M16 15l3 3M19 15l-3 3" fill="none" stroke="currentColor" strokeWidth="1.7" />
+    </svg>
+  );
+}
+
 type Tab = { href: string; label: string; Icon: () => React.JSX.Element; badge?: number };
 
 const WORK: Tab[] = [
   { href: "/", label: "Inicio", Icon: IconHome },
   { href: "/process", label: "Procesar", Icon: IconProcess },
-  { href: "/review", label: "Revisión", Icon: IconReview },
+  { href: "/review", label: "Revisi\u00f3n", Icon: IconReview },
 ];
 
 const RECORDS: Tab[] = [
@@ -106,8 +115,8 @@ export default function Nav({ reviewCount = 0 }: { reviewCount?: number }) {
 
   return (
     <>
-      <Link href="/" className="brand" aria-label="Factu, inicio">Factu</Link>
-      <nav className="nav" aria-label="Navegación principal">
+      <Link href="/" className="brand" aria-label="Otrebla, inicio">Otrebla</Link>
+      <nav className="nav" aria-label="Navegacion principal">
         <div className="nav-section">
           <div className="nav-section-title">Trabajo</div>
           {WORK.map(tab)}
@@ -121,7 +130,10 @@ export default function Nav({ reviewCount = 0 }: { reviewCount?: number }) {
           {REPORTING.map(tab)}
         </div>
         <div className="nav-spacer" />
-        {tab({ href: "/settings", label: "Configuración", Icon: IconSettings })}
+        <div className="nav-section">
+          {tab({ href: "/rules", label: "Reglas", Icon: IconRules })}
+          {tab({ href: "/settings", label: "Configuraci\u00f3n", Icon: IconSettings })}
+        </div>
       </nav>
     </>
   );

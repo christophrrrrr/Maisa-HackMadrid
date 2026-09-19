@@ -78,6 +78,13 @@ def _date(s: str | None) -> date | None:
 
 
 def extract_xml(path: Path, *, facturae: bool = True) -> InvoiceData:
+    if not facturae:
+        return InvoiceData(
+            file_id=path.name,
+            extraction_ok=False,
+            extraction_reason="unknown_format",
+            extraction_note="lectura FacturaE / UBL desactivada",
+        )
     try:
         root = ET.parse(path).getroot()
     except Exception as exc:
@@ -116,12 +123,6 @@ def extract_xml(path: Path, *, facturae: bool = True) -> InvoiceData:
             if _local(el.tag) == "id" and (el.text or "").strip():
                 bag["invoice_number"] = el.text.strip()
                 break
-
-    if not facturae and not bag:
-        return InvoiceData(
-            file_id=path.name, extraction_ok=False,
-            extraction_note="xml sin mapeo facturae/ubl",
-        )
 
     inv = InvoiceData(
         file_id=path.name,

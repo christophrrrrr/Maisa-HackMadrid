@@ -148,6 +148,7 @@ def run(
     facturas_dir: Path | None = None,
     extractor_name: str | None = None,
     batch: str = "lote1",
+    batch_name: str | None = None,
     today: date | None = None,
     stream: bool = False,
     db_path: Path = state.DEFAULT_DB,
@@ -184,9 +185,10 @@ def run(
         raise RuntimeError(f"no supported invoice files found in {facturas_dir}")
     manual_overrides = load_overrides()
     run_id = datetime.now(timezone.utc).isoformat()
+    batch_id = batch_name or batch
 
     conn = state.connect(db_path)
-    state.start_run(conn, run_id, batch, biz.rules_version)
+    state.start_run(conn, run_id, batch_id, biz.rules_version)
     _emit(stream, {"event": "run_start", "run_id": run_id, "total": len(files),
                    "extractor": extractor.name, "rules_version": biz.rules_version})
     # surface master data-quality issues (dup suppliers, conflicting rows, bad
@@ -230,7 +232,7 @@ def run(
                        "file_id": inv.file_id, "ok": inv.extraction_ok, "latency_ms": round(ms, 1)})
 
     # 2) decide (deterministic, cheap) — needs the whole batch for duplicate detection
-    previous_purchase_orders = state.purchase_orders_from_other_batches(batch, db_path)
+    previous_purchase_orders = state.purchase_orders_from_other_batches(batch_id, db_path)
     outcomes = decide_batch(
         invoices,
         biz,
@@ -290,6 +292,7 @@ def _main() -> int:
     ap.add_argument("--extractor", default=None, help="hybrid (default) | baseline; overrides policy")
     ap.add_argument("--dir", help="directory of invoice PDFs (default: challenge/facturas)")
     ap.add_argument("--batch", default="lote1", choices=["lote1", "lote2"])
+    ap.add_argument("--batch-name", help="unique identity for this logical batch")
     ap.add_argument("--out", help="output JSONL path (default: batch-specific artifact)")
     ap.add_argument("--rules-version", help="rules profile (default: norma-v3 / norma-v4 by batch)")
     ap.add_argument("--xlsx", default=str(DEFAULT_XLSX), help="business-data workbook")
@@ -308,6 +311,7 @@ def _main() -> int:
     facturas_dir = Path(args.dir) if args.dir else input_dir_for_batch(args.batch)
     outcomes_path = Path(args.out) if args.out else outcomes_path_for_batch(args.batch)
     result = run(facturas_dir=facturas_dir, extractor_name=args.extractor, batch=args.batch,
+                 batch_name=args.batch_name,
                  stream=args.stream, today=today, limit=args.limit, use_vision=not args.no_vision,
                  replace_state=args.replace_state, outcomes_path=outcomes_path,
                  rules_version=args.rules_version, xlsx_path=Path(args.xlsx),

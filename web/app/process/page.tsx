@@ -1,7 +1,7 @@
-import DecisionBoard from "@/components/DecisionBoard";
+import ProcessBoard from "@/components/ProcessBoard";
 
 export const dynamic = "force-dynamic";
 
 export default function ProcessPage() {
-  return <DecisionBoard mode="process" />;
+  return <ProcessBoard />;
 }

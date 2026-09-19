@@ -1,6 +1,6 @@
 """editable payment policy - persisted overrides the rules engine reads at run time.
 
-the console's settings page edits this; rules_engine + pipeline load it so changes
+the console edits this; rules_engine + pipeline load it so changes
 take effect on the next batch run. defaults live here; overrides in outputs/policy.json.
 """
 from __future__ import annotations
@@ -11,7 +11,7 @@ from pathlib import Path
 CONFIG_PATH = Path(__file__).resolve().parents[1] / "outputs" / "policy.json"
 
 RULES_VERSION = "norma-v3"
-DEFAULT_TOLERANCE = "0.01"
+DEFAULT_TOLERANCE = "0"
 RESULTS = ["PAGAR", "NO_PAGAR", "ESCALAR"]
 
 # reason code -> outcome when that check FAILS. this is the editable policy.
@@ -37,7 +37,7 @@ DEFAULT_REASON_OUTCOMES: dict[str, str] = {
     "unknown_format": "ESCALAR",
 }
 
-# human metadata for the settings ui: label + which norma rule it maps to + help
+# human metadata for the rules ui: label + which norma rule it maps to + help
 REASONS: dict[str, dict[str, str]] = {
     "incomplete_extraction": {"label": "Extracci\u00f3n incompleta", "rule": "filtro", "help": "el documento no se pudo leer con suficiente confianza"},
     "supplier_not_in_master": {"label": "Proveedor no dado de alta", "rule": "1", "help": "el NIF no figura en el maestro de proveedores"},
@@ -69,10 +69,10 @@ FILE_TYPE_META: dict[str, dict] = {
     },
     "xml": {"label": "XML", "exts": [".xml", ".xsig"], "help": "FacturaE / UBL"},
     "email": {"label": "Email", "exts": [".eml", ".msg"], "help": "correos con o sin adjuntos"},
-    "docx": {"label": "Word", "exts": [".docx", ".doc"], "help": "documentos de Word"},
+    "docx": {"label": "Word", "exts": [".docx"], "help": "documentos de Word"},
     "spreadsheet": {
         "label": "Hoja de c\u00e1lculo",
-        "exts": [".xlsx", ".xls", ".csv"],
+        "exts": [".xlsx", ".csv"],
         "help": "Excel / CSV",
     },
     "text": {"label": "Texto", "exts": [".txt", ".md", ".htm", ".html", ".json"], "help": "texto plano / HTML"},
@@ -80,17 +80,17 @@ FILE_TYPE_META: dict[str, dict] = {
 
 DEFAULT_FILE_TYPES: dict[str, dict] = {
     "pdf": {"enabled": True, "vision": True},
-    "image": {"enabled": False, "vision": True, "max_mb": 12},
-    "xml": {"enabled": False, "facturae": True},
-    "email": {"enabled": False, "vision": True},
-    "docx": {"enabled": False, "vision": True},
-    "spreadsheet": {"enabled": False, "vision": False},
-    "text": {"enabled": False, "vision": True},
+    "image": {"enabled": True, "vision": True, "max_mb": 12},
+    "xml": {"enabled": True, "facturae": True},
+    "email": {"enabled": True, "vision": True},
+    "docx": {"enabled": True, "vision": True},
+    "spreadsheet": {"enabled": True, "vision": False},
+    "text": {"enabled": True, "vision": True},
 }
 
 DEFAULT_WATCH: dict = {"enabled": False, "folder_name": None}
 
-PERSIST_KEYS = ("tolerance", "extractor", "today", "reason_outcomes", "file_types", "watch")
+PERSIST_KEYS = ("tolerance", "extractor", "today", "reason_outcomes", "reasons", "file_types", "watch")
 
 
 def defaults() -> dict:
@@ -100,6 +100,7 @@ def defaults() -> dict:
         "extractor": "hybrid",  # A's digital+vision; 'baseline' is the offline fallback
         "today": None,  # reference date for rule 4; None = system today
         "reason_outcomes": dict(DEFAULT_REASON_OUTCOMES),
+        "reasons": {k: dict(v) for k, v in REASONS.items()},
         "file_types": {k: dict(v) for k, v in DEFAULT_FILE_TYPES.items()},
         "watch": dict(DEFAULT_WATCH),
     }
@@ -157,6 +158,21 @@ def _merge_watch(saved: object) -> dict:
     return out
 
 
+def _merge_reasons(saved: object) -> dict:
+    out = {k: dict(v) for k, v in REASONS.items()}
+    if not isinstance(saved, dict):
+        return out
+    for code, value in saved.items():
+        if not isinstance(code, str) or not code or not isinstance(value, dict):
+            continue
+        label = str(value.get("label") or "").strip()
+        rule = str(value.get("rule") or "").strip()
+        help_text = str(value.get("help") or "").strip()
+        if label and rule and help_text:
+            out[code] = {"label": label, "rule": rule, "help": help_text}
+    return out
+
+
 def load_policy() -> dict:
     """defaults merged with saved overrides (unknown / invalid values ignored)."""
     cfg = defaults()
@@ -168,8 +184,9 @@ def load_policy() -> dict:
         for key in ("tolerance", "extractor", "today"):
             if saved.get(key) is not None:
                 cfg[key] = saved[key]
+        cfg["reasons"] = _merge_reasons(saved.get("reasons"))
         for code, outcome in (saved.get("reason_outcomes") or {}).items():
-            if code in cfg["reason_outcomes"] and outcome in RESULTS:
+            if code in cfg["reasons"] and outcome in RESULTS:
                 cfg["reason_outcomes"][code] = outcome
         cfg["file_types"] = _merge_file_types(saved.get("file_types"))
         cfg["watch"] = _merge_watch(saved.get("watch"))
@@ -185,8 +202,10 @@ def save_policy(data: dict) -> dict:
         cfg["extractor"] = data["extractor"]
     if "today" in data:
         cfg["today"] = data["today"] or None
+    if "reasons" in data:
+        cfg["reasons"] = _merge_reasons(data.get("reasons"))
     for code, outcome in (data.get("reason_outcomes") or {}).items():
-        if code in cfg["reason_outcomes"] and outcome in RESULTS:
+        if code in cfg["reasons"] and outcome in RESULTS:
             cfg["reason_outcomes"][code] = outcome
     if "file_types" in data:
         cfg["file_types"] = _merge_file_types(data.get("file_types"))
@@ -203,7 +222,7 @@ def save_policy(data: dict) -> dict:
 
 def as_ui() -> dict:
     """full payload for the settings page: current values + metadata."""
-    return {**load_policy(), "reasons": REASONS, "results": RESULTS, "file_type_meta": FILE_TYPE_META}
+    return {**load_policy(), "results": RESULTS, "file_type_meta": FILE_TYPE_META}
 
 
 def _main() -> int:
