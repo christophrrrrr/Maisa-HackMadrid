@@ -1,0 +1,52 @@
+flowchart TD
+    subgraph refs["Datos de referencia (etapa 0)"]
+        XLS["Excel FINAL_v7<br/>Proveedores · Pedidos_2026 · Norma_Pagos"]
+        ERP["ERP legado :8009<br/>challenge/alberto_erp.py"]
+        XLS -->|"business_data.load_business_data"| BD["BusinessData<br/>(en memoria)"]
+        ERP -->|"ERPClient.fetch_all<br/>login · paginación · retries"| SNAP[("erp_snapshot.sqlite<br/>erp_asientos")]
+        SNAP -->|"load_snapshot → index_by_pedido"| ERPIDX["dict pedido → ERPEntry"]
+    end
+
+    subgraph ingest["Etapa 1 · Ingest"]
+        FILES["challenge/facturas · lote_2_sorpresa<br/>outputs/inbox (uploads web)"]
+        FILES -->|"pipeline._collect_files<br/>policy.accepted_suffixes"| PATHS["list[Path]"]
+    end
+
+    subgraph extract["Etapa 2 · Extracción (capa LLM / probabilística)"]
+        PATHS --> HYB{"HybridExtractor.extract"}
+        HYB -->|"PDF digital ≥100 chars"| DIG["PyMuPDF + regex<br/>_parse_digital"]
+        HYB -->|"PDF escaneado / imagen"| VIS["Render PNG → Vision LLM<br/>Vercel AI Gateway / Gemini<br/>cache .cache/invoice_extraction"]
+        HYB -->|"XML"| XML["extract_xml"]
+        HYB -->|"otros docs"| DOCS["extract_docs"]
+        HYB -->|"fallo"| BASE["BaselineExtractor"]
+        DIG & VIS & XML & DOCS & BASE --> OVR["manual_overrides.apply_override<br/>(JSON ligado a SHA-256)"]
+        OVR --> INV["InvoiceData<br/>+ method · cost · evidence"]
+    end
+
+    subgraph decide["Etapa 3 · Decisión (determinista, norma-v3)"]
+        INV --> DB["rules_engine.decide_batch"]
+        BD --> DB
+        ERPIDX --> DB
+        HIST["POs de otros lotes<br/>state.purchase_orders_from_other_batches"] --> DB
+        DB -->|"duplicados cross-invoice"| EV["evaluate → _evaluate_v3<br/>1 NIF+IBAN · 2 pedido/importe · 3 base+IVA<br/>4 fecha · 5 ERP PENDIENTE · 6 anomalías"]
+        EV --> OUT["Outcome[]<br/>PAGAR · NO_PAGAR · ESCALAR<br/>(ESCALAR > NO_PAGAR > PAGAR)"]
+    end
+
+    subgraph persist["Etapa 4 · Persistencia y entregable"]
+        OUT -->|"state.start_run · record_decision · finish_run"| STATE[("pipeline_state.sqlite<br/>runs · decisions · decision_history")]
+        OUT -->|"write_outcomes → Outcome.to_contract_line"| JSONL["outcomes.jsonl /<br/>outcomes_lote2.jsonl"]
+        JSONL --> VAL["deliverables.validate_outcomes"]
+    end
+
+    subgraph web["Etapa 5 · Consola web (opcional)"]
+        UP["POST /api/upload"] --> FILES
+        RUN["GET /api/run (SSE)<br/>run_start · extracted · decided · run_done"]
+        ST["GET /api/state<br/>python -m src.state"]
+        UI["DecisionBoard.tsx"]
+        RUN --> UI
+        ST --> UI
+    end
+
+    STATE -.->|"decision_history"| HIST
+    STATE --> ST
+    DB -.->|"stdout JSON lines"| RUN
