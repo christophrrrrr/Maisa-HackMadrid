@@ -80,7 +80,10 @@ def evaluate(
 
     # --- gate: did extraction give us enough to judge? ---
     if not invoice.extraction_ok:
-        findings.append(Finding("incomplete_extraction",
+        # the extractor may hand us a precise triage code (out_of_scope / unreadable /
+        # unknown_format); default to incomplete_extraction. all of these ESCALATE.
+        code = invoice.extraction_reason or "incomplete_extraction"
+        findings.append(Finding(code,
                                 invoice.extraction_note or "extractor flagged low confidence"))
         return _aggregate(invoice, findings, evidence)  # trust A's flag; don't guess
     required = {"purchase_order": invoice.purchase_order,
