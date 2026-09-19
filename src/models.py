@@ -68,6 +68,10 @@ class InvoiceData(BaseModel):
     # A's extractor may set this when a scan can't be read confidently:
     extraction_ok: bool = True
     extraction_note: str | None = None
+    # machine-readable triage code when extraction_ok is False, e.g.
+    # "incomplete_extraction" | "out_of_scope" | "unreadable" | "unknown_format".
+    # the rules engine maps this to the ESCALAR reason so the trace is precise.
+    extraction_reason: str | None = None
 
 
 class Outcome(BaseModel):

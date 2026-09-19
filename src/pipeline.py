@@ -120,12 +120,14 @@ def run(
     outcomes = decide_batch(invoices, biz, erp, today=today)
 
     # 3) persist + emit each decision
+    by_id = {inv.file_id: inv for inv in invoices}
     for o in outcomes:
+        inv = by_id.get(o.file_id)
         state.record_decision(
             conn, run_id, o,
             extraction_method=method.get(o.file_id),
-            extraction_ok=(o.reason != "incomplete_extraction"),
-            extracted=next((inv.model_dump() for inv in invoices if inv.file_id == o.file_id), None),
+            extraction_ok=bool(inv.extraction_ok) if inv is not None else (o.reason == "all_rules_pass"),
+            extracted=inv.model_dump() if inv is not None else None,
             latency_ms=latencies.get(o.file_id),
             cost_usd=costs.get(o.file_id, 0.0),
         )

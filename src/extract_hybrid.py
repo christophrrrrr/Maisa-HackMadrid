@@ -47,6 +47,19 @@ class HybridExtractor:
             self.last_method = "xml" if inv.extraction_ok else "xml-incomplete"
             self.last_cost = 0.0
             return inv
+        # universal ingestion: any non-pdf/image/xml file (or an unknown suffix)
+        # is normalised -> deterministic parse -> generic LLM -> triaged ESCALAR.
+        if kind in ("email", "docx", "spreadsheet", "text") or kind is None:
+            from .extract_docs import extract_document
+            inv, method, cost = extract_document(
+                pdf_path,
+                use_vision=self.use_vision and bool(spec.get("vision", True)),
+                model=self.model,
+                fallback_models=self.fallback_models,
+            )
+            self.last_method = method
+            self.last_cost = cost
+            return inv
         use_vision = self.use_vision and bool(spec.get("vision", True))
         if kind == "image" and not use_vision:
             self.last_method = "unavailable"
