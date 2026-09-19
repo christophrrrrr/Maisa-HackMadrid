@@ -21,7 +21,12 @@ from pathlib import Path
 from . import state
 from .business_data import DEFAULT_XLSX, load_business_data
 from .deliverables import validate_outcomes
-from .erp_snapshot import DEFAULT_DB as DEFAULT_ERP_DB, index_by_pedido, load_snapshot
+from .erp_snapshot import (
+    DEFAULT_DB as DEFAULT_ERP_DB,
+    assert_snapshot_ready_for_batch,
+    index_by_pedido,
+    load_snapshot,
+)
 from .extractor import Extractor
 from .manual_overrides import apply_override, load_overrides
 from .models import InvoiceData
@@ -162,6 +167,7 @@ def run(
     extractor = get_extractor(extractor_name or cfg.get("extractor") or "hybrid", use_vision=use_vision)
     rules_version = rules_version or rules_version_for_batch(batch)
     biz = load_business_data(xlsx_path, rules_version=rules_version)
+    assert_snapshot_ready_for_batch(batch, erp_db_path)
     erp = index_by_pedido(load_snapshot(erp_db_path))
 
     facturas_dir = facturas_dir or input_dir_for_batch(batch)

@@ -97,6 +97,45 @@ def load_snapshot(db_path: Path = DEFAULT_DB) -> list[ERPEntry]:
     ]
 
 
+def latest_snapshot_metadata(db_path: Path = DEFAULT_DB) -> dict | None:
+    """Return provenance for the newest ERP snapshot, if available."""
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    try:
+        try:
+            row = conn.execute(
+                "SELECT run_at, total, stats FROM snapshot_runs ORDER BY run_at DESC LIMIT 1"
+            ).fetchone()
+        except sqlite3.OperationalError as exc:
+            if "no such table" not in str(exc):
+                raise
+            return None
+    finally:
+        conn.close()
+    if row is None:
+        return None
+    metadata = dict(row)
+    try:
+        metadata["stats"] = json.loads(metadata["stats"])
+    except (json.JSONDecodeError, TypeError):
+        pass
+    return metadata
+
+
+def assert_snapshot_ready_for_batch(batch: str, db_path: Path = DEFAULT_DB) -> None:
+    """Prevent lote 2 from reconciling against a stale, pre-update ERP snapshot."""
+    if batch != "lote2":
+        return
+    metadata = latest_snapshot_metadata(db_path)
+    stats = metadata.get("stats", {}) if metadata else {}
+    erp_status = stats.get("erp_status", {}) if isinstance(stats, dict) else {}
+    if erp_status.get("actualizacion_cargada") != "SI":
+        raise RuntimeError(
+            "lote2 requires an ERP snapshot captured with actualizacion_cargada=SI; "
+            "start `make -C challenge erp-lote2-fast` and refresh the snapshot"
+        )
+
+
 def index_by_pedido(entries: list[ERPEntry]) -> dict[str, ERPEntry]:
     """Reconciliation helper: pedido -> asiento (what B will call)."""
     return {e.purchase_order: e for e in entries}
@@ -105,9 +144,12 @@ def index_by_pedido(entries: list[ERPEntry]) -> dict[str, ERPEntry]:
 def refresh(db_path: Path = DEFAULT_DB, **client_kwargs) -> tuple[list[ERPEntry], dict]:
     """Fetch everything from the live ERP and persist it. Returns (entries, stats)."""
     client = ERPClient(**client_kwargs)
+    erp_status = client.estado()
     entries = client.fetch_all()
-    save_snapshot(entries, db_path=db_path, stats=client.stats.as_dict())
-    return entries, client.stats.as_dict()
+    stats = client.stats.as_dict()
+    stats["erp_status"] = erp_status
+    save_snapshot(entries, db_path=db_path, stats=stats)
+    return entries, stats
 
 
 def _main() -> int:
