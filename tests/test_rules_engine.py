@@ -141,11 +141,25 @@ def test_contract_line_is_minimal():
     assert set(line.keys()) == {"file_id", "result"}
 
 
+def test_norma_v4_reuses_v3_logic_until_official_rule_ships():
+    # v4 was announced without official rule text; it is an EXPLICIT alias of v3
+    # logic, stamped with its own version label for the trace. It must therefore
+    # decide identically to v3 for the same input, only labelled differently.
+    inv = _invoice()
+    out_v3 = evaluate(inv, _biz(), _erp(), today=TODAY, rules_version="norma-v3")
+    out_v4 = evaluate(inv, _biz(), _erp(), today=TODAY, rules_version="norma-v4")
+    assert out_v4.result == out_v3.result
+    assert out_v4.reason == out_v3.reason
+    assert out_v4.findings == out_v3.findings
+    assert out_v3.rules_version == "norma-v3"
+    assert out_v4.rules_version == "norma-v4"
+
+
 def test_unknown_rules_version_fails_closed():
     import pytest
 
-    with pytest.raises(ValueError, match="norma-v4.*not implemented"):
-        evaluate(_invoice(), _biz(), _erp(), today=TODAY, rules_version="norma-v4")
+    with pytest.raises(ValueError, match="norma-v5.*not implemented"):
+        evaluate(_invoice(), _biz(), _erp(), today=TODAY, rules_version="norma-v5")
 
 
 def test_business_data_and_engine_versions_must_match():

@@ -10,8 +10,10 @@ ERP snapshot (Person C).
 """
 from __future__ import annotations
 
+import csv
 import re
 import unicodedata
+from collections.abc import Iterator, Sequence
 from dataclasses import dataclass, field
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
@@ -33,6 +35,19 @@ def rules_sheet_for_version(rules_version: str) -> str:
     if not rules_version.startswith(prefix) or not rules_version[len(prefix):].isdigit():
         raise ValueError(f"invalid rules version {rules_version!r}; expected norma-vN")
     return f"Norma_Pagos_v{rules_version[len(prefix):]}"
+
+
+def _latest_norma_sheet(sheetnames: list[str]) -> str | None:
+    """Highest-numbered ``Norma_Pagos_vN`` sheet present, used as a TEXT fallback
+    when the exact requested norma sheet was not shipped in the workbook."""
+    best: tuple[int, str] | None = None
+    for name in sheetnames:
+        match = re.fullmatch(r"norma_pagos_v(\d+)", _norm_header(name))
+        if match:
+            number = int(match.group(1))
+            if best is None or number > best[0]:
+                best = (number, name)
+    return best[1] if best else None
 
 # --- schema resilience -------------------------------------------------------
 # The master Excel is human-maintained, so its LAYOUT can drift (a column gets
@@ -153,6 +168,115 @@ def _to_decimal(value) -> Decimal | None:
         return None
 
 
+# --- external sources (CSV) --------------------------------------------------
+# New suppliers / purchase orders can arrive as separate CSVs (e.g. lote 2's
+# proveedores_nuevos.csv / pedidos_nuevos.csv) instead of being folded into the
+# master Excel. These helpers ingest ANY such source through the SAME header-alias
+# resolution the Excel uses, so a new file with slightly different column names
+# still lands correctly. Merges are ADDITIVE: a brand-new id is added; an id that
+# already exists in the master is NOT overwritten — identical rows are de-duped
+# silently and genuinely conflicting rows keep the vetted master value and raise
+# a loud warning (rule 6: surface anomalies for a human).
+
+
+def _read_csv_rows(
+    path: Path,
+    columns: dict[str, list[str]],
+    required: tuple[str, ...],
+    label: str,
+    warnings: list[str],
+) -> Iterator[dict[str, object]]:
+    """Yield ``{field: raw_value}`` dicts from a CSV, resolving columns by header
+    NAME (accent/case/space-insensitive) exactly like the Excel loader."""
+    with path.open(newline="", encoding="utf-8-sig") as handle:
+        reader = csv.reader(handle)
+        try:
+            header = next(reader)
+        except StopIteration:
+            warnings.append(f"fuente de {label} vacia: {path.name}")
+            return
+        header_idx: dict[str, int] = {}
+        for i, cell in enumerate(header):
+            key = _norm_header(cell)
+            if key and key not in header_idx:
+                header_idx[key] = i
+        col = _resolve_columns(header_idx, columns, required, f"{label} ({path.name})")
+        for row in reader:
+            yield {field: (row[idx] if idx < len(row) else None) for field, idx in col.items()}
+
+
+def _merge_supplier_source(
+    path: Path,
+    suppliers_by_id: dict[str, "Supplier"],
+    suppliers_by_nif: dict[str, "Supplier"],
+    warnings: list[str],
+) -> None:
+    for raw in _read_csv_rows(path, SUPPLIER_COLUMNS, SUPPLIER_REQUIRED, "proveedores", warnings):
+        sid = str(raw.get("id") or "").strip()
+        if not sid:
+            continue
+        name = raw.get("name")
+        tax_id = raw.get("tax_id")
+        iban = raw.get("iban")
+        terms = raw.get("payment_terms")
+        supplier = Supplier(
+            id=sid,
+            name=str(name).strip() if name else "",
+            tax_id=str(tax_id).strip() if tax_id else "",
+            iban=normalize_iban(iban) or "",
+            payment_terms=str(terms).strip() if terms else None,
+        )
+        if supplier.id in suppliers_by_id:
+            existing = suppliers_by_id[supplier.id]
+            if existing.model_dump() != supplier.model_dump():
+                warnings.append(
+                    f"proveedor {supplier.id} de {path.name} EN CONFLICTO con el maestro - "
+                    f"se conservo el del Excel"
+                )
+            else:
+                warnings.append(f"proveedor {supplier.id} de {path.name} duplicado (identico) - de-duplicado")
+            continue
+        suppliers_by_id[supplier.id] = supplier
+        if supplier.tax_id:
+            if supplier.tax_id in suppliers_by_nif:
+                warnings.append(f"NIF {supplier.tax_id} ({path.name}) apunta a mas de un proveedor - se conservo el existente")
+            else:
+                suppliers_by_nif[supplier.tax_id] = supplier
+
+
+def _merge_order_source(
+    path: Path,
+    orders: dict[str, "PurchaseOrder"],
+    warnings: list[str],
+) -> None:
+    for raw in _read_csv_rows(path, ORDER_COLUMNS, ORDER_REQUIRED, "pedidos", warnings):
+        pedido = str(raw.get("id") or "").strip()
+        if not pedido:
+            continue
+        amount = _to_decimal(raw.get("amount"))
+        if amount is None:
+            warnings.append(f"pedido {pedido} ({path.name}) con importe no interpretable {raw.get('amount')!r} - omitido")
+            continue
+        supplier_id = raw.get("supplier_id")
+        tax_id = raw.get("tax_id")
+        order = PurchaseOrder(
+            id=pedido,
+            supplier_id=str(supplier_id).strip() if supplier_id else "",
+            tax_id=str(tax_id).strip() if tax_id else None,
+            amount=amount,
+        )
+        if order.id in orders:
+            existing = orders[order.id]
+            if existing.model_dump() != order.model_dump():
+                warnings.append(
+                    f"pedido {order.id} de {path.name} EN CONFLICTO con el maestro - se conservo el del Excel"
+                )
+            else:
+                warnings.append(f"pedido {order.id} de {path.name} duplicado (identico) - de-duplicado")
+            continue
+        orders[order.id] = order
+
+
 @dataclass
 class BusinessData:
     suppliers_by_id: dict[str, Supplier]
@@ -178,6 +302,8 @@ def load_business_data(
     xlsx_path: Path = DEFAULT_XLSX,
     *,
     rules_version: str = DEFAULT_RULES_VERSION,
+    extra_supplier_csvs: Sequence[Path] | None = None,
+    extra_order_csvs: Sequence[Path] | None = None,
 ) -> BusinessData:
     rules_sheet = rules_sheet_for_version(rules_version)
     wb = openpyxl.load_workbook(xlsx_path, data_only=True, read_only=True)
@@ -242,17 +368,46 @@ def load_business_data(
         orders[po.id] = po
 
     # --- rules text (kept for the pitch / versioning; the logic is coded in rules_engine) ---
+    # If the requested norma sheet was not shipped in the workbook (e.g. norma-v4
+    # was announced but the master Excel is unchanged), fall back to the most
+    # recent norma sheet available for the human-readable TEXT and warn loudly.
+    # The decision LOGIC for the requested version is selected in the rules engine;
+    # this fallback only affects the rule text carried in the trace, so the batch
+    # never crashes just because the text tab is missing.
     rules_text: list[str] = []
+    resolved_rules_sheet = rules_sheet
     if rules_sheet not in wb.sheetnames:
-        wb.close()
-        raise ValueError(
-            f"{xlsx_path} does not contain {rules_sheet!r} for {rules_version}"
+        fallback = _latest_norma_sheet(wb.sheetnames)
+        if fallback is None:
+            wb.close()
+            raise BusinessDataError(
+                f"{xlsx_path} no contiene ninguna hoja de norma (se esperaba {rules_sheet!r}). "
+                f"hojas disponibles: {', '.join(wb.sheetnames)}"
+            )
+        warnings.append(
+            f"no se encontro la hoja {rules_sheet!r} para {rules_version}; "
+            f"se usa el texto de '{fallback}' como referencia (la logica la decide el motor de reglas)"
         )
-    for row in wb[rules_sheet].iter_rows(values_only=True):
+        resolved_rules_sheet = fallback
+    for row in wb[resolved_rules_sheet].iter_rows(values_only=True):
         if row and row[0]:
             rules_text.append(str(row[0]).strip())
 
     wb.close()
+
+    # --- merge additional external sources (new suppliers / orders as CSV) ---
+    for source in extra_supplier_csvs or ():
+        path = Path(source)
+        if path.is_file():
+            _merge_supplier_source(path, suppliers_by_id, suppliers_by_nif, warnings)
+        else:
+            warnings.append(f"fuente de proveedores no encontrada: {path}")
+    for source in extra_order_csvs or ():
+        path = Path(source)
+        if path.is_file():
+            _merge_order_source(path, orders, warnings)
+        else:
+            warnings.append(f"fuente de pedidos no encontrada: {path}")
     return BusinessData(
         suppliers_by_id=suppliers_by_id,
         suppliers_by_nif=suppliers_by_nif,

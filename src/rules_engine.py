@@ -98,9 +98,14 @@ def _evaluate_v3(
     *,
     today: date | None = None,
     duplicate: bool = False,
+    rules_version: str = "norma-v3",
 ) -> Outcome:
     """Decide one invoice. `duplicate` is injected by decide_batch when the same
-    pedido appears on more than one invoice."""
+    pedido appears on more than one invoice.
+
+    `rules_version` only labels the trace/outcome; the decision LOGIC here is the
+    v3 norma. norma-v4 currently reuses this same logic as an explicit alias (no
+    official v4 rule text has shipped yet), so it flows through with its own label."""
     today = today or date.today()
     findings: list[Finding] = []
     evidence: dict = {}
@@ -120,7 +125,7 @@ def _evaluate_v3(
             expected=_value("Estado requerido", "correcta", "Política de extracción"),
         )
         return _aggregate(
-            invoice, findings, evidence, checks, "norma-v3"
+            invoice, findings, evidence, checks, rules_version
         )  # trust A's flag; don't guess
     required = {"purchase_order": invoice.purchase_order,
                 "supplier_tax_id": invoice.supplier_tax_id,
@@ -135,7 +140,7 @@ def _evaluate_v3(
             actual=_value("Campos ausentes", ", ".join(missing), "Factura"),
             expected=_value("Campos requeridos", "pedido, NIF y total", "Política de extracción"),
         )
-        return _aggregate(invoice, findings, evidence, checks, "norma-v3")
+        return _aggregate(invoice, findings, evidence, checks, rules_version)
     _check(
         checks, rule="filtro", code="incomplete_extraction",
         label="Extracción completa", status="pass",
@@ -379,7 +384,7 @@ def _evaluate_v3(
             status="pass", message="El pedido aparece una sola vez en el lote.",
         )
 
-    return _aggregate(invoice, findings, evidence, checks, "norma-v3")
+    return _aggregate(invoice, findings, evidence, checks, rules_version)
 
 
 def _aggregate(
@@ -421,6 +426,13 @@ def evaluate(
     """Dispatch explicitly to a versioned evaluator; unknown versions fail closed."""
     evaluators = {
         "norma-v3": _evaluate_v3,
+        # norma-v4: the challenge announced "una regla nueva" for the Saturday
+        # batch but shipped no official Norma_Pagos_v4 text. Until a dedicated
+        # `_evaluate_v4` encodes that rule, v4 is an EXPLICIT alias of the v3
+        # logic (decisions are stamped "norma-v4" for the trace). This is a
+        # conscious, documented choice — not a silent fallback — and unknown
+        # future versions (v5+) still fail closed below.
+        "norma-v4": _evaluate_v3,
     }
     try:
         evaluator = evaluators[rules_version]
@@ -435,6 +447,7 @@ def evaluate(
         erp_by_pedido,
         today=today,
         duplicate=duplicate,
+        rules_version=rules_version,
     )
 
 

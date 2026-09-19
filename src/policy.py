@@ -11,7 +11,11 @@ from pathlib import Path
 CONFIG_PATH = Path(__file__).resolve().parents[1] / "outputs" / "policy.json"
 
 RULES_VERSION = "norma-v3"
-DEFAULT_TOLERANCE = "0"
+# The norma de pagos matches amounts "±0.01 EUR"; the engine's TOLERANCE reads
+# this. A value of "0" forces exact equality and wrongly ESCALATES invoices whose
+# IVA is merely rounded to the cent (e.g. base*21% = 1206.7251 printed as 1206.73),
+# so the documented cent tolerance is the correct default.
+DEFAULT_TOLERANCE = "0.01"
 RESULTS = ["PAGAR", "NO_PAGAR", "ESCALAR"]
 
 # reason code -> outcome when that check FAILS. this is the editable policy.

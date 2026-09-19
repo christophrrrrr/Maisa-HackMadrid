@@ -36,6 +36,8 @@ from .rules_engine import decide_batch
 REPO = Path(__file__).resolve().parents[1]
 FACTURAS_DIR = REPO / "challenge" / "facturas"
 LOTE2_DIR = REPO / "lote_2_sorpresa" / "facturas"
+LOTE2_SUPPLIERS_CSV = REPO / "lote_2_sorpresa" / "proveedores_nuevos.csv"
+LOTE2_ORDERS_CSV = REPO / "lote_2_sorpresa" / "pedidos_nuevos.csv"
 INBOX_DIR = REPO / "outputs" / "inbox"          # PDFs uploaded from the console
 OUTCOMES = REPO / "outputs" / "outcomes.jsonl"
 OUTCOMES_LOTE2 = REPO / "outputs" / "outcomes_lote2.jsonl"
@@ -51,6 +53,17 @@ BATCH_OUTCOMES = {
 BATCH_RULES_VERSIONS = {
     "lote1": "norma-v3",
     "lote2": "norma-v4",
+}
+# Extra business-data sources merged on top of the master Excel per batch. lote2
+# ships brand-new suppliers/orders as CSVs (foreign P012-P015 + new pedidos) that
+# never made it into the workbook; without these they'd be invisible to the rules.
+BATCH_EXTRA_SUPPLIER_CSVS: dict[str, list[Path]] = {
+    "lote1": [],
+    "lote2": [LOTE2_SUPPLIERS_CSV],
+}
+BATCH_EXTRA_ORDER_CSVS: dict[str, list[Path]] = {
+    "lote1": [],
+    "lote2": [LOTE2_ORDERS_CSV],
 }
 
 
@@ -133,6 +146,14 @@ def rules_version_for_batch(batch: str) -> str:
         raise ValueError(f"unknown batch {batch!r}") from exc
 
 
+def extra_supplier_csvs_for_batch(batch: str) -> list[Path]:
+    return list(BATCH_EXTRA_SUPPLIER_CSVS.get(batch, []))
+
+
+def extra_order_csvs_for_batch(batch: str) -> list[Path]:
+    return list(BATCH_EXTRA_ORDER_CSVS.get(batch, []))
+
+
 def write_outcomes(outcomes, path: Path) -> None:
     """Atomically write one batch contract without touching the other batch."""
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -159,6 +180,8 @@ def run(
     rules_version: str | None = None,
     xlsx_path: Path = DEFAULT_XLSX,
     erp_db_path: Path = DEFAULT_ERP_DB,
+    extra_supplier_csvs: list[Path] | None = None,
+    extra_order_csvs: list[Path] | None = None,
 ) -> dict:
     # reference date + extractor fall back to the editable policy (settings page)
     cfg = load_policy()
@@ -167,8 +190,21 @@ def run(
     today = today or date.today()
     extractor = get_extractor(extractor_name or cfg.get("extractor") or "hybrid", use_vision=use_vision)
     rules_version = rules_version or rules_version_for_batch(batch)
+    supplier_csvs = (
+        extra_supplier_csvs if extra_supplier_csvs is not None
+        else extra_supplier_csvs_for_batch(batch)
+    )
+    order_csvs = (
+        extra_order_csvs if extra_order_csvs is not None
+        else extra_order_csvs_for_batch(batch)
+    )
     try:
-        biz = load_business_data(xlsx_path, rules_version=rules_version)
+        biz = load_business_data(
+            xlsx_path,
+            rules_version=rules_version,
+            extra_supplier_csvs=supplier_csvs,
+            extra_order_csvs=order_csvs,
+        )
     except BusinessDataError as exc:
         # the master Excel is structurally unreadable (a required sheet/column is
         # missing or renamed beyond recognition). fail loudly with an actionable
@@ -297,6 +333,16 @@ def _main() -> int:
     ap.add_argument("--rules-version", help="rules profile (default: norma-v3 / norma-v4 by batch)")
     ap.add_argument("--xlsx", default=str(DEFAULT_XLSX), help="business-data workbook")
     ap.add_argument("--erp-db", default=str(DEFAULT_ERP_DB), help="ERP snapshot SQLite path")
+    ap.add_argument(
+        "--extra-suppliers", action="append", dest="extra_suppliers",
+        help="CSV of additional suppliers merged onto the master (repeatable); "
+             "overrides the batch default when given",
+    )
+    ap.add_argument(
+        "--extra-orders", action="append", dest="extra_orders",
+        help="CSV of additional purchase orders merged onto the master (repeatable); "
+             "overrides the batch default when given",
+    )
     ap.add_argument("--stream", action="store_true", help="emit JSON progress lines (for the webapp SSE)")
     ap.add_argument("--today", help="reference date YYYY-MM-DD for rule 4 (default: today)")
     ap.add_argument("--limit", type=int, help="process only the first N files (dev)")
@@ -310,12 +356,15 @@ def _main() -> int:
     today = date.fromisoformat(args.today) if args.today else None
     facturas_dir = Path(args.dir) if args.dir else input_dir_for_batch(args.batch)
     outcomes_path = Path(args.out) if args.out else outcomes_path_for_batch(args.batch)
+    extra_supplier_csvs = [Path(p) for p in args.extra_suppliers] if args.extra_suppliers else None
+    extra_order_csvs = [Path(p) for p in args.extra_orders] if args.extra_orders else None
     result = run(facturas_dir=facturas_dir, extractor_name=args.extractor, batch=args.batch,
                  batch_name=args.batch_name,
                  stream=args.stream, today=today, limit=args.limit, use_vision=not args.no_vision,
                  replace_state=args.replace_state, outcomes_path=outcomes_path,
                  rules_version=args.rules_version, xlsx_path=Path(args.xlsx),
-                 erp_db_path=Path(args.erp_db))
+                 erp_db_path=Path(args.erp_db),
+                 extra_supplier_csvs=extra_supplier_csvs, extra_order_csvs=extra_order_csvs)
     if not args.stream:
         print(f"run {result['run_id']}: {result['summary']} in {result['elapsed_s']:.2f}s -> {result['outcomes']}")
     return 0

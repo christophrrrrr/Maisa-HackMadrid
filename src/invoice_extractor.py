@@ -326,9 +326,32 @@ def _sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
+def _render_one_page(page: "fitz.Page", dpi: int) -> bytes:
+    """Rasterise a single page to PNG bytes, freeing the pixmap immediately and
+    retrying at progressively lower DPI if the allocation fails.
+
+    High-DPI pixmaps need a large contiguous buffer; under memory pressure (or a
+    32-bit interpreter) PyMuPDF raises `code=2: malloc (...) failed`. Rather than
+    let the whole page — and therefore the invoice — degrade to an unreadable
+    scan, we step the resolution down and try again. Lower DPI is still perfectly
+    legible to the vision model."""
+    last_error: Exception | None = None
+    for attempt_dpi in (dpi, 150, 110, 90):
+        pix = None
+        try:
+            matrix = fitz.Matrix(attempt_dpi / 72, attempt_dpi / 72)
+            pix = page.get_pixmap(matrix=matrix, alpha=False)
+            data = pix.tobytes("png")
+            return data
+        except Exception as exc:  # memory / rendering failure -> smaller buffer
+            last_error = exc
+        finally:
+            pix = None  # release the C-side buffer before the next attempt
+    raise RuntimeError(f"could not rasterise page even at reduced DPI: {last_error}")
+
+
 def _render_pages(document: fitz.Document, dpi: int = 200) -> list[bytes]:
-    matrix = fitz.Matrix(dpi / 72, dpi / 72)
-    return [page.get_pixmap(matrix=matrix, alpha=False).tobytes("png") for page in document]
+    return [_render_one_page(page, dpi) for page in document]
 
 
 def _vision_prompt() -> str:
@@ -467,6 +490,19 @@ def _extract_with_vision(
     return invoice, "vision", warnings
 
 
+# canonical fields used to compare two reads of the same document (digital vs
+# vision) so a vision re-pass is only adopted when it recovers at least as much.
+_CANONICAL_FIELDS = (
+    "purchase_order", "supplier_tax_id", "supplier_iban",
+    "issue_date", "base", "iva_amount", "total",
+)
+
+
+def _completeness(invoice: InvoiceData) -> int:
+    values = invoice.model_dump()
+    return sum(1 for name in _CANONICAL_FIELDS if values.get(name) is not None)
+
+
 def _add_arithmetic_warnings(invoice: InvoiceData, warnings: list[str]) -> None:
     if invoice.base is not None and invoice.iva_amount is not None and invoice.total is not None:
         if abs(invoice.base + invoice.iva_amount - invoice.total) > MONEY_TOLERANCE:
@@ -498,6 +534,36 @@ def extract_pdf(
             invoice, template, evidence, warnings = _parse_digital(path.name, page_texts)
             method: ExtractionMethod = "embedded_text"
             used_model = None
+            # The page HAS a text layer, but the deterministic parser could not
+            # read every required field — a new template, a foreign-language
+            # layout (USt-ID / N° TVA), or an unusual date/amount format the
+            # regex doesn't know. Rather than fail closed on the text path,
+            # escalate to the format-agnostic vision model. This is what makes a
+            # brand-new invoice format need NO code change: the LLM covers it.
+            if not invoice.extraction_ok and use_vision:
+                v_invoice, v_method, v_warnings = _extract_with_vision(
+                    path,
+                    document,
+                    digest=digest,
+                    cache_dir=cache_dir,
+                    model=model,
+                    fallback_models=DEFAULT_FALLBACK_MODELS if fallback_models is None else fallback_models,
+                    force=force,
+                )
+                # Adopt vision only if it actually ran and did not regress: keep
+                # whichever read recovered more canonical fields (or is complete).
+                if v_method in {"vision", "vision_cache"} and (
+                    v_invoice.extraction_ok
+                    or _completeness(v_invoice) > _completeness(invoice)
+                ):
+                    invoice = v_invoice
+                    method = v_method
+                    template = None
+                    evidence = {}
+                    used_model = model if v_method in {"vision", "vision_cache"} else None
+                    warnings = list(v_warnings) + [
+                        "texto digital incompleto; reprocesado con visión"
+                    ]
         elif use_vision:
             invoice, method, warnings = _extract_with_vision(
                 path,
