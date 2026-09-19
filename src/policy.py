@@ -39,7 +39,7 @@ DEFAULT_REASON_OUTCOMES: dict[str, str] = {
 
 # human metadata for the settings ui: label + which norma rule it maps to + help
 REASONS: dict[str, dict[str, str]] = {
-    "incomplete_extraction": {"label": "Extraccion incompleta", "rule": "filtro", "help": "el documento no se pudo leer con suficiente confianza"},
+    "incomplete_extraction": {"label": "Extracci\u00f3n incompleta", "rule": "filtro", "help": "el documento no se pudo leer con suficiente confianza"},
     "supplier_not_in_master": {"label": "Proveedor no dado de alta", "rule": "1", "help": "el NIF no figura en el maestro de proveedores"},
     "iban_mismatch": {"label": "IBAN no coincide", "rule": "1", "help": "el IBAN de la factura no coincide con el maestro"},
     "pedido_not_found": {"label": "Pedido no encontrado", "rule": "2", "help": "el pedido no existe en Pedidos_2026"},
@@ -47,7 +47,7 @@ REASONS: dict[str, dict[str, str]] = {
     "amount_mismatch": {"label": "Importe no coincide", "rule": "2", "help": "el total de la factura no coincide con el pedido"},
     "total_not_base_plus_iva": {"label": "Total distinto de base + IVA", "rule": "3", "help": "la aritmetica de la factura no cuadra"},
     "iva_miscalculated": {"label": "IVA mal calculado", "rule": "3", "help": "la cuota de IVA no corresponde a la base por el tipo"},
-    "invalid_date": {"label": "Fecha no valida", "rule": "4", "help": "no hay una fecha de emision valida"},
+    "invalid_date": {"label": "Fecha no v\u00e1lida", "rule": "4", "help": "no hay una fecha de emision valida"},
     "future_date": {"label": "Fecha futura", "rule": "4", "help": "la fecha de emision es posterior a la de referencia"},
     "pedido_not_in_erp": {"label": "Pedido ausente en el ERP", "rule": "5", "help": "no hay asiento contable para conciliar"},
     "erp_amount_mismatch": {"label": "Importe distinto del ERP", "rule": "5", "help": "el mayor no coincide con la factura"},

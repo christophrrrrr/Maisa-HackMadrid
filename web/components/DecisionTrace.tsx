@@ -1,4 +1,5 @@
 import type { CheckValue, Decision, RuleCheck } from "@/lib/types";
+import { reasonLabel } from "@/lib/reasons";
 
 const FIELDS: [string, string][] = [
   ["invoice_number", "N. factura"],
@@ -26,25 +27,6 @@ function KV({ rows }: { rows: [string, React.ReactNode][] }) {
 }
 
 const DASH = <span className="faint">&mdash;</span>;
-
-const REASON_LABELS: Record<string, string> = {
-  all_rules_pass: "Todas las comprobaciones son correctas",
-  incomplete_extraction: "No se pudo leer la factura con suficiente confianza",
-  supplier_not_in_master: "El proveedor no figura en el maestro",
-  iban_mismatch: "El IBAN no coincide con el maestro de proveedores",
-  pedido_not_found: "El pedido no existe en Pedidos_2026",
-  pedido_supplier_mismatch: "El pedido pertenece a otro proveedor",
-  amount_mismatch: "El total no coincide con el importe del pedido",
-  total_not_base_plus_iva: "El total no coincide con base m\u00e1s IVA",
-  iva_miscalculated: "La cuota de IVA est\u00e1 mal calculada",
-  invalid_date: "La fecha de emisi\u00f3n no es v\u00e1lida",
-  future_date: "La fecha de emisi\u00f3n est\u00e1 en el futuro",
-  pedido_not_in_erp: "El pedido no tiene un asiento en el ERP",
-  erp_amount_mismatch: "El total no coincide con el importe del ERP",
-  erp_status_unexpected: "El ERP tiene un estado inesperado",
-  already_paid: "El ERP indica que la factura ya est\u00e1 pagada",
-  duplicate_pedido: "El pedido aparece en m\u00e1s de una factura",
-};
 
 const FIELD_LABELS = Object.fromEntries(FIELDS);
 
@@ -96,7 +78,7 @@ export default function DecisionTrace({ d }: { d: Decision }) {
   const skipped = checks.filter((check) => check.status === "skipped");
   const sourceEvidence = d.extraction_evidence ?? {};
   const primary = failed.find((check) => check.code === d.reason) ?? failed[0];
-  const summary = REASON_LABELS[d.reason] ?? primary?.message ?? d.reason;
+  const summary = reasonLabel(d.reason) || primary?.message || "sin motivo";
   const action = d.result === "PAGAR"
     ? "No requiere revisi\u00f3n manual."
     : d.result === "NO_PAGAR"
@@ -108,7 +90,6 @@ export default function DecisionTrace({ d }: { d: Decision }) {
       <section className={`decision-summary ${d.result}`}>
         <div className="summary-top">
           <span className={`pill ${d.result}`}>{d.result}</span>
-          <span className="summary-code">{d.reason}</span>
         </div>
         <h2>{summary}</h2>
         <p>{action}</p>

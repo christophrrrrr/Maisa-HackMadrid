@@ -71,7 +71,7 @@ function RankList({ rows, empty }: { rows: CountRow[]; empty: string }) {
       {rows.map((r) => (
         <div className="rank-row" key={r.code}>
           <div className="rank-top">
-            <span className="rank-label" title={r.code}>{r.label}</span>
+            <span className="rank-label" title={r.label}>{r.label}</span>
             <span className="rank-n">{r.n}</span>
           </div>
           <div className="rank-bar">

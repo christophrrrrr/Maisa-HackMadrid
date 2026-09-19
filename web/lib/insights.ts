@@ -1,4 +1,5 @@
 import type { Decision, Policy, Result, RunRow } from "./types";
+import { reasonLabel } from "./reasons";
 
 const LEAK = new Set(["already_paid", "duplicate_pedido"]);
 
@@ -44,7 +45,7 @@ function moneyOf(d: Decision): number {
 }
 
 function labelOf(code: string, policy: Policy | null): string {
-  return policy?.reasons?.[code]?.label ?? code;
+  return reasonLabel(code, policy);
 }
 
 function toneOf(code: string, hits: Decision[], policy: Policy | null): Tone {

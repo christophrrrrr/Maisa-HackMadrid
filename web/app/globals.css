@@ -389,7 +389,7 @@ input.field:focus, select.field:focus, input.search:focus { border-color: var(--
 .trace-kv .tk { color: var(--muted); }
 .trace-kv .tv { font-family: var(--mono); word-break: break-word; }
 .findings { display: flex; flex-wrap: wrap; gap: 6px; }
-.finding { font-family: var(--mono); font-size: var(--fs-micro); padding: 2px 8px; border-radius: var(--r-xs); background: var(--escalar-soft); color: var(--escalar); border: 1px solid var(--escalar-line); }
+.finding { font-size: var(--fs-micro); padding: 2px 8px; border-radius: var(--r-xs); background: var(--escalar-soft); color: var(--escalar); border: 1px solid var(--escalar-line); }
 .reason-box { font-family: var(--mono); font-size: var(--fs-xs); background: var(--panel-2); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 10px; margin-top: var(--sp-2); color: var(--muted); line-height: 1.5; white-space: pre-wrap; }
 
 /* ongoing spinner */
