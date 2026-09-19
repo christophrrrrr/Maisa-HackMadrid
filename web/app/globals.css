@@ -917,6 +917,11 @@ input.field:focus, select.field:focus, input.search:focus { border-color: var(--
 }
 .process-schedule-label { font-size: var(--fs-sm); font-weight: 600; }
 .process-schedule .field { min-width: 210px; }
+.process-cache-toggle {
+  display: flex; align-items: center; gap: 8px;
+  margin-top: 12px; font-size: var(--fs-sm); color: var(--muted);
+}
+.process-cache-toggle input { margin: 0; }
 .process-run-link {
   display: flex; align-items: center; justify-content: space-between; gap: 12px;
   min-width: 0; flex: 1;

@@ -29,11 +29,13 @@ class HybridExtractor:
         model: str = ax.DEFAULT_MODEL,
         fallback_models: list[str] | None = None,
         baseline_on_error: bool = True,
+        force: bool = False,
     ) -> None:
         self.use_vision = use_vision
         self.model = model
         self.fallback_models = fallback_models
         self.baseline_on_error = baseline_on_error
+        self.force = force
         self._baseline = BaselineExtractor()
         self.last_method: str = "hybrid"
         self.last_cost: float = 0.0
@@ -77,6 +79,7 @@ class HybridExtractor:
                 use_vision=use_vision,
                 model=self.model,
                 fallback_models=self.fallback_models,
+                force=self.force,
             )
             self.last_method = record.method
             self.last_cost = float(getattr(record, "cost_usd", 0.0) or 0.0)

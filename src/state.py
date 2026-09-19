@@ -566,6 +566,8 @@ def delete_run(run_id: str, db_path: Path = DEFAULT_DB) -> dict:
                 ),
             )
         conn.commit()
+        from .invoice_extractor import clear_vision_cache
+        clear_vision_cache()
         return {"ok": True, "run_id": run_id}
     finally:
         conn.close()
@@ -586,6 +588,8 @@ def clear(db_path: Path = DEFAULT_DB) -> dict:
         outcomes = outputs / name
         if outcomes.exists():
             outcomes.write_text("", encoding="utf-8")
+    from .invoice_extractor import clear_vision_cache
+    clear_vision_cache()
     return {"ok": True}
 
 

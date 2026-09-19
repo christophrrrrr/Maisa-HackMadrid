@@ -39,6 +39,24 @@ load_dotenv(ROOT / ".env")
 DEFAULT_INPUT = ROOT / "challenge" / "facturas"
 DEFAULT_OUTPUT = ROOT / "outputs" / "extracted_invoices.jsonl"
 DEFAULT_CACHE = ROOT / ".cache" / "invoice_extraction"
+
+
+def clear_vision_cache(cache_dir: Path = DEFAULT_CACHE) -> int:
+    """Delete cached vision JSON so the next run hits the model again.
+
+    The cache is keyed by PDF content hash on disk. Clearing the SQLite board
+    or browser storage does not touch it — that is why a 'deleted' batch can
+    still finish in under a second."""
+    if not cache_dir.is_dir():
+        return 0
+    removed = 0
+    for path in cache_dir.glob("*.json"):
+        try:
+            path.unlink()
+            removed += 1
+        except OSError:
+            continue
+    return removed
 GATEWAY_BASE_URL = os.getenv("AI_GATEWAY_BASE_URL", "https://ai-gateway.vercel.sh/v1")
 DEFAULT_MODEL = os.getenv("AI_GATEWAY_MODEL", "google/gemini-2.5-flash")
 DEFAULT_FALLBACK_MODELS = [
@@ -663,7 +681,16 @@ def _main() -> int:
     parser.add_argument("--cache-dir", type=Path, default=DEFAULT_CACHE)
     parser.add_argument("--no-vision", action="store_true", help="Do not call the vision API")
     parser.add_argument("--force", action="store_true", help="Ignore cached vision results")
+    parser.add_argument(
+        "--purge-cache", action="store_true",
+        help="Delete the on-disk vision cache and exit (does not extract)",
+    )
     args = parser.parse_args()
+
+    if args.purge_cache:
+        removed = clear_vision_cache(args.cache_dir)
+        print(json.dumps({"purged": removed, "cache_dir": str(args.cache_dir)}))
+        return 0
 
     records = extract_batch(
         args.input,

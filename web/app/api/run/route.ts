@@ -14,6 +14,7 @@ export async function GET(req: Request) {
   const url = new URL(req.url);
   const today = url.searchParams.get("today") || "";
   const limit = url.searchParams.get("limit") || "";
+  const force = url.searchParams.get("force") === "1";
 
   // keep prior decisions so recurring batches accumulate on the board and in history
   const args = [
@@ -23,6 +24,7 @@ export async function GET(req: Request) {
   ];
   if (today) args.push("--today", today);
   if (limit) args.push("--limit", limit);
+  if (force) args.push("--force");
 
   const encoder = new TextEncoder();
   let child: ReturnType<typeof spawn> | null = null;

@@ -94,12 +94,12 @@ def _emit(stream: bool, obj: dict) -> None:
         sys.stdout.flush()
 
 
-def get_extractor(name: str, *, use_vision: bool = True) -> Extractor:
+def get_extractor(name: str, *, use_vision: bool = True, force_vision: bool = False) -> Extractor:
     """Pick the extractor. 'hybrid' = A's digital+vision extractor (default);
     'baseline' = the deterministic regex fallback (offline, free)."""
     if name in ("hybrid", "llm", "auto"):
         from .extract_hybrid import HybridExtractor
-        return HybridExtractor(use_vision=use_vision)
+        return HybridExtractor(use_vision=use_vision, force=force_vision)
     if name == "baseline":
         from .extract_baseline import BaselineExtractor
         return BaselineExtractor()
@@ -203,13 +203,18 @@ def run(
     extra_supplier_csvs: list[Path] | None = None,
     extra_order_csvs: list[Path] | None = None,
     max_workers: int | None = None,
+    force_vision: bool = False,
 ) -> dict:
     # reference date + extractor fall back to the editable policy (settings page)
     cfg = load_policy()
     if today is None and cfg.get("today"):
         today = date.fromisoformat(cfg["today"])
     today = today or date.today()
-    extractor = get_extractor(extractor_name or cfg.get("extractor") or "hybrid", use_vision=use_vision)
+    extractor = get_extractor(
+        extractor_name or cfg.get("extractor") or "hybrid",
+        use_vision=use_vision,
+        force_vision=force_vision,
+    )
     rules_version = rules_version or rules_version_for_batch(batch)
     supplier_csvs = (
         extra_supplier_csvs if extra_supplier_csvs is not None
@@ -271,7 +276,9 @@ def run(
     def _worker_extractor() -> Extractor:
         existing = getattr(worker_local, "extractor", None)
         if existing is None:
-            existing = get_extractor(extractor_kind, use_vision=use_vision)
+            existing = get_extractor(
+                extractor_kind, use_vision=use_vision, force_vision=force_vision,
+            )
             worker_local.extractor = existing
         return existing
 
@@ -411,6 +418,10 @@ def _main() -> int:
     )
     ap.add_argument("--no-vision", action="store_true", help="skip the vision model for scans (digital only)")
     ap.add_argument(
+        "--force", action="store_true",
+        help="ignore the on-disk vision cache and call the model again (realistic timing)",
+    )
+    ap.add_argument(
         "--replace-state", action="store_true",
         help="replace the visible decisions with this batch after successful extraction",
     )
@@ -428,7 +439,7 @@ def _main() -> int:
                  rules_version=args.rules_version, xlsx_path=Path(args.xlsx),
                  erp_db_path=Path(args.erp_db),
                  extra_supplier_csvs=extra_supplier_csvs, extra_order_csvs=extra_order_csvs,
-                 max_workers=args.workers)
+                 max_workers=args.workers, force_vision=args.force)
     if not args.stream:
         print(f"run {result['run_id']}: {result['summary']} in {result['elapsed_s']:.2f}s -> {result['outcomes']}")
     return 0

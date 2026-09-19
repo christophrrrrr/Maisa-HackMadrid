@@ -41,7 +41,7 @@ export default function ProcessBoard() {
   const [scheduled, setScheduled] = useState<ScheduledJob[]>([]);
   const [p, setP] = useState<Progress>({ done: 0, total: 0, running: false });
   const [when, setWhen] = useState("");
-  const [err, setErr] = useState("");
+  const [forceVision, setForceVision] = useState(false);
   const [policy, setPolicy] = useState<Policy | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [scheduling, setScheduling] = useState(false);
@@ -135,7 +135,7 @@ export default function ProcessBoard() {
     }
 
     await new Promise<void>((resolve) => {
-      const es = new EventSource("/api/run?inbox=1");
+      const es = new EventSource(forceVision ? "/api/run?inbox=1&force=1" : "/api/run?inbox=1");
       esRef.current = es;
       let finished = false;
       const done = () => {
@@ -360,6 +360,16 @@ export default function ProcessBoard() {
             </button>
           </div>
         </div>
+
+        <label className="process-cache-toggle">
+          <input
+            type="checkbox"
+            checked={forceVision}
+            onChange={(e) => setForceVision(e.target.checked)}
+            disabled={p.running}
+          />
+          Volver a extraer (ignorar caché de visión)
+        </label>
 
         <div className="queue process-queue">
           {p.running ? (

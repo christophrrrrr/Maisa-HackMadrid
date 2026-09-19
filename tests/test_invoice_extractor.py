@@ -106,3 +106,15 @@ def test_every_digital_pdf_extracts_required_fields():
     assert len(scans) == 29
     failures = [record.invoice.file_id for record in digital if not record.invoice.extraction_ok]
     assert failures == []
+
+
+def test_clear_vision_cache_removes_json_files(tmp_path):
+    from src.invoice_extractor import clear_vision_cache
+
+    cache = tmp_path / "invoice_extraction"
+    cache.mkdir()
+    (cache / "abc.json").write_text("{}", encoding="utf-8")
+    (cache / "keep.txt").write_text("no", encoding="utf-8")
+    assert clear_vision_cache(cache) == 1
+    assert not (cache / "abc.json").exists()
+    assert (cache / "keep.txt").exists()
