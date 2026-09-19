@@ -1,4 +1,4 @@
-# Alberto Decision Console (`web/`)
+# Otrebla — Consola de facturas (`web/`)
 
 Next.js observability & review console over the Python pipeline. **The backend is
 the product; this is the window into it.** Next never touches SQLite directly — it

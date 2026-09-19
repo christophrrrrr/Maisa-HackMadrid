@@ -18,8 +18,9 @@ const mono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Otrebla",
-  description: "Consola de revisión del pipeline de facturas",
+  title: "Otrebla · Consola de facturas",
+  applicationName: "Otrebla",
+  description: "Otrebla: revisión y seguimiento de decisiones sobre facturas.",
 };
 
 export const dynamic = "force-dynamic";
