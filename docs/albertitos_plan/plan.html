@@ -1,0 +1,2797 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="utf-8">
+  <title>Otrebla — albertitos_plan</title>
+  <style>
+    /* ============================================================
+   Otrebla · albertitos_plan.pdf
+   Vernáculo: expediente contable. Papel blanco, pauta verde
+   pálida, tinta de sello violeta. Cada afirmación cita su
+   fuente en la columna de márgenes, igual que cada decisión
+   del sistema cita su evidencia.
+   ============================================================ */
+
+    :root {
+      --tinta: #17211d;
+      --tinta-suave: #55635b;
+      --papel: #ffffff;
+      --pauta: #c9d4ca;
+      --pauta-fina: #e2e9e2;
+      --banda: #eef2ec;
+      --sello: #4a3c7e;
+      --pagar: #256a4a;
+      --escalar: #9c6512;
+      --nopagar: #8f241b;
+
+      --forma: "TeX Gyre Heros Cn", "Nimbus Sans Narrow", sans-serif;
+      --lectura: "Bitstream Charter", "Charter", Georgia, serif;
+      --dato: "Noto Sans Mono", "DejaVu Sans Mono", monospace;
+    }
+
+    @page {
+      size: A4;
+      margin: 0;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+      background: var(--papel);
+      color: var(--tinta);
+    }
+
+    body {
+      font-family: var(--lectura);
+      font-size: 10.4pt;
+      line-height: 1.47;
+      -webkit-font-smoothing: antialiased;
+      text-rendering: geometricPrecision;
+    }
+
+    .hoja {
+      position: relative;
+      width: 210mm;
+      height: 297mm;
+      padding: 14mm 30mm 12mm 30mm;
+      overflow: hidden;
+      break-after: page;
+      page-break-after: always;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .hoja:last-child {
+      break-after: auto;
+      page-break-after: auto;
+    }
+
+    /* ---------- cabecera y pie ---------- */
+    .cabecera {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      font-family: var(--forma);
+      font-size: 7.6pt;
+      letter-spacing: .02em;
+      color: var(--tinta-suave);
+      padding-bottom: 1.6mm;
+      margin-bottom: 5.5mm;
+      border-bottom: .5pt solid var(--pauta);
+      flex: 0 0 auto;
+    }
+
+    .cabecera b {
+      font-weight: 700;
+      color: var(--tinta);
+    }
+
+    .pie {
+      margin-top: auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      font-family: var(--forma);
+      font-size: 7.2pt;
+      color: var(--tinta-suave);
+      border-top: .5pt solid var(--pauta);
+      padding-top: 1.5mm;
+      flex: 0 0 auto;
+    }
+
+    .folio {
+      font-family: var(--forma);
+      font-weight: 700;
+      font-size: 9pt;
+      color: var(--tinta);
+    }
+
+    /* ---------- una sola columna de lectura, centrada (150mm) ---------- */
+    .cuerpo {
+      flex: 1 1 auto;
+      width: 100%;
+      max-width: 150mm;
+      margin: 0 auto;
+    }
+
+    /* ---------- títulos ---------- */
+    h1,
+    h2,
+    h3,
+    h4 {
+      font-family: var(--forma);
+      font-weight: 700;
+      margin: 0;
+    }
+
+    h2 {
+      font-size: 16.5pt;
+      line-height: 1.06;
+      letter-spacing: -.005em;
+      margin: 0 0 2.4mm;
+    }
+
+    h2 .num {
+      color: var(--sello);
+      margin-right: 2.2mm;
+    }
+
+    h2.segunda {
+      margin-top: 7mm;
+    }
+
+    h3 {
+      font-size: 10.5pt;
+      letter-spacing: .005em;
+      margin: 5.2mm 0 1.4mm;
+      padding-bottom: .9mm;
+      border-bottom: .5pt solid var(--pauta);
+    }
+
+    .cuerpo> :first-child>h3:first-child {
+      margin-top: 0;
+    }
+
+    /* la fuente de la sección, a la derecha del título: sustituye a la antigua columna de márgenes */
+    h2 .ref,
+    h3 .ref {
+      float: right;
+      font-weight: 400;
+      font-size: 7pt;
+      color: var(--sello);
+      letter-spacing: 0;
+      margin-top: .6mm;
+    }
+
+    h2 .ref {
+      margin-top: 2.4mm;
+    }
+
+    h4 {
+      font-size: 9.3pt;
+      margin: 3.4mm 0 .8mm;
+    }
+
+    p {
+      margin: 0 0 2.3mm;
+    }
+
+    p.entrada {
+      font-size: 11pt;
+      line-height: 1.4;
+      margin-bottom: 3.2mm;
+    }
+
+    .col>p:last-child {
+      margin-bottom: 0;
+    }
+
+    /* Texto de lectura: composición justificada y ritmo uniforme. */
+    p,
+    li,
+    dd,
+    .que {
+      text-align: justify;
+      text-justify: inter-word;
+      hyphens: auto;
+      -webkit-hyphens: auto;
+    }
+
+    strong {
+      font-weight: 700;
+    }
+
+    code,
+    .ref,
+    .id {
+      font-family: var(--dato);
+      font-size: .86em;
+    }
+
+    .id {
+      color: var(--sello);
+    }
+
+    ul {
+      margin: 0 0 2.3mm;
+      padding-left: 4.6mm;
+    }
+
+    li {
+      margin-bottom: 1mm;
+    }
+
+    li::marker {
+      color: var(--sello);
+    }
+
+    /* listas con entrada en negrita: sustituyen a las tablas de dos columnas */
+    ul.definida {
+      list-style: none;
+      padding: 0;
+      margin: 1mm 0 2.5mm;
+    }
+
+    ul.definida li {
+      margin: 0;
+      min-height: 10mm;
+      padding: 1.7mm 0 1.9mm;
+      border-bottom: .4pt solid var(--pauta-fina);
+      line-height: 1.4;
+    }
+
+    ul.definida li:first-child {
+      border-top: .8pt solid var(--tinta);
+    }
+
+    ul.definida li:last-child {
+      border-bottom: .8pt solid var(--pauta);
+    }
+
+    ul.definida b {
+      font-family: var(--forma);
+      font-size: 9pt;
+      display: block;
+      margin-bottom: .4mm;
+    }
+
+    ul.definida.linea b {
+      display: inline;
+      margin: 0 1.2mm 0 0;
+    }
+
+    /* ---------- tablas de libro de cuentas ---------- */
+    table {
+      width: 100%;
+      margin: 1.5mm auto 2.8mm;
+      border-collapse: collapse;
+      table-layout: fixed;
+    }
+
+    th,
+    td {
+      text-align: left;
+      vertical-align: top;
+      padding: 1mm 2.4mm 1mm 0;
+      border-bottom: .4pt solid var(--pauta-fina);
+    }
+
+    thead th {
+      font-family: var(--forma);
+      font-weight: 700;
+      font-size: 7.5pt;
+      letter-spacing: .012em;
+      border-bottom: .8pt solid var(--tinta);
+      padding-bottom: 1.1mm;
+    }
+
+    tbody tr:last-child td {
+      border-bottom: .8pt solid var(--pauta);
+    }
+
+    td {
+      font-size: 8.7pt;
+      line-height: 1.28;
+    }
+
+    td.n,
+    th.n {
+      text-align: right;
+      font-family: var(--dato);
+      font-size: 7.9pt;
+      white-space: nowrap;
+    }
+
+    tbody tr.banda td {
+      background: var(--banda);
+    }
+
+    table.compacta td {
+      font-size: 8.3pt;
+      padding: .85mm 2.4mm .85mm 0;
+    }
+
+    /* ---------- veredictos ---------- */
+    .v {
+      font-family: var(--forma);
+      font-weight: 700;
+      font-size: 7.8pt;
+      letter-spacing: .04em;
+      white-space: nowrap;
+    }
+
+    .v-pagar {
+      color: var(--pagar);
+    }
+
+    .v-nopagar {
+      color: var(--nopagar);
+    }
+
+    .v-escalar {
+      color: var(--escalar);
+    }
+
+    .veredictos {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      align-items: stretch;
+      border-top: .8pt solid var(--tinta);
+      border-bottom: .8pt solid var(--pauta);
+      width: 100%;
+      margin: 1.5mm auto 3.5mm;
+    }
+
+    .veredictos div {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      min-width: 0;
+      padding: 2.8mm 4mm;
+      text-align: center;
+    }
+
+    .veredictos div+div {
+      border-left: .4pt solid var(--pauta-fina);
+      padding-left: 4mm;
+    }
+
+    .veredictos .cifra {
+      font-family: var(--forma);
+      font-weight: 700;
+      font-size: 22pt;
+      line-height: 1;
+      display: block;
+    }
+
+    .veredictos .v {
+      display: block;
+      margin-top: 1.4mm;
+      font-size: 8.4pt;
+    }
+
+    .veredictos .euros {
+      font-family: var(--dato);
+      font-size: 7.6pt;
+      color: var(--tinta-suave);
+      display: block;
+      margin-top: .8mm;
+    }
+
+    .veredictos .rotulo {
+      display: block;
+      max-width: 38mm;
+      margin-top: 1.4mm;
+      font-size: 8.4pt;
+      line-height: 1.32;
+      text-align: center;
+    }
+
+    /* ---------- portada (Geometría Forense) ---------- */
+    .portada {
+      padding: 16mm 28mm 14mm 28mm;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      background: var(--papel);
+    }
+
+    .portada-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      font-family: var(--forma);
+      font-size: 7.4pt;
+      letter-spacing: .04em;
+      color: var(--tinta-suave);
+      border-bottom: .8pt solid var(--tinta);
+      padding-bottom: 2mm;
+      margin-bottom: 5mm;
+      flex: 0 0 auto;
+    }
+
+    .portada-top b {
+      color: var(--tinta);
+      font-weight: 700;
+    }
+
+    .portada-top .ref-tag {
+      font-family: var(--dato);
+      font-size: 6.8pt;
+      color: var(--sello);
+    }
+
+    .portada-hero {
+      flex: 0 0 auto;
+      margin-bottom: 5mm;
+    }
+
+    .portada-rubrica {
+      font-family: var(--forma);
+      font-size: 7.2pt;
+      font-weight: 700;
+      letter-spacing: .16em;
+      text-transform: uppercase;
+      color: var(--sello);
+      margin-bottom: 2.2mm;
+      display: flex;
+      align-items: center;
+      gap: 2.5mm;
+    }
+
+    .portada-rubrica::after {
+      content: "";
+      flex: 1;
+      height: .4pt;
+      background: var(--pauta);
+    }
+
+    .portada h1 {
+      font-size: 76pt;
+      line-height: .84;
+      letter-spacing: -.035em;
+      margin: 0 0 3mm;
+      font-weight: 700;
+      color: var(--tinta);
+    }
+
+    .portada h1 .punto {
+      color: var(--sello);
+    }
+
+    .portada .lema-wrap {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      gap: 6mm;
+      border-bottom: .4pt solid var(--pauta);
+      padding-bottom: 2.4mm;
+    }
+
+    .portada .lema {
+      font-family: var(--forma);
+      font-size: 13pt;
+      font-weight: 700;
+      color: var(--tinta);
+      letter-spacing: -.01em;
+      margin: 0;
+      white-space: nowrap;
+    }
+
+    .portada .tesis {
+      font-family: var(--lectura);
+      font-size: 8.4pt;
+      line-height: 1.36;
+      color: var(--tinta-suave);
+      margin: 0;
+      max-width: 88mm;
+      text-align: right;
+    }
+
+    .portada-matriz-box {
+      flex: 0 0 auto;
+      margin: 2mm 0 4.5mm;
+    }
+
+    .matriz-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      font-family: var(--dato);
+      font-size: 6.2pt;
+      letter-spacing: .02em;
+      color: var(--tinta-suave);
+      margin-bottom: 1.4mm;
+      white-space: nowrap;
+    }
+
+    .matriz-header b {
+      color: var(--tinta);
+      font-weight: 700;
+      font-family: var(--forma);
+      font-size: 6.9pt;
+    }
+
+    .matriz-header .gate-info {
+      color: var(--sello);
+      font-family: var(--dato);
+      font-size: 6.2pt;
+    }
+
+    .matriz-svg {
+      display: block;
+      width: 100%;
+      height: auto;
+    }
+
+    .portada-balance {
+      flex: 0 0 auto;
+      margin-top: 1.5mm;
+    }
+
+    .portada-barra {
+      display: flex;
+      height: 3.8mm;
+      gap: .8mm;
+      border-radius: 1px;
+      overflow: hidden;
+      margin-bottom: 3.2mm;
+    }
+
+    .portada-barra span {
+      display: block;
+    }
+
+    .portada-barra .b-pagar {
+      background: var(--pagar);
+    }
+
+    .portada-barra .b-nopagar {
+      background: var(--nopagar);
+    }
+
+    .portada-barra .b-escalar {
+      background: var(--escalar);
+    }
+
+    .portada-tripartito {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      column-gap: 5mm;
+      border-top: .8pt solid var(--tinta);
+      border-bottom: .8pt solid var(--pauta);
+      padding: 3mm 0 3.5mm;
+    }
+
+    .portada-tripartito>div {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      padding-right: 2mm;
+      min-width: 0;
+    }
+
+    .portada-tripartito>div+div {
+      border-left: .4pt solid var(--pauta-fina);
+      padding-left: 4.5mm;
+    }
+
+    .portada-tripartito .cifra-fila {
+      display: flex;
+      align-items: baseline;
+      gap: 2.4mm;
+    }
+
+    .portada-tripartito .cifra {
+      font-family: var(--forma);
+      font-weight: 700;
+      font-size: 26pt;
+      line-height: 1;
+      letter-spacing: -.01em;
+      color: var(--tinta);
+    }
+
+    .portada-tripartito .pct {
+      font-family: var(--dato);
+      font-size: 7.6pt;
+      color: var(--tinta-suave);
+    }
+
+    .portada-tripartito .v {
+      font-size: 8.4pt;
+      margin-top: 1.4mm;
+      letter-spacing: .04em;
+      white-space: nowrap;
+      font-family: var(--forma);
+      font-weight: 700;
+    }
+
+    .portada-tripartito .euros {
+      font-family: var(--dato);
+      font-size: 8pt;
+      color: var(--tinta-suave);
+      margin-top: .7mm;
+      font-weight: 500;
+      white-space: nowrap;
+    }
+
+    .portada-tripartito .glosa {
+      font-family: var(--lectura);
+      font-size: 8pt;
+      line-height: 1.32;
+      color: var(--tinta-suave);
+      margin-top: 1.4mm;
+      text-align: left;
+      hyphens: auto;
+    }
+
+    .portada-pie {
+      border-top: .5pt solid var(--pauta);
+      padding-top: 2mm;
+      margin-top: auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-family: var(--forma);
+      font-size: 7pt;
+      color: var(--tinta-suave);
+      flex: 0 0 auto;
+    }
+
+    .portada-pie .telemetria {
+      display: flex;
+      gap: 5mm;
+      font-family: var(--dato);
+      font-size: 6.7pt;
+      color: var(--tinta);
+    }
+
+    .portada-pie .telemetria span b {
+      color: var(--sello);
+      font-weight: 400;
+    }
+
+    .portada-pie .colofon {
+      letter-spacing: .02em;
+    }
+
+    /* ---------- figura de la costura (Arquitectura Forense) ---------- */
+    .costura-wrap {
+      width: 100%;
+      margin: 1.5mm auto 2.8mm;
+    }
+
+    .costura-svg {
+      display: block;
+      width: 100%;
+      height: auto;
+    }
+
+    /* ---------- etapas ---------- */
+    ol.etapas {
+      list-style: none;
+      margin: 1mm 0 2.5mm;
+      padding: 0;
+    }
+
+    ol.etapas li {
+      display: grid;
+      grid-template-columns: 6mm 35mm minmax(0, 1fr);
+      column-gap: 2.5mm;
+      align-items: start;
+      min-height: 17mm;
+      margin: 0;
+      padding: 1.9mm 0;
+      border-bottom: .4pt solid var(--pauta-fina);
+    }
+
+    ol.etapas li:first-child {
+      border-top: .8pt solid var(--tinta);
+    }
+
+    ol.etapas li:last-child {
+      border-bottom: .8pt solid var(--pauta);
+    }
+
+    ol.etapas .e {
+      font-family: var(--forma);
+      font-weight: 700;
+      font-size: 11pt;
+      color: var(--sello);
+      line-height: 1.1;
+    }
+
+    ol.etapas .nombre {
+      font-family: var(--forma);
+      font-weight: 700;
+      font-size: 8.8pt;
+      line-height: 1.2;
+    }
+
+    ol.etapas .nombre .fuente {
+      font-family: var(--dato);
+      font-size: 6.5pt;
+      color: var(--tinta-suave);
+      display: block;
+      font-weight: 400;
+      margin-top: .7mm;
+      overflow-wrap: anywhere;
+    }
+
+    ol.etapas .que {
+      font-size: 8.7pt;
+      line-height: 1.36;
+    }
+
+    ol.etapas .que .deja {
+      font-family: var(--forma);
+      font-size: 7.4pt;
+      color: var(--sello);
+      margin-right: 1mm;
+    }
+
+    /* ---------- reparto ---------- */
+    .reparto {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      grid-auto-rows: 1fr;
+      column-gap: 4.5mm;
+      align-items: stretch;
+      width: 100%;
+      margin: 1.5mm auto 3mm;
+    }
+
+    .reparto div {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      border-top: .8pt solid var(--tinta);
+      padding-top: 1.8mm;
+    }
+
+    .reparto h4 {
+      margin: 0 0 .5mm;
+      font-size: 9pt;
+      text-align: center;
+    }
+
+    .reparto .cuota {
+      font-family: var(--dato);
+      font-size: 7.2pt;
+      color: var(--sello);
+      display: block;
+      margin-bottom: 1.4mm;
+      text-align: center;
+    }
+
+    .reparto p {
+      font-size: 8.4pt;
+      line-height: 1.34;
+      margin-bottom: 1.1mm;
+      max-width: none;
+    }
+
+    .reparto p:last-child {
+      margin-bottom: 0;
+      color: var(--tinta-suave);
+    }
+
+    /* ---------- reglas numeradas ---------- */
+    th.e,
+    td.e {
+      width: 6mm;
+      padding-right: 1mm;
+    }
+
+    td.e {
+      font-family: var(--forma);
+      font-weight: 700;
+      font-size: 10pt;
+      color: var(--sello);
+    }
+
+    /* ---------- traza ---------- */
+    table.traza td {
+      font-size: 8.2pt;
+    }
+
+    table.traza td.regla {
+      font-family: var(--forma);
+      font-weight: 700;
+      font-size: 8pt;
+      color: var(--tinta-suave);
+      width: 6mm;
+    }
+
+    table.traza tr.falla td {
+      background: #fbf2f0;
+    }
+
+    table.traza tr.falla td.regla {
+      color: var(--nopagar);
+    }
+
+    table.traza td.est {
+      font-family: var(--forma);
+      font-size: 7.4pt;
+      width: 15mm;
+    }
+
+    table.traza .ok {
+      color: var(--pagar);
+    }
+
+    table.traza .no {
+      color: var(--nopagar);
+      font-weight: 700;
+    }
+
+    table.traza td.cmp {
+      font-family: var(--dato);
+      font-size: 6.55pt;
+      line-height: 1.28;
+      overflow-wrap: anywhere;
+    }
+
+    table.traza td.cmp .src {
+      font-family: var(--forma);
+      font-size: 6.7pt;
+      color: var(--tinta-suave);
+      display: block;
+    }
+
+    /* ---------- fallos ---------- */
+    dl.fallos {
+      margin: 1mm 0 2.5mm;
+    }
+
+    dl.fallos dt {
+      font-family: var(--forma);
+      font-weight: 700;
+      font-size: 9pt;
+      padding-top: 1.8mm;
+      border-top: .4pt solid var(--pauta-fina);
+    }
+
+    dl.fallos dt:first-child {
+      border-top: .8pt solid var(--tinta);
+    }
+
+    dl.fallos dd {
+      margin: .5mm 0 0;
+      padding-bottom: 1.9mm;
+      font-size: 8.7pt;
+      line-height: 1.38;
+    }
+
+    dl.fallos dd:last-child {
+      border-bottom: .8pt solid var(--pauta);
+    }
+
+    /* ---------- cajas y fórmula ---------- */
+    .caja {
+      border: .5pt solid var(--pauta);
+      border-left: 1.6pt solid var(--sello);
+      width: 100%;
+      padding: 2.6mm 3.2mm;
+      margin: 2mm auto 0;
+      background: #fcfdfc;
+    }
+
+    .caja h4 {
+      margin: 0 0 1.1mm;
+    }
+
+    .caja p {
+      font-size: 8.6pt;
+      margin-bottom: 1.3mm;
+      max-width: none;
+    }
+
+    .caja p:last-child {
+      margin-bottom: 0;
+    }
+
+    .formula {
+      font-family: var(--dato);
+      font-size: 8.2pt;
+      line-height: 1.5;
+      width: 100%;
+      background: var(--banda);
+      padding: 2.4mm 3mm;
+      margin: 1.5mm auto 2.4mm;
+      border-left: 1.6pt solid var(--sello);
+    }
+
+    .formula b {
+      color: var(--sello);
+      font-weight: 400;
+    }
+
+    /* ---------- ADR ---------- */
+    .adr {
+      border-top: 1.4pt solid var(--tinta);
+      padding-top: 2.2mm;
+      margin-bottom: 5mm;
+    }
+
+    .adr .rotulo {
+      font-family: var(--forma);
+      font-size: 7.4pt;
+      color: var(--sello);
+      letter-spacing: .04em;
+      margin-bottom: .8mm;
+    }
+
+    .adr h3 {
+      border: 0;
+      margin: 0 0 1.8mm;
+      padding: 0;
+      font-size: 12.4pt;
+      line-height: 1.12;
+    }
+
+    .adr dl {
+      width: 100%;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 23mm minmax(0, 1fr);
+      column-gap: 3mm;
+      max-width: none;
+    }
+
+    .adr dt {
+      font-family: var(--forma);
+      font-size: 7.8pt;
+      font-weight: 700;
+      padding: 1.2mm 0 0;
+      color: var(--tinta-suave);
+      border-top: .4pt solid var(--pauta-fina);
+    }
+
+    .adr dd {
+      margin: 0;
+      font-size: 8.7pt;
+      line-height: 1.37;
+      padding: 1.2mm 0 1.6mm;
+      border-top: .4pt solid var(--pauta-fina);
+    }
+
+    .adr dd ul,
+    .adr dd ol {
+      margin: 0;
+      padding-left: 4.2mm;
+      max-width: none;
+    }
+
+    .adr dd li {
+      font-size: 8.7pt;
+      margin-bottom: .5mm;
+    }
+
+    .adr dt:first-of-type,
+    .adr dd:first-of-type {
+      border-top: 0;
+      padding-top: 0;
+    }
+
+    /* ---------- cierre ---------- */
+    .cierre {
+      margin-top: 6mm;
+      border-top: 1.4pt solid var(--tinta);
+      padding-top: 3mm;
+    }
+
+    .cierre .lema {
+      font-family: var(--forma);
+      font-weight: 700;
+      font-size: 14pt;
+      line-height: 1.14;
+      max-width: 140mm;
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- ============================ 1 · PORTADA ============================ -->
+  <section class="hoja portada">
+    <div class="portada-top">
+      <span><b>Elequipo</b> · Maisa HackSpain 2026 · 500 Sombras de Alberto</span>
+      <span class="ref-tag">EXPEDIENTE DE AUDITORÍA · REF. HC26-500 · DETERMINISTA</span>
+    </div>
+
+    <div class="portada-hero">
+      <div class="portada-rubrica">Arquitectura de Reglas Deterministas &amp; Auditoría Forense</div>
+      <h1>Otrebla<span class="punto">.</span></h1>
+      <div class="lema-wrap">
+        <p class="lema">Qué facturas pagar, y por qué.</p>
+        <p class="tesis">Sistema determinista de seis filtros para quinientas facturas: 452 pagos inmediatos, 11
+          duplicados detenidos y 37 expedientes con la anomalía identificada para revisión humana.</p>
+      </div>
+    </div>
+
+    <div class="portada-matriz-box">
+      <div class="matriz-header">
+        <span><b>FIG. 1 · MATRIZ DETERMINISTA DEL LOTE</b> (500 facturas en retícula 25 × 20)</span>
+        <span class="gate-info">2,06 s · 0,00 $ MODELOS · 100 % DETERMINISTA</span>
+      </div>
+      <svg viewBox="0 0 660 215" width="100%" height="auto" class="matriz-svg" xmlns="http://www.w3.org/2000/svg">
+
+        <defs>
+          <pattern id="ledger-grid-fine" width="24.0" height="7.1579" patternUnits="userSpaceOnUse">
+            <path d="M 24.0 0 L 0 0 0 7.1579" fill="none" stroke="#ebf0eb" stroke-width="0.35" />
+          </pattern>
+        </defs>
+
+        <rect x="2" y="2" width="656" height="211" fill="#fcfdfc" stroke="#c9d4ca" stroke-width="0.55" />
+        <rect x="5" y="5" width="650" height="205" fill="none" stroke="#e6ede6" stroke-width="0.35" />
+        <line x1="-1.5" y1="2" x2="5.5" y2="2" stroke="#4a3c7e" stroke-width="0.5" />
+        <line x1="2" y1="-1.5" x2="2" y2="5.5" stroke="#4a3c7e" stroke-width="0.5" />
+        <line x1="654.5" y1="2" x2="661.5" y2="2" stroke="#4a3c7e" stroke-width="0.5" />
+        <line x1="658" y1="-1.5" x2="658" y2="5.5" stroke="#4a3c7e" stroke-width="0.5" />
+        <line x1="-1.5" y1="213" x2="5.5" y2="213" stroke="#4a3c7e" stroke-width="0.5" />
+        <line x1="2" y1="209.5" x2="2" y2="216.5" stroke="#4a3c7e" stroke-width="0.5" />
+        <line x1="654.5" y1="213" x2="661.5" y2="213" stroke="#4a3c7e" stroke-width="0.5" />
+        <line x1="658" y1="209.5" x2="658" y2="216.5" stroke="#4a3c7e" stroke-width="0.5" />
+
+        <g opacity="0.14" stroke="#4a3c7e" fill="none" transform="rotate(-6 530 96)">
+          <circle cx="530" cy="96" r="60" stroke-width="0.75" stroke-dasharray="2.5 1.5" />
+          <circle cx="530" cy="96" r="56.5" stroke-width="0.3" />
+          <circle cx="530" cy="96" r="43" stroke-width="0.5" />
+          <circle cx="530" cy="96" r="40.5" stroke-width="0.25" stroke-dasharray="1 1" />
+          <circle cx="530" cy="96" r="25" stroke-width="0.4" />
+          <path id="seal-path" d="M 480 96 A 50 50 0 1 1 580 96 A 50 50 0 1 1 480 96" fill="none" />
+          <text font-family="'Noto Sans Mono', monospace" font-size="4.6" fill="#4a3c7e" letter-spacing="1.4"
+            text-anchor="middle">
+            <textPath href="#seal-path" startOffset="50%">
+              * AUDITORIA DETERMINISTA * ELEQUIPO * HACKSPAIN 2026 * EXPEDIENTE FORENSE *
+            </textPath>
+          </text>
+          <text x="530" y="92" font-family="'TeX Gyre Heros Cn', sans-serif" font-weight="700" font-size="8"
+            fill="#4a3c7e" text-anchor="middle" letter-spacing="0.4">500</text>
+          <text x="530" y="101" font-family="'Noto Sans Mono', monospace" font-size="4.5" fill="#4a3c7e"
+            text-anchor="middle" letter-spacing="0.3">FACTURAS</text>
+          <text x="530" y="108" font-family="'Noto Sans Mono', monospace" font-size="3.8" fill="#4a3c7e"
+            text-anchor="middle" letter-spacing="0.2">0,00 $ MODELOS</text>
+        </g>
+
+        <rect x="38.0" y="25.0" width="584" height="142" fill="url(#ledger-grid-fine)" />
+        <line x1="42.0" y1="25.0" x2="42.0" y2="167.0" stroke="#c9d4ca" stroke-width="0.4" stroke-dasharray="1.5 1.5" />
+        <text x="42.0" y="19.0" font-family="'Noto Sans Mono', monospace" font-size="5.2" fill="#55635b"
+          text-anchor="middle">C01</text>
+        <line x1="162.0" y1="25.0" x2="162.0" y2="167.0" stroke="#c9d4ca" stroke-width="0.4"
+          stroke-dasharray="1.5 1.5" />
+        <text x="162.0" y="19.0" font-family="'Noto Sans Mono', monospace" font-size="5.2" fill="#55635b"
+          text-anchor="middle">C06</text>
+        <line x1="282.0" y1="25.0" x2="282.0" y2="167.0" stroke="#c9d4ca" stroke-width="0.4"
+          stroke-dasharray="1.5 1.5" />
+        <text x="282.0" y="19.0" font-family="'Noto Sans Mono', monospace" font-size="5.2" fill="#55635b"
+          text-anchor="middle">C11</text>
+        <line x1="402.0" y1="25.0" x2="402.0" y2="167.0" stroke="#c9d4ca" stroke-width="0.4"
+          stroke-dasharray="1.5 1.5" />
+        <text x="402.0" y="19.0" font-family="'Noto Sans Mono', monospace" font-size="5.2" fill="#55635b"
+          text-anchor="middle">C16</text>
+        <line x1="522.0" y1="25.0" x2="522.0" y2="167.0" stroke="#c9d4ca" stroke-width="0.4"
+          stroke-dasharray="1.5 1.5" />
+        <text x="522.0" y="19.0" font-family="'Noto Sans Mono', monospace" font-size="5.2" fill="#55635b"
+          text-anchor="middle">C21</text>
+        <text x="618.0" y="19.0" font-family="'Noto Sans Mono', monospace" font-size="5.2" fill="#55635b"
+          text-anchor="middle">C25</text>
+        <line x1="39.0" y1="28.0" x2="621.0" y2="28.0" stroke="#c9d4ca" stroke-width="0.4" stroke-dasharray="1.5 1.5" />
+        <text x="34.0" y="29.8" font-family="'Noto Sans Mono', monospace" font-size="5.2" fill="#55635b"
+          text-anchor="end">F01</text>
+        <line x1="39.0" y1="63.8" x2="621.0" y2="63.8" stroke="#c9d4ca" stroke-width="0.4" stroke-dasharray="1.5 1.5" />
+        <text x="34.0" y="65.6" font-family="'Noto Sans Mono', monospace" font-size="5.2" fill="#55635b"
+          text-anchor="end">F06</text>
+        <line x1="39.0" y1="99.6" x2="621.0" y2="99.6" stroke="#c9d4ca" stroke-width="0.4" stroke-dasharray="1.5 1.5" />
+        <text x="34.0" y="101.4" font-family="'Noto Sans Mono', monospace" font-size="5.2" fill="#55635b"
+          text-anchor="end">F11</text>
+        <line x1="39.0" y1="135.4" x2="621.0" y2="135.4" stroke="#c9d4ca" stroke-width="0.4"
+          stroke-dasharray="1.5 1.5" />
+        <text x="34.0" y="137.2" font-family="'Noto Sans Mono', monospace" font-size="5.2" fill="#55635b"
+          text-anchor="end">F16</text>
+        <circle cx="42.0" cy="28.0" r="2.0" fill="#256a4a" />
+        <circle cx="66.0" cy="28.0" r="2.0" fill="#256a4a" />
+        <circle cx="90.0" cy="28.0" r="2.0" fill="#256a4a" />
+        <circle cx="114.0" cy="28.0" r="2.0" fill="#256a4a" />
+        <circle cx="138.0" cy="28.0" r="2.0" fill="#256a4a" />
+        <circle cx="162.0" cy="28.0" r="2.0" fill="#256a4a" />
+        <circle cx="186.0" cy="28.0" r="2.0" fill="#256a4a" />
+        <circle cx="210.0" cy="28.0" r="2.0" fill="#256a4a" />
+        <circle cx="234.0" cy="28.0" r="2.0" fill="#256a4a" />
+        <circle cx="258.0" cy="28.0" r="2.0" fill="#256a4a" />
+        <circle cx="282.0" cy="28.0" r="2.0" fill="#256a4a" />
+        <circle cx="306.0" cy="28.0" r="2.0" fill="#256a4a" />
+        <circle cx="330.0" cy="28.0" r="2.0" fill="#256a4a" />
+        <circle cx="354.0" cy="28.0" r="2.0" fill="#256a4a" />
+        <circle cx="378.0" cy="28.0" r="2.0" fill="#256a4a" />
+        <circle cx="402.0" cy="28.0" r="2.0" fill="#256a4a" />
+        <circle cx="426.0" cy="28.0" r="2.0" fill="#256a4a" />
+        <circle cx="450.0" cy="28.0" r="2.0" fill="#256a4a" />
+        <circle cx="474.0" cy="28.0" r="2.0" fill="#256a4a" />
+        <circle cx="498.0" cy="28.0" r="2.0" fill="#256a4a" />
+        <circle cx="522.0" cy="28.0" r="2.0" fill="#256a4a" />
+        <circle cx="546.0" cy="28.0" r="2.0" fill="#256a4a" />
+        <circle cx="570.0" cy="28.0" r="2.0" fill="#256a4a" />
+        <circle cx="594.0" cy="28.0" r="2.0" fill="#256a4a" />
+        <circle cx="618.0" cy="28.0" r="2.0" fill="#256a4a" />
+        <circle cx="42.0" cy="35.2" r="2.0" fill="#256a4a" />
+        <circle cx="66.0" cy="35.2" r="2.0" fill="#256a4a" />
+        <circle cx="90.0" cy="35.2" r="2.0" fill="#256a4a" />
+        <circle cx="114.0" cy="35.2" r="2.0" fill="#256a4a" />
+        <circle cx="138.0" cy="35.2" r="2.0" fill="#256a4a" />
+        <circle cx="162.0" cy="35.2" r="2.0" fill="#256a4a" />
+        <circle cx="186.0" cy="35.2" r="2.0" fill="#256a4a" />
+        <circle cx="210.0" cy="35.2" r="2.0" fill="#256a4a" />
+        <circle cx="234.0" cy="35.2" r="2.0" fill="#256a4a" />
+        <circle cx="258.0" cy="35.2" r="2.0" fill="#256a4a" />
+        <circle cx="282.0" cy="35.2" r="2.0" fill="#256a4a" />
+        <circle cx="306.0" cy="35.2" r="2.0" fill="#256a4a" />
+        <circle cx="330.0" cy="35.2" r="5.0" fill="none" stroke="#8f241b" stroke-width="0.8" stroke-dasharray="1 1" />
+        <circle cx="330.0" cy="35.2" r="2.2" fill="#8f241b" />
+        <line x1="324.4" y1="35.2" x2="335.6" y2="35.2" stroke="#8f241b" stroke-width="0.4" />
+        <circle cx="354.0" cy="35.2" r="2.0" fill="#256a4a" />
+        <circle cx="378.0" cy="35.2" r="2.0" fill="#256a4a" />
+        <circle cx="402.0" cy="35.2" r="2.0" fill="#256a4a" />
+        <circle cx="426.0" cy="35.2" r="2.0" fill="#256a4a" />
+        <circle cx="450.0" cy="35.2" r="2.0" fill="#256a4a" />
+        <circle cx="474.0" cy="35.2" r="2.0" fill="#256a4a" />
+        <circle cx="498.0" cy="35.2" r="2.0" fill="#256a4a" />
+        <circle cx="522.0" cy="35.2" r="2.0" fill="#256a4a" />
+        <circle cx="546.0" cy="35.2" r="2.0" fill="#256a4a" />
+        <circle cx="570.0" cy="35.2" r="2.0" fill="#256a4a" />
+        <circle cx="594.0" cy="35.2" r="2.0" fill="#256a4a" />
+        <circle cx="618.0" cy="35.2" r="2.0" fill="#256a4a" />
+        <circle cx="42.0" cy="42.3" r="2.0" fill="#256a4a" />
+        <circle cx="66.0" cy="42.3" r="2.0" fill="#256a4a" />
+        <circle cx="90.0" cy="42.3" r="2.0" fill="#256a4a" />
+        <circle cx="114.0" cy="42.3" r="2.0" fill="#256a4a" />
+        <rect x="135.2" y="39.5" width="5.6" height="5.6" transform="rotate(45 138.0 42.3)" fill="none" stroke="#9c6512"
+          stroke-width="0.75" />
+        <circle cx="138.0" cy="42.3" r="1.3" fill="#9c6512" />
+        <circle cx="162.0" cy="42.3" r="2.0" fill="#256a4a" />
+        <circle cx="186.0" cy="42.3" r="2.0" fill="#256a4a" />
+        <circle cx="210.0" cy="42.3" r="2.0" fill="#256a4a" />
+        <circle cx="234.0" cy="42.3" r="2.0" fill="#256a4a" />
+        <circle cx="258.0" cy="42.3" r="2.0" fill="#256a4a" />
+        <circle cx="282.0" cy="42.3" r="2.0" fill="#256a4a" />
+        <circle cx="306.0" cy="42.3" r="2.0" fill="#256a4a" />
+        <circle cx="330.0" cy="42.3" r="2.0" fill="#256a4a" />
+        <circle cx="354.0" cy="42.3" r="5.0" fill="none" stroke="#8f241b" stroke-width="0.8" stroke-dasharray="1 1" />
+        <circle cx="354.0" cy="42.3" r="2.2" fill="#8f241b" />
+        <line x1="348.4" y1="42.3" x2="359.6" y2="42.3" stroke="#8f241b" stroke-width="0.4" />
+        <circle cx="378.0" cy="42.3" r="2.0" fill="#256a4a" />
+        <circle cx="402.0" cy="42.3" r="2.0" fill="#256a4a" />
+        <circle cx="426.0" cy="42.3" r="2.0" fill="#256a4a" />
+        <circle cx="450.0" cy="42.3" r="2.0" fill="#256a4a" />
+        <circle cx="474.0" cy="42.3" r="5.0" fill="none" stroke="#8f241b" stroke-width="0.8" stroke-dasharray="1 1" />
+        <circle cx="474.0" cy="42.3" r="2.2" fill="#8f241b" />
+        <line x1="468.4" y1="42.3" x2="479.6" y2="42.3" stroke="#8f241b" stroke-width="0.4" />
+        <circle cx="498.0" cy="42.3" r="2.0" fill="#256a4a" />
+        <circle cx="522.0" cy="42.3" r="2.0" fill="#256a4a" />
+        <circle cx="546.0" cy="42.3" r="2.0" fill="#256a4a" />
+        <circle cx="570.0" cy="42.3" r="2.0" fill="#256a4a" />
+        <circle cx="594.0" cy="42.3" r="2.0" fill="#256a4a" />
+        <circle cx="618.0" cy="42.3" r="2.0" fill="#256a4a" />
+        <circle cx="42.0" cy="49.5" r="2.0" fill="#256a4a" />
+        <circle cx="66.0" cy="49.5" r="2.0" fill="#256a4a" />
+        <circle cx="90.0" cy="49.5" r="2.0" fill="#256a4a" />
+        <circle cx="114.0" cy="49.5" r="2.0" fill="#256a4a" />
+        <circle cx="138.0" cy="49.5" r="2.0" fill="#256a4a" />
+        <circle cx="162.0" cy="49.5" r="2.0" fill="#256a4a" />
+        <circle cx="186.0" cy="49.5" r="2.0" fill="#256a4a" />
+        <circle cx="210.0" cy="49.5" r="2.0" fill="#256a4a" />
+        <circle cx="234.0" cy="49.5" r="2.0" fill="#256a4a" />
+        <circle cx="258.0" cy="49.5" r="2.0" fill="#256a4a" />
+        <circle cx="282.0" cy="49.5" r="2.0" fill="#256a4a" />
+        <circle cx="306.0" cy="49.5" r="2.0" fill="#256a4a" />
+        <circle cx="330.0" cy="49.5" r="2.0" fill="#256a4a" />
+        <circle cx="354.0" cy="49.5" r="2.0" fill="#256a4a" />
+        <circle cx="378.0" cy="49.5" r="2.0" fill="#256a4a" />
+        <circle cx="402.0" cy="49.5" r="2.0" fill="#256a4a" />
+        <circle cx="426.0" cy="49.5" r="2.0" fill="#256a4a" />
+        <circle cx="450.0" cy="49.5" r="2.0" fill="#256a4a" />
+        <circle cx="474.0" cy="49.5" r="2.0" fill="#256a4a" />
+        <circle cx="498.0" cy="49.5" r="2.0" fill="#256a4a" />
+        <circle cx="522.0" cy="49.5" r="2.0" fill="#256a4a" />
+        <circle cx="546.0" cy="49.5" r="2.0" fill="#256a4a" />
+        <circle cx="570.0" cy="49.5" r="2.0" fill="#256a4a" />
+        <circle cx="594.0" cy="49.5" r="2.0" fill="#256a4a" />
+        <circle cx="618.0" cy="49.5" r="2.0" fill="#256a4a" />
+        <circle cx="42.0" cy="56.6" r="2.0" fill="#256a4a" />
+        <circle cx="66.0" cy="56.6" r="2.0" fill="#256a4a" />
+        <circle cx="90.0" cy="56.6" r="2.0" fill="#256a4a" />
+        <circle cx="114.0" cy="56.6" r="2.0" fill="#256a4a" />
+        <circle cx="138.0" cy="56.6" r="2.0" fill="#256a4a" />
+        <circle cx="162.0" cy="56.6" r="2.0" fill="#256a4a" />
+        <circle cx="186.0" cy="56.6" r="2.0" fill="#256a4a" />
+        <circle cx="210.0" cy="56.6" r="2.0" fill="#256a4a" />
+        <circle cx="234.0" cy="56.6" r="2.0" fill="#256a4a" />
+        <circle cx="258.0" cy="56.6" r="5.0" fill="none" stroke="#8f241b" stroke-width="0.8" stroke-dasharray="1 1" />
+        <circle cx="258.0" cy="56.6" r="2.2" fill="#8f241b" />
+        <line x1="252.4" y1="56.6" x2="263.6" y2="56.6" stroke="#8f241b" stroke-width="0.4" />
+        <circle cx="282.0" cy="56.6" r="2.0" fill="#256a4a" />
+        <circle cx="306.0" cy="56.6" r="2.0" fill="#256a4a" />
+        <circle cx="330.0" cy="56.6" r="2.0" fill="#256a4a" />
+        <circle cx="354.0" cy="56.6" r="2.0" fill="#256a4a" />
+        <circle cx="378.0" cy="56.6" r="5.0" fill="none" stroke="#8f241b" stroke-width="0.8" stroke-dasharray="1 1" />
+        <circle cx="378.0" cy="56.6" r="2.2" fill="#8f241b" />
+        <line x1="372.4" y1="56.6" x2="383.6" y2="56.6" stroke="#8f241b" stroke-width="0.4" />
+        <circle cx="402.0" cy="56.6" r="2.0" fill="#256a4a" />
+        <circle cx="426.0" cy="56.6" r="2.0" fill="#256a4a" />
+        <circle cx="450.0" cy="56.6" r="2.0" fill="#256a4a" />
+        <circle cx="474.0" cy="56.6" r="2.0" fill="#256a4a" />
+        <circle cx="498.0" cy="56.6" r="2.0" fill="#256a4a" />
+        <circle cx="522.0" cy="56.6" r="2.0" fill="#256a4a" />
+        <circle cx="546.0" cy="56.6" r="2.0" fill="#256a4a" />
+        <circle cx="570.0" cy="56.6" r="2.0" fill="#256a4a" />
+        <circle cx="594.0" cy="56.6" r="2.0" fill="#256a4a" />
+        <circle cx="618.0" cy="56.6" r="2.0" fill="#256a4a" />
+        <circle cx="42.0" cy="63.8" r="2.0" fill="#256a4a" />
+        <circle cx="66.0" cy="63.8" r="2.0" fill="#256a4a" />
+        <circle cx="90.0" cy="63.8" r="2.0" fill="#256a4a" />
+        <circle cx="114.0" cy="63.8" r="2.0" fill="#256a4a" />
+        <circle cx="138.0" cy="63.8" r="2.0" fill="#256a4a" />
+        <circle cx="162.0" cy="63.8" r="2.0" fill="#256a4a" />
+        <circle cx="186.0" cy="63.8" r="2.0" fill="#256a4a" />
+        <circle cx="210.0" cy="63.8" r="2.0" fill="#256a4a" />
+        <circle cx="234.0" cy="63.8" r="2.0" fill="#256a4a" />
+        <circle cx="258.0" cy="63.8" r="2.0" fill="#256a4a" />
+        <circle cx="282.0" cy="63.8" r="2.0" fill="#256a4a" />
+        <circle cx="306.0" cy="63.8" r="2.0" fill="#256a4a" />
+        <circle cx="330.0" cy="63.8" r="2.0" fill="#256a4a" />
+        <circle cx="354.0" cy="63.8" r="2.0" fill="#256a4a" />
+        <circle cx="378.0" cy="63.8" r="2.0" fill="#256a4a" />
+        <circle cx="402.0" cy="63.8" r="2.0" fill="#256a4a" />
+        <circle cx="426.0" cy="63.8" r="2.0" fill="#256a4a" />
+        <circle cx="450.0" cy="63.8" r="2.0" fill="#256a4a" />
+        <circle cx="474.0" cy="63.8" r="2.0" fill="#256a4a" />
+        <rect x="495.2" y="61.0" width="5.6" height="5.6" transform="rotate(45 498.0 63.8)" fill="none" stroke="#9c6512"
+          stroke-width="0.75" />
+        <circle cx="498.0" cy="63.8" r="1.3" fill="#9c6512" />
+        <circle cx="522.0" cy="63.8" r="2.0" fill="#256a4a" />
+        <circle cx="546.0" cy="63.8" r="2.0" fill="#256a4a" />
+        <circle cx="570.0" cy="63.8" r="2.0" fill="#256a4a" />
+        <circle cx="594.0" cy="63.8" r="2.0" fill="#256a4a" />
+        <circle cx="618.0" cy="63.8" r="2.0" fill="#256a4a" />
+        <circle cx="42.0" cy="70.9" r="2.0" fill="#256a4a" />
+        <circle cx="66.0" cy="70.9" r="2.0" fill="#256a4a" />
+        <circle cx="90.0" cy="70.9" r="2.0" fill="#256a4a" />
+        <circle cx="114.0" cy="70.9" r="2.0" fill="#256a4a" />
+        <circle cx="138.0" cy="70.9" r="2.0" fill="#256a4a" />
+        <circle cx="162.0" cy="70.9" r="2.0" fill="#256a4a" />
+        <circle cx="186.0" cy="70.9" r="2.0" fill="#256a4a" />
+        <circle cx="210.0" cy="70.9" r="2.0" fill="#256a4a" />
+        <circle cx="234.0" cy="70.9" r="2.0" fill="#256a4a" />
+        <circle cx="258.0" cy="70.9" r="2.0" fill="#256a4a" />
+        <circle cx="282.0" cy="70.9" r="2.0" fill="#256a4a" />
+        <rect x="303.2" y="68.1" width="5.6" height="5.6" transform="rotate(45 306.0 70.9)" fill="none" stroke="#9c6512"
+          stroke-width="0.75" />
+        <circle cx="306.0" cy="70.9" r="1.3" fill="#9c6512" />
+        <circle cx="330.0" cy="70.9" r="2.0" fill="#256a4a" />
+        <rect x="351.2" y="68.1" width="5.6" height="5.6" transform="rotate(45 354.0 70.9)" fill="none" stroke="#9c6512"
+          stroke-width="0.75" />
+        <circle cx="354.0" cy="70.9" r="1.3" fill="#9c6512" />
+        <circle cx="378.0" cy="70.9" r="2.0" fill="#256a4a" />
+        <circle cx="402.0" cy="70.9" r="5.0" fill="none" stroke="#8f241b" stroke-width="0.8" stroke-dasharray="1 1" />
+        <circle cx="402.0" cy="70.9" r="2.2" fill="#8f241b" />
+        <line x1="396.4" y1="70.9" x2="407.6" y2="70.9" stroke="#8f241b" stroke-width="0.4" />
+        <circle cx="426.0" cy="70.9" r="2.0" fill="#256a4a" />
+        <circle cx="450.0" cy="70.9" r="2.0" fill="#256a4a" />
+        <circle cx="474.0" cy="70.9" r="2.0" fill="#256a4a" />
+        <circle cx="498.0" cy="70.9" r="2.0" fill="#256a4a" />
+        <circle cx="522.0" cy="70.9" r="2.0" fill="#256a4a" />
+        <circle cx="546.0" cy="70.9" r="2.0" fill="#256a4a" />
+        <circle cx="570.0" cy="70.9" r="2.0" fill="#256a4a" />
+        <circle cx="594.0" cy="70.9" r="2.0" fill="#256a4a" />
+        <circle cx="618.0" cy="70.9" r="2.0" fill="#256a4a" />
+        <circle cx="42.0" cy="78.1" r="2.0" fill="#256a4a" />
+        <circle cx="66.0" cy="78.1" r="2.0" fill="#256a4a" />
+        <circle cx="90.0" cy="78.1" r="2.0" fill="#256a4a" />
+        <circle cx="114.0" cy="78.1" r="2.0" fill="#256a4a" />
+        <circle cx="138.0" cy="78.1" r="2.0" fill="#256a4a" />
+        <circle cx="162.0" cy="78.1" r="2.0" fill="#256a4a" />
+        <circle cx="186.0" cy="78.1" r="2.0" fill="#256a4a" />
+        <circle cx="210.0" cy="78.1" r="2.0" fill="#256a4a" />
+        <circle cx="234.0" cy="78.1" r="2.0" fill="#256a4a" />
+        <circle cx="258.0" cy="78.1" r="2.0" fill="#256a4a" />
+        <circle cx="282.0" cy="78.1" r="2.0" fill="#256a4a" />
+        <circle cx="306.0" cy="78.1" r="2.0" fill="#256a4a" />
+        <circle cx="330.0" cy="78.1" r="2.0" fill="#256a4a" />
+        <circle cx="354.0" cy="78.1" r="2.0" fill="#256a4a" />
+        <circle cx="378.0" cy="78.1" r="2.0" fill="#256a4a" />
+        <circle cx="402.0" cy="78.1" r="2.0" fill="#256a4a" />
+        <rect x="423.2" y="75.3" width="5.6" height="5.6" transform="rotate(45 426.0 78.1)" fill="none" stroke="#9c6512"
+          stroke-width="0.75" />
+        <circle cx="426.0" cy="78.1" r="1.3" fill="#9c6512" />
+        <circle cx="450.0" cy="78.1" r="2.0" fill="#256a4a" />
+        <circle cx="474.0" cy="78.1" r="2.0" fill="#256a4a" />
+        <rect x="495.2" y="75.3" width="5.6" height="5.6" transform="rotate(45 498.0 78.1)" fill="none" stroke="#9c6512"
+          stroke-width="0.75" />
+        <circle cx="498.0" cy="78.1" r="1.3" fill="#9c6512" />
+        <rect x="519.2" y="75.3" width="5.6" height="5.6" transform="rotate(45 522.0 78.1)" fill="none" stroke="#9c6512"
+          stroke-width="0.75" />
+        <circle cx="522.0" cy="78.1" r="1.3" fill="#9c6512" />
+        <circle cx="546.0" cy="78.1" r="2.0" fill="#256a4a" />
+        <circle cx="570.0" cy="78.1" r="2.0" fill="#256a4a" />
+        <circle cx="594.0" cy="78.1" r="2.0" fill="#256a4a" />
+        <circle cx="618.0" cy="78.1" r="2.0" fill="#256a4a" />
+        <rect x="39.2" y="82.5" width="5.6" height="5.6" transform="rotate(45 42.0 85.3)" fill="none" stroke="#9c6512"
+          stroke-width="0.75" />
+        <circle cx="42.0" cy="85.3" r="1.3" fill="#9c6512" />
+        <rect x="63.2" y="82.5" width="5.6" height="5.6" transform="rotate(45 66.0 85.3)" fill="none" stroke="#9c6512"
+          stroke-width="0.75" />
+        <circle cx="66.0" cy="85.3" r="1.3" fill="#9c6512" />
+        <circle cx="90.0" cy="85.3" r="2.0" fill="#256a4a" />
+        <rect x="111.2" y="82.5" width="5.6" height="5.6" transform="rotate(45 114.0 85.3)" fill="none" stroke="#9c6512"
+          stroke-width="0.75" />
+        <circle cx="114.0" cy="85.3" r="1.3" fill="#9c6512" />
+        <rect x="135.2" y="82.5" width="5.6" height="5.6" transform="rotate(45 138.0 85.3)" fill="none" stroke="#9c6512"
+          stroke-width="0.75" />
+        <circle cx="138.0" cy="85.3" r="1.3" fill="#9c6512" />
+        <circle cx="162.0" cy="85.3" r="2.0" fill="#256a4a" />
+        <circle cx="186.0" cy="85.3" r="2.0" fill="#256a4a" />
+        <circle cx="210.0" cy="85.3" r="2.0" fill="#256a4a" />
+        <circle cx="234.0" cy="85.3" r="2.0" fill="#256a4a" />
+        <circle cx="258.0" cy="85.3" r="2.0" fill="#256a4a" />
+        <circle cx="282.0" cy="85.3" r="2.0" fill="#256a4a" />
+        <circle cx="306.0" cy="85.3" r="2.0" fill="#256a4a" />
+        <circle cx="330.0" cy="85.3" r="5.0" fill="none" stroke="#8f241b" stroke-width="0.8" stroke-dasharray="1 1" />
+        <circle cx="330.0" cy="85.3" r="2.2" fill="#8f241b" />
+        <line x1="324.4" y1="85.3" x2="335.6" y2="85.3" stroke="#8f241b" stroke-width="0.4" />
+        <circle cx="354.0" cy="85.3" r="2.0" fill="#256a4a" />
+        <circle cx="378.0" cy="85.3" r="2.0" fill="#256a4a" />
+        <circle cx="402.0" cy="85.3" r="2.0" fill="#256a4a" />
+        <rect x="423.2" y="82.5" width="5.6" height="5.6" transform="rotate(45 426.0 85.3)" fill="none" stroke="#9c6512"
+          stroke-width="0.75" />
+        <circle cx="426.0" cy="85.3" r="1.3" fill="#9c6512" />
+        <circle cx="450.0" cy="85.3" r="2.0" fill="#256a4a" />
+        <circle cx="474.0" cy="85.3" r="2.0" fill="#256a4a" />
+        <circle cx="498.0" cy="85.3" r="2.0" fill="#256a4a" />
+        <circle cx="522.0" cy="85.3" r="2.0" fill="#256a4a" />
+        <circle cx="546.0" cy="85.3" r="2.0" fill="#256a4a" />
+        <circle cx="570.0" cy="85.3" r="2.0" fill="#256a4a" />
+        <circle cx="594.0" cy="85.3" r="5.0" fill="none" stroke="#8f241b" stroke-width="0.8" stroke-dasharray="1 1" />
+        <circle cx="594.0" cy="85.3" r="2.2" fill="#8f241b" />
+        <line x1="588.4" y1="85.3" x2="599.6" y2="85.3" stroke="#8f241b" stroke-width="0.4" />
+        <circle cx="618.0" cy="85.3" r="2.0" fill="#256a4a" />
+        <circle cx="42.0" cy="92.4" r="2.0" fill="#256a4a" />
+        <circle cx="66.0" cy="92.4" r="2.0" fill="#256a4a" />
+        <circle cx="90.0" cy="92.4" r="2.0" fill="#256a4a" />
+        <circle cx="114.0" cy="92.4" r="2.0" fill="#256a4a" />
+        <rect x="135.2" y="89.6" width="5.6" height="5.6" transform="rotate(45 138.0 92.4)" fill="none" stroke="#9c6512"
+          stroke-width="0.75" />
+        <circle cx="138.0" cy="92.4" r="1.3" fill="#9c6512" />
+        <circle cx="162.0" cy="92.4" r="2.0" fill="#256a4a" />
+        <circle cx="186.0" cy="92.4" r="2.0" fill="#256a4a" />
+        <circle cx="210.0" cy="92.4" r="2.0" fill="#256a4a" />
+        <rect x="231.2" y="89.6" width="5.6" height="5.6" transform="rotate(45 234.0 92.4)" fill="none" stroke="#9c6512"
+          stroke-width="0.75" />
+        <circle cx="234.0" cy="92.4" r="1.3" fill="#9c6512" />
+        <circle cx="258.0" cy="92.4" r="2.0" fill="#256a4a" />
+        <circle cx="282.0" cy="92.4" r="2.0" fill="#256a4a" />
+        <circle cx="306.0" cy="92.4" r="2.0" fill="#256a4a" />
+        <circle cx="330.0" cy="92.4" r="2.0" fill="#256a4a" />
+        <circle cx="354.0" cy="92.4" r="2.0" fill="#256a4a" />
+        <circle cx="378.0" cy="92.4" r="2.0" fill="#256a4a" />
+        <circle cx="402.0" cy="92.4" r="2.0" fill="#256a4a" />
+        <circle cx="426.0" cy="92.4" r="2.0" fill="#256a4a" />
+        <circle cx="450.0" cy="92.4" r="2.0" fill="#256a4a" />
+        <rect x="471.2" y="89.6" width="5.6" height="5.6" transform="rotate(45 474.0 92.4)" fill="none" stroke="#9c6512"
+          stroke-width="0.75" />
+        <circle cx="474.0" cy="92.4" r="1.3" fill="#9c6512" />
+        <circle cx="498.0" cy="92.4" r="2.0" fill="#256a4a" />
+        <circle cx="522.0" cy="92.4" r="2.0" fill="#256a4a" />
+        <circle cx="546.0" cy="92.4" r="2.0" fill="#256a4a" />
+        <circle cx="570.0" cy="92.4" r="2.0" fill="#256a4a" />
+        <circle cx="594.0" cy="92.4" r="2.0" fill="#256a4a" />
+        <circle cx="618.0" cy="92.4" r="2.0" fill="#256a4a" />
+        <circle cx="42.0" cy="99.6" r="2.0" fill="#256a4a" />
+        <circle cx="66.0" cy="99.6" r="2.0" fill="#256a4a" />
+        <circle cx="90.0" cy="99.6" r="2.0" fill="#256a4a" />
+        <circle cx="114.0" cy="99.6" r="2.0" fill="#256a4a" />
+        <circle cx="138.0" cy="99.6" r="2.0" fill="#256a4a" />
+        <rect x="159.2" y="96.8" width="5.6" height="5.6" transform="rotate(45 162.0 99.6)" fill="none" stroke="#9c6512"
+          stroke-width="0.75" />
+        <circle cx="162.0" cy="99.6" r="1.3" fill="#9c6512" />
+        <rect x="183.2" y="96.8" width="5.6" height="5.6" transform="rotate(45 186.0 99.6)" fill="none" stroke="#9c6512"
+          stroke-width="0.75" />
+        <circle cx="186.0" cy="99.6" r="1.3" fill="#9c6512" />
+        <circle cx="210.0" cy="99.6" r="2.0" fill="#256a4a" />
+        <circle cx="234.0" cy="99.6" r="2.0" fill="#256a4a" />
+        <circle cx="258.0" cy="99.6" r="2.0" fill="#256a4a" />
+        <rect x="279.2" y="96.8" width="5.6" height="5.6" transform="rotate(45 282.0 99.6)" fill="none" stroke="#9c6512"
+          stroke-width="0.75" />
+        <circle cx="282.0" cy="99.6" r="1.3" fill="#9c6512" />
+        <rect x="303.2" y="96.8" width="5.6" height="5.6" transform="rotate(45 306.0 99.6)" fill="none" stroke="#9c6512"
+          stroke-width="0.75" />
+        <circle cx="306.0" cy="99.6" r="1.3" fill="#9c6512" />
+        <circle cx="330.0" cy="99.6" r="2.0" fill="#256a4a" />
+        <circle cx="354.0" cy="99.6" r="2.0" fill="#256a4a" />
+        <circle cx="378.0" cy="99.6" r="2.0" fill="#256a4a" />
+        <circle cx="402.0" cy="99.6" r="2.0" fill="#256a4a" />
+        <circle cx="426.0" cy="99.6" r="2.0" fill="#256a4a" />
+        <circle cx="450.0" cy="99.6" r="2.0" fill="#256a4a" />
+        <circle cx="474.0" cy="99.6" r="2.0" fill="#256a4a" />
+        <circle cx="498.0" cy="99.6" r="2.0" fill="#256a4a" />
+        <circle cx="522.0" cy="99.6" r="2.0" fill="#256a4a" />
+        <circle cx="546.0" cy="99.6" r="2.0" fill="#256a4a" />
+        <circle cx="570.0" cy="99.6" r="2.0" fill="#256a4a" />
+        <circle cx="594.0" cy="99.6" r="2.0" fill="#256a4a" />
+        <rect x="615.2" y="96.8" width="5.6" height="5.6" transform="rotate(45 618.0 99.6)" fill="none" stroke="#9c6512"
+          stroke-width="0.75" />
+        <circle cx="618.0" cy="99.6" r="1.3" fill="#9c6512" />
+        <circle cx="42.0" cy="106.7" r="2.0" fill="#256a4a" />
+        <circle cx="66.0" cy="106.7" r="2.0" fill="#256a4a" />
+        <circle cx="90.0" cy="106.7" r="2.0" fill="#256a4a" />
+        <circle cx="114.0" cy="106.7" r="2.0" fill="#256a4a" />
+        <circle cx="138.0" cy="106.7" r="2.0" fill="#256a4a" />
+        <circle cx="162.0" cy="106.7" r="2.0" fill="#256a4a" />
+        <circle cx="186.0" cy="106.7" r="2.0" fill="#256a4a" />
+        <circle cx="210.0" cy="106.7" r="2.0" fill="#256a4a" />
+        <circle cx="234.0" cy="106.7" r="2.0" fill="#256a4a" />
+        <circle cx="258.0" cy="106.7" r="2.0" fill="#256a4a" />
+        <circle cx="282.0" cy="106.7" r="2.0" fill="#256a4a" />
+        <circle cx="306.0" cy="106.7" r="2.0" fill="#256a4a" />
+        <circle cx="330.0" cy="106.7" r="2.0" fill="#256a4a" />
+        <circle cx="354.0" cy="106.7" r="2.0" fill="#256a4a" />
+        <circle cx="378.0" cy="106.7" r="2.0" fill="#256a4a" />
+        <circle cx="402.0" cy="106.7" r="2.0" fill="#256a4a" />
+        <circle cx="426.0" cy="106.7" r="2.0" fill="#256a4a" />
+        <circle cx="450.0" cy="106.7" r="2.0" fill="#256a4a" />
+        <circle cx="474.0" cy="106.7" r="2.0" fill="#256a4a" />
+        <circle cx="498.0" cy="106.7" r="2.0" fill="#256a4a" />
+        <circle cx="522.0" cy="106.7" r="2.0" fill="#256a4a" />
+        <circle cx="546.0" cy="106.7" r="2.0" fill="#256a4a" />
+        <circle cx="570.0" cy="106.7" r="2.0" fill="#256a4a" />
+        <circle cx="594.0" cy="106.7" r="2.0" fill="#256a4a" />
+        <circle cx="618.0" cy="106.7" r="2.0" fill="#256a4a" />
+        <circle cx="42.0" cy="113.9" r="2.0" fill="#256a4a" />
+        <circle cx="66.0" cy="113.9" r="2.0" fill="#256a4a" />
+        <circle cx="90.0" cy="113.9" r="2.0" fill="#256a4a" />
+        <circle cx="114.0" cy="113.9" r="2.0" fill="#256a4a" />
+        <circle cx="138.0" cy="113.9" r="2.0" fill="#256a4a" />
+        <rect x="159.2" y="111.1" width="5.6" height="5.6" transform="rotate(45 162.0 113.9)" fill="none"
+          stroke="#9c6512" stroke-width="0.75" />
+        <circle cx="162.0" cy="113.9" r="1.3" fill="#9c6512" />
+        <circle cx="186.0" cy="113.9" r="2.0" fill="#256a4a" />
+        <circle cx="210.0" cy="113.9" r="2.0" fill="#256a4a" />
+        <circle cx="234.0" cy="113.9" r="2.0" fill="#256a4a" />
+        <circle cx="258.0" cy="113.9" r="2.0" fill="#256a4a" />
+        <circle cx="282.0" cy="113.9" r="2.0" fill="#256a4a" />
+        <circle cx="306.0" cy="113.9" r="2.0" fill="#256a4a" />
+        <circle cx="330.0" cy="113.9" r="2.0" fill="#256a4a" />
+        <rect x="351.2" y="111.1" width="5.6" height="5.6" transform="rotate(45 354.0 113.9)" fill="none"
+          stroke="#9c6512" stroke-width="0.75" />
+        <circle cx="354.0" cy="113.9" r="1.3" fill="#9c6512" />
+        <circle cx="378.0" cy="113.9" r="2.0" fill="#256a4a" />
+        <circle cx="402.0" cy="113.9" r="2.0" fill="#256a4a" />
+        <circle cx="426.0" cy="113.9" r="2.0" fill="#256a4a" />
+        <circle cx="450.0" cy="113.9" r="2.0" fill="#256a4a" />
+        <circle cx="474.0" cy="113.9" r="2.0" fill="#256a4a" />
+        <circle cx="498.0" cy="113.9" r="2.0" fill="#256a4a" />
+        <circle cx="522.0" cy="113.9" r="2.0" fill="#256a4a" />
+        <circle cx="546.0" cy="113.9" r="2.0" fill="#256a4a" />
+        <circle cx="570.0" cy="113.9" r="2.0" fill="#256a4a" />
+        <circle cx="594.0" cy="113.9" r="2.0" fill="#256a4a" />
+        <circle cx="618.0" cy="113.9" r="2.0" fill="#256a4a" />
+        <circle cx="42.0" cy="121.1" r="2.0" fill="#256a4a" />
+        <circle cx="66.0" cy="121.1" r="2.0" fill="#256a4a" />
+        <circle cx="90.0" cy="121.1" r="2.0" fill="#256a4a" />
+        <circle cx="114.0" cy="121.1" r="2.0" fill="#256a4a" />
+        <circle cx="138.0" cy="121.1" r="2.0" fill="#256a4a" />
+        <circle cx="162.0" cy="121.1" r="2.0" fill="#256a4a" />
+        <circle cx="186.0" cy="121.1" r="2.0" fill="#256a4a" />
+        <circle cx="210.0" cy="121.1" r="2.0" fill="#256a4a" />
+        <circle cx="234.0" cy="121.1" r="2.0" fill="#256a4a" />
+        <circle cx="258.0" cy="121.1" r="2.0" fill="#256a4a" />
+        <circle cx="282.0" cy="121.1" r="2.0" fill="#256a4a" />
+        <circle cx="306.0" cy="121.1" r="2.0" fill="#256a4a" />
+        <circle cx="330.0" cy="121.1" r="2.0" fill="#256a4a" />
+        <circle cx="354.0" cy="121.1" r="2.0" fill="#256a4a" />
+        <circle cx="378.0" cy="121.1" r="2.0" fill="#256a4a" />
+        <circle cx="402.0" cy="121.1" r="2.0" fill="#256a4a" />
+        <rect x="423.2" y="118.3" width="5.6" height="5.6" transform="rotate(45 426.0 121.1)" fill="none"
+          stroke="#9c6512" stroke-width="0.75" />
+        <circle cx="426.0" cy="121.1" r="1.3" fill="#9c6512" />
+        <rect x="447.2" y="118.3" width="5.6" height="5.6" transform="rotate(45 450.0 121.1)" fill="none"
+          stroke="#9c6512" stroke-width="0.75" />
+        <circle cx="450.0" cy="121.1" r="1.3" fill="#9c6512" />
+        <circle cx="474.0" cy="121.1" r="2.0" fill="#256a4a" />
+        <circle cx="498.0" cy="121.1" r="2.0" fill="#256a4a" />
+        <circle cx="522.0" cy="121.1" r="2.0" fill="#256a4a" />
+        <circle cx="546.0" cy="121.1" r="2.0" fill="#256a4a" />
+        <circle cx="570.0" cy="121.1" r="2.0" fill="#256a4a" />
+        <circle cx="594.0" cy="121.1" r="2.0" fill="#256a4a" />
+        <circle cx="618.0" cy="121.1" r="2.0" fill="#256a4a" />
+        <circle cx="42.0" cy="128.2" r="2.0" fill="#256a4a" />
+        <circle cx="66.0" cy="128.2" r="2.0" fill="#256a4a" />
+        <circle cx="90.0" cy="128.2" r="2.0" fill="#256a4a" />
+        <circle cx="114.0" cy="128.2" r="2.0" fill="#256a4a" />
+        <circle cx="138.0" cy="128.2" r="2.0" fill="#256a4a" />
+        <circle cx="162.0" cy="128.2" r="2.0" fill="#256a4a" />
+        <circle cx="186.0" cy="128.2" r="2.0" fill="#256a4a" />
+        <circle cx="210.0" cy="128.2" r="2.0" fill="#256a4a" />
+        <circle cx="234.0" cy="128.2" r="2.0" fill="#256a4a" />
+        <rect x="255.2" y="125.4" width="5.6" height="5.6" transform="rotate(45 258.0 128.2)" fill="none"
+          stroke="#9c6512" stroke-width="0.75" />
+        <circle cx="258.0" cy="128.2" r="1.3" fill="#9c6512" />
+        <circle cx="282.0" cy="128.2" r="2.0" fill="#256a4a" />
+        <circle cx="306.0" cy="128.2" r="2.0" fill="#256a4a" />
+        <circle cx="330.0" cy="128.2" r="2.0" fill="#256a4a" />
+        <circle cx="354.0" cy="128.2" r="2.0" fill="#256a4a" />
+        <circle cx="378.0" cy="128.2" r="2.0" fill="#256a4a" />
+        <circle cx="402.0" cy="128.2" r="2.0" fill="#256a4a" />
+        <circle cx="426.0" cy="128.2" r="2.0" fill="#256a4a" />
+        <circle cx="450.0" cy="128.2" r="2.0" fill="#256a4a" />
+        <circle cx="474.0" cy="128.2" r="2.0" fill="#256a4a" />
+        <circle cx="498.0" cy="128.2" r="5.0" fill="none" stroke="#8f241b" stroke-width="0.8" stroke-dasharray="1 1" />
+        <circle cx="498.0" cy="128.2" r="2.2" fill="#8f241b" />
+        <line x1="492.4" y1="128.2" x2="503.6" y2="128.2" stroke="#8f241b" stroke-width="0.4" />
+        <circle cx="522.0" cy="128.2" r="2.0" fill="#256a4a" />
+        <circle cx="546.0" cy="128.2" r="2.0" fill="#256a4a" />
+        <circle cx="570.0" cy="128.2" r="2.0" fill="#256a4a" />
+        <circle cx="594.0" cy="128.2" r="2.0" fill="#256a4a" />
+        <circle cx="618.0" cy="128.2" r="2.0" fill="#256a4a" />
+        <circle cx="42.0" cy="135.4" r="2.0" fill="#256a4a" />
+        <rect x="63.2" y="132.6" width="5.6" height="5.6" transform="rotate(45 66.0 135.4)" fill="none" stroke="#9c6512"
+          stroke-width="0.75" />
+        <circle cx="66.0" cy="135.4" r="1.3" fill="#9c6512" />
+        <circle cx="90.0" cy="135.4" r="2.0" fill="#256a4a" />
+        <circle cx="114.0" cy="135.4" r="5.0" fill="none" stroke="#8f241b" stroke-width="0.8" stroke-dasharray="1 1" />
+        <circle cx="114.0" cy="135.4" r="2.2" fill="#8f241b" />
+        <line x1="108.4" y1="135.4" x2="119.6" y2="135.4" stroke="#8f241b" stroke-width="0.4" />
+        <circle cx="138.0" cy="135.4" r="2.0" fill="#256a4a" />
+        <circle cx="162.0" cy="135.4" r="2.0" fill="#256a4a" />
+        <circle cx="186.0" cy="135.4" r="2.0" fill="#256a4a" />
+        <circle cx="210.0" cy="135.4" r="2.0" fill="#256a4a" />
+        <circle cx="234.0" cy="135.4" r="2.0" fill="#256a4a" />
+        <circle cx="258.0" cy="135.4" r="2.0" fill="#256a4a" />
+        <circle cx="282.0" cy="135.4" r="2.0" fill="#256a4a" />
+        <circle cx="306.0" cy="135.4" r="2.0" fill="#256a4a" />
+        <circle cx="330.0" cy="135.4" r="2.0" fill="#256a4a" />
+        <circle cx="354.0" cy="135.4" r="2.0" fill="#256a4a" />
+        <circle cx="378.0" cy="135.4" r="2.0" fill="#256a4a" />
+        <circle cx="402.0" cy="135.4" r="2.0" fill="#256a4a" />
+        <circle cx="426.0" cy="135.4" r="2.0" fill="#256a4a" />
+        <circle cx="450.0" cy="135.4" r="2.0" fill="#256a4a" />
+        <circle cx="474.0" cy="135.4" r="2.0" fill="#256a4a" />
+        <circle cx="498.0" cy="135.4" r="2.0" fill="#256a4a" />
+        <circle cx="522.0" cy="135.4" r="2.0" fill="#256a4a" />
+        <circle cx="546.0" cy="135.4" r="2.0" fill="#256a4a" />
+        <circle cx="570.0" cy="135.4" r="2.0" fill="#256a4a" />
+        <circle cx="594.0" cy="135.4" r="2.0" fill="#256a4a" />
+        <circle cx="618.0" cy="135.4" r="2.0" fill="#256a4a" />
+        <circle cx="42.0" cy="142.5" r="2.0" fill="#256a4a" />
+        <circle cx="66.0" cy="142.5" r="2.0" fill="#256a4a" />
+        <circle cx="90.0" cy="142.5" r="2.0" fill="#256a4a" />
+        <circle cx="114.0" cy="142.5" r="2.0" fill="#256a4a" />
+        <circle cx="138.0" cy="142.5" r="5.0" fill="none" stroke="#8f241b" stroke-width="0.8" stroke-dasharray="1 1" />
+        <circle cx="138.0" cy="142.5" r="2.2" fill="#8f241b" />
+        <line x1="132.4" y1="142.5" x2="143.6" y2="142.5" stroke="#8f241b" stroke-width="0.4" />
+        <circle cx="162.0" cy="142.5" r="2.0" fill="#256a4a" />
+        <circle cx="186.0" cy="142.5" r="2.0" fill="#256a4a" />
+        <circle cx="210.0" cy="142.5" r="2.0" fill="#256a4a" />
+        <circle cx="234.0" cy="142.5" r="2.0" fill="#256a4a" />
+        <circle cx="258.0" cy="142.5" r="2.0" fill="#256a4a" />
+        <circle cx="282.0" cy="142.5" r="2.0" fill="#256a4a" />
+        <circle cx="306.0" cy="142.5" r="2.0" fill="#256a4a" />
+        <circle cx="330.0" cy="142.5" r="2.0" fill="#256a4a" />
+        <circle cx="354.0" cy="142.5" r="2.0" fill="#256a4a" />
+        <circle cx="378.0" cy="142.5" r="2.0" fill="#256a4a" />
+        <circle cx="402.0" cy="142.5" r="2.0" fill="#256a4a" />
+        <circle cx="426.0" cy="142.5" r="2.0" fill="#256a4a" />
+        <circle cx="450.0" cy="142.5" r="2.0" fill="#256a4a" />
+        <circle cx="474.0" cy="142.5" r="2.0" fill="#256a4a" />
+        <circle cx="498.0" cy="142.5" r="2.0" fill="#256a4a" />
+        <circle cx="522.0" cy="142.5" r="2.0" fill="#256a4a" />
+        <circle cx="546.0" cy="142.5" r="2.0" fill="#256a4a" />
+        <circle cx="570.0" cy="142.5" r="2.0" fill="#256a4a" />
+        <circle cx="594.0" cy="142.5" r="2.0" fill="#256a4a" />
+        <circle cx="618.0" cy="142.5" r="2.0" fill="#256a4a" />
+        <circle cx="42.0" cy="149.7" r="2.0" fill="#256a4a" />
+        <circle cx="66.0" cy="149.7" r="2.0" fill="#256a4a" />
+        <circle cx="90.0" cy="149.7" r="2.0" fill="#256a4a" />
+        <circle cx="114.0" cy="149.7" r="2.0" fill="#256a4a" />
+        <circle cx="138.0" cy="149.7" r="2.0" fill="#256a4a" />
+        <circle cx="162.0" cy="149.7" r="2.0" fill="#256a4a" />
+        <rect x="183.2" y="146.9" width="5.6" height="5.6" transform="rotate(45 186.0 149.7)" fill="none"
+          stroke="#9c6512" stroke-width="0.75" />
+        <circle cx="186.0" cy="149.7" r="1.3" fill="#9c6512" />
+        <circle cx="210.0" cy="149.7" r="2.0" fill="#256a4a" />
+        <circle cx="234.0" cy="149.7" r="2.0" fill="#256a4a" />
+        <circle cx="258.0" cy="149.7" r="2.0" fill="#256a4a" />
+        <circle cx="282.0" cy="149.7" r="2.0" fill="#256a4a" />
+        <circle cx="306.0" cy="149.7" r="2.0" fill="#256a4a" />
+        <circle cx="330.0" cy="149.7" r="2.0" fill="#256a4a" />
+        <circle cx="354.0" cy="149.7" r="2.0" fill="#256a4a" />
+        <circle cx="378.0" cy="149.7" r="2.0" fill="#256a4a" />
+        <circle cx="402.0" cy="149.7" r="2.0" fill="#256a4a" />
+        <circle cx="426.0" cy="149.7" r="2.0" fill="#256a4a" />
+        <circle cx="450.0" cy="149.7" r="2.0" fill="#256a4a" />
+        <circle cx="474.0" cy="149.7" r="2.0" fill="#256a4a" />
+        <circle cx="498.0" cy="149.7" r="2.0" fill="#256a4a" />
+        <circle cx="522.0" cy="149.7" r="2.0" fill="#256a4a" />
+        <circle cx="546.0" cy="149.7" r="2.0" fill="#256a4a" />
+        <circle cx="570.0" cy="149.7" r="2.0" fill="#256a4a" />
+        <circle cx="594.0" cy="149.7" r="2.0" fill="#256a4a" />
+        <circle cx="618.0" cy="149.7" r="2.0" fill="#256a4a" />
+        <circle cx="42.0" cy="156.8" r="2.0" fill="#256a4a" />
+        <circle cx="66.0" cy="156.8" r="2.0" fill="#256a4a" />
+        <circle cx="90.0" cy="156.8" r="2.0" fill="#256a4a" />
+        <circle cx="114.0" cy="156.8" r="2.0" fill="#256a4a" />
+        <circle cx="138.0" cy="156.8" r="2.0" fill="#256a4a" />
+        <circle cx="162.0" cy="156.8" r="2.0" fill="#256a4a" />
+        <circle cx="186.0" cy="156.8" r="2.0" fill="#256a4a" />
+        <circle cx="210.0" cy="156.8" r="2.0" fill="#256a4a" />
+        <rect x="231.2" y="154.0" width="5.6" height="5.6" transform="rotate(45 234.0 156.8)" fill="none"
+          stroke="#9c6512" stroke-width="0.75" />
+        <circle cx="234.0" cy="156.8" r="1.3" fill="#9c6512" />
+        <circle cx="258.0" cy="156.8" r="2.0" fill="#256a4a" />
+        <circle cx="282.0" cy="156.8" r="2.0" fill="#256a4a" />
+        <circle cx="306.0" cy="156.8" r="2.0" fill="#256a4a" />
+        <circle cx="330.0" cy="156.8" r="2.0" fill="#256a4a" />
+        <circle cx="354.0" cy="156.8" r="2.0" fill="#256a4a" />
+        <circle cx="378.0" cy="156.8" r="2.0" fill="#256a4a" />
+        <circle cx="402.0" cy="156.8" r="2.0" fill="#256a4a" />
+        <circle cx="426.0" cy="156.8" r="2.0" fill="#256a4a" />
+        <circle cx="450.0" cy="156.8" r="2.0" fill="#256a4a" />
+        <circle cx="474.0" cy="156.8" r="2.0" fill="#256a4a" />
+        <circle cx="498.0" cy="156.8" r="2.0" fill="#256a4a" />
+        <circle cx="522.0" cy="156.8" r="2.0" fill="#256a4a" />
+        <circle cx="546.0" cy="156.8" r="2.0" fill="#256a4a" />
+        <rect x="567.2" y="154.0" width="5.6" height="5.6" transform="rotate(45 570.0 156.8)" fill="none"
+          stroke="#9c6512" stroke-width="0.75" />
+        <circle cx="570.0" cy="156.8" r="1.3" fill="#9c6512" />
+        <rect x="591.2" y="154.0" width="5.6" height="5.6" transform="rotate(45 594.0 156.8)" fill="none"
+          stroke="#9c6512" stroke-width="0.75" />
+        <circle cx="594.0" cy="156.8" r="1.3" fill="#9c6512" />
+        <circle cx="618.0" cy="156.8" r="2.0" fill="#256a4a" />
+        <circle cx="42.0" cy="164.0" r="2.0" fill="#256a4a" />
+        <circle cx="66.0" cy="164.0" r="2.0" fill="#256a4a" />
+        <circle cx="90.0" cy="164.0" r="2.0" fill="#256a4a" />
+        <circle cx="114.0" cy="164.0" r="2.0" fill="#256a4a" />
+        <circle cx="138.0" cy="164.0" r="2.0" fill="#256a4a" />
+        <circle cx="162.0" cy="164.0" r="2.0" fill="#256a4a" />
+        <circle cx="186.0" cy="164.0" r="2.0" fill="#256a4a" />
+        <circle cx="210.0" cy="164.0" r="2.0" fill="#256a4a" />
+        <circle cx="234.0" cy="164.0" r="2.0" fill="#256a4a" />
+        <rect x="255.2" y="161.2" width="5.6" height="5.6" transform="rotate(45 258.0 164.0)" fill="none"
+          stroke="#9c6512" stroke-width="0.75" />
+        <circle cx="258.0" cy="164.0" r="1.3" fill="#9c6512" />
+        <circle cx="282.0" cy="164.0" r="2.0" fill="#256a4a" />
+        <circle cx="306.0" cy="164.0" r="2.0" fill="#256a4a" />
+        <rect x="327.2" y="161.2" width="5.6" height="5.6" transform="rotate(45 330.0 164.0)" fill="none"
+          stroke="#9c6512" stroke-width="0.75" />
+        <circle cx="330.0" cy="164.0" r="1.3" fill="#9c6512" />
+        <circle cx="354.0" cy="164.0" r="2.0" fill="#256a4a" />
+        <rect x="375.2" y="161.2" width="5.6" height="5.6" transform="rotate(45 378.0 164.0)" fill="none"
+          stroke="#9c6512" stroke-width="0.75" />
+        <circle cx="378.0" cy="164.0" r="1.3" fill="#9c6512" />
+        <rect x="399.2" y="161.2" width="5.6" height="5.6" transform="rotate(45 402.0 164.0)" fill="none"
+          stroke="#9c6512" stroke-width="0.75" />
+        <circle cx="402.0" cy="164.0" r="1.3" fill="#9c6512" />
+        <rect x="423.2" y="161.2" width="5.6" height="5.6" transform="rotate(45 426.0 164.0)" fill="none"
+          stroke="#9c6512" stroke-width="0.75" />
+        <circle cx="426.0" cy="164.0" r="1.3" fill="#9c6512" />
+        <circle cx="450.0" cy="164.0" r="2.0" fill="#256a4a" />
+        <circle cx="474.0" cy="164.0" r="2.0" fill="#256a4a" />
+        <rect x="495.2" y="161.2" width="5.6" height="5.6" transform="rotate(45 498.0 164.0)" fill="none"
+          stroke="#9c6512" stroke-width="0.75" />
+        <circle cx="498.0" cy="164.0" r="1.3" fill="#9c6512" />
+        <circle cx="522.0" cy="164.0" r="2.0" fill="#256a4a" />
+        <circle cx="546.0" cy="164.0" r="2.0" fill="#256a4a" />
+        <circle cx="570.0" cy="164.0" r="2.0" fill="#256a4a" />
+        <circle cx="594.0" cy="164.0" r="2.0" fill="#256a4a" />
+        <rect x="615.2" y="161.2" width="5.6" height="5.6" transform="rotate(45 618.0 164.0)" fill="none"
+          stroke="#9c6512" stroke-width="0.75" />
+        <circle cx="618.0" cy="164.0" r="1.3" fill="#9c6512" />
+        <line x1="12" y1="184" x2="648" y2="184" stroke="#c9d4ca" stroke-width="0.45" />
+
+        <g transform="translate(18, 198)">
+          <!-- PAGAR glyph -->
+          <circle cx="4" cy="-1.5" r="2.2" fill="#256a4a" />
+          <text x="11" y="1.2" font-family="'TeX Gyre Heros Cn', sans-serif" font-weight="700" font-size="6.4"
+            fill="#256a4a">452 PAGAR</text>
+          <text x="56" y="1.2" font-family="'Noto Sans Mono', monospace" font-size="5.4" fill="#55635b">(90,4 %)</text>
+
+          <!-- NO_PAGAR glyph -->
+          <circle cx="120" cy="-1.5" r="4.2" fill="none" stroke="#8f241b" stroke-width="0.75" stroke-dasharray="1 1" />
+          <circle cx="120" cy="-1.5" r="1.8" fill="#8f241b" />
+          <text x="129" y="1.2" font-family="'TeX Gyre Heros Cn', sans-serif" font-weight="700" font-size="6.4"
+            fill="#8f241b">11 NO_PAGAR</text>
+          <text x="180" y="1.2" font-family="'Noto Sans Mono', monospace" font-size="5.4" fill="#55635b">(2,2 %)</text>
+
+          <!-- ESCALAR glyph -->
+          <rect x="238" y="-3.8" width="4.6" height="4.6" transform="rotate(45 240.3 -1.5)" fill="none" stroke="#9c6512"
+            stroke-width="0.75" />
+          <circle cx="240.3" cy="-1.5" r="1.2" fill="#9c6512" />
+          <text x="249" y="1.2" font-family="'TeX Gyre Heros Cn', sans-serif" font-weight="700" font-size="6.4"
+            fill="#9c6512">37 ESCALAR</text>
+          <text x="298" y="1.2" font-family="'Noto Sans Mono', monospace" font-size="5.4" fill="#55635b">(7,4 %)</text>
+
+          <!-- FILTERS BAR -->
+          <text x="368" y="1.2" font-family="'Noto Sans Mono', monospace" font-size="5.2" fill="#4a3c7e"
+            letter-spacing="0.3">
+            TAMIZ: [G1 NIF] · [G2 IBAN] · [G3 FECHA] · [G4 IVA] · [G5 PO] · [G6 ERP]
+          </text>
+        </g>
+
+      </svg>
+    </div>
+
+    <div class="portada-balance">
+      <div class="portada-barra">
+        <span class="b-pagar" style="flex:452"></span>
+        <span class="b-nopagar" style="flex:11"></span>
+        <span class="b-escalar" style="flex:37"></span>
+      </div>
+
+      <div class="portada-tripartito">
+        <div>
+          <div class="cifra-fila"><span class="cifra">452</span><span class="pct">90,4 %</span></div>
+          <span class="v v-pagar">PAGAR</span>
+          <span class="euros">2.450.391,46 €</span>
+          <p class="glosa">Las seis reglas pasan limpiamente. Se abonan de forma desatendida sin riesgo operativo.</p>
+        </div>
+        <div>
+          <div class="cifra-fila"><span class="cifra">11</span><span class="pct">2,2 %</span></div>
+          <span class="v v-nopagar">NO_PAGAR</span>
+          <span class="euros">19.184,92 €</span>
+          <p class="glosa">Duplicidad probada frente al ERP o dentro del lote. Capital protegido de inmediato.</p>
+        </div>
+        <div>
+          <div class="cifra-fila"><span class="cifra">37</span><span class="pct">7,4 %</span></div>
+          <span class="v v-escalar">ESCALAR</span>
+          <span class="euros">144.119,95 €</span>
+          <p class="glosa">Discrepancias en IBAN, NIF, fecha o pedido. Expediente aislado con el dato que no cuadra ya
+            señalado.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="portada-pie">
+      <div class="telemetria">
+        <span><b>500</b> facturas auditadas</span>
+        <span><b>2,06 s</b> tiempo total</span>
+        <span><b>0,00 $</b> coste en LLMs</span>
+        <span><b>1</b> portátil monoproceso</span>
+      </div>
+      <span class="colofon">Elequipo · albertitos_plan · 11 páginas de especificación</span>
+    </div>
+  </section>
+
+  <!-- ==================== 2 · EL TRABAJO DE ALBERTO ==================== -->
+  <section class="hoja">
+    <div class="cabecera"><span><b>Otrebla</b> · albertitos_plan</span><span>1 · El trabajo de Alberto</span>
+    </div>
+
+    <div class="cuerpo">
+      <div class="col ancho-d">
+        <h2><span class="num">1</span>Alberto contra las facturas</h2>
+        <p class="entrada">El trabajo de Alberto es aprobar los pagos. Dicho así, parece darle a un botón.
+          Ojalá. Por cada factura tiene que abrir el PDF, encontrar el pedido en un Excel
+          de catorce hojas, comprobar el NIF y el IBAN del proveedor, sumar base e IVA
+          y entrar en un ERP del 2009 que sigue vivo porque nadie se atreve a cambiarlo,
+          solo para comprobar si ya está pagada. Con una factura es un trabajo tedioso. Con miles,
+          Alberto empieza a sospechar que cuando su padre le dijo que estudiase algo
+          "con salidas", se refería a salidas de emergencia.</p>
+        <p>Por suerte, nuestro sistema se encarga del trabajo pesado.
+          Alberto sigue teniendo la última palabra, pero ya no son palabrotas.
+          Así funciona:</p>
+
+        <div class="veredictos">
+          <div>
+            <span class="cifra">452</span>
+            <span class="v v-pagar">PAGAR · 90,4 %</span>
+            <span class="euros">2.450.391,46 €</span>
+            <span class="rotulo">Las seis reglas pasan. Se paga sin que nadie las mire.</span>
+          </div>
+          <div>
+            <span class="cifra">11</span>
+            <span class="v v-nopagar">NO_PAGAR · 2,2 %</span>
+            <span class="euros">19.184,92 €</span>
+            <span class="rotulo">Pago duplicado demostrado. No es una duda: es un no.</span>
+          </div>
+          <div>
+            <span class="cifra">37</span>
+            <span class="v v-escalar">ESCALAR · 7,4 %</span>
+            <span class="euros">144.119,95 €</span>
+            <span class="rotulo">Hace falta una persona o un dato corregido.</span>
+          </div>
+        </div>
+      </div>
+      <div class="col ancho-d">
+        <h3>Lo que el sistema evita<span class="ref">outcomes.jsonl</span></h3>
+        <p>Los once <span class="v v-nopagar">NO_PAGAR</span> son dinero concreto. Nueve son facturas
+          cuyo asiento en el ERP ya está en <code>PAGADA</code>: pagarlas sería pagar dos veces. Los
+          otros dos son el mismo pedido (<span class="id">PO-2026-0492</span>) facturado dos veces
+          dentro del propio lote, algo que sólo se ve mirando el lote entero y no factura a factura.</p>
+      </div>
+      <div class="col ancho-d">
+        <h3>Por qué escalan las 37</h3>
+        <p>Quince traen un IBAN distinto del registrado: cambio de banco o fraude, 40.063,85 € en
+          juego. Trece facturan un total que no coincide con el pedido ni con el ERP: 69.486,40 €.
+          Seis vienen de un NIF que no está en el maestro de proveedores: 24.623,50 €. Tres tienen una
+          fecha de emisión ilegible o imposible: 9.946,20 €.</p>
+        <p>El motivo visible es el primero por precedencia, pero el expediente guarda todos los
+          hallazgos. La factura de la página 5 arrastra tres.</p>
+      </div>
+      <div class="col ancho-d">
+        <h3>El formato que pide el problema</h3>
+        <p>El trabajo llega por lotes: una carpeta de PDFs, de golpe. Así que el producto es un
+          <strong>proceso por lotes con una sola orden</strong>: eso es lo que se audita, se reejecuta
+          y se mide. Encima hay una <strong>consola de revisión</strong>, no para lanzar el trabajo
+          sino para cerrar las 37 excepciones con el PDF al lado de la regla que falló. Quinientas
+          facturas no necesitan una pantalla; treinta y siete sí.
+        </p>
+      </div>
+    </div>
+
+    <div class="pie"><span>Elequipo · albertitos_plan.pdf</span><span class="folio">2</span></div>
+  </section>
+
+  <!-- ==================== 3 · ARQUITECTURA ==================== -->
+  <section class="hoja">
+    <div class="cabecera"><span><b>Otrebla</b> · albertitos_plan</span><span>2 · Arquitectura</span></div>
+
+    <div class="cuerpo">
+      <div class="col ancho-d">
+        <h2><span class="num">2</span>Arquitectura<span class="ref">models.py</span></h2>
+        <p class="entrada">Leer un documento es un problema probabilístico; decidir un pago no lo es. Separamos las dos
+          cosas con un contrato de datos
+          en medio, y sólo el lado izquierdo tiene permiso para equivocarse.</p>
+      </div>
+      <div class="col ancho-d">
+        <div class="costura-wrap">
+          <svg viewBox="0 0 680 180" width="100%" height="auto" class="costura-svg" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <marker id="seam-arrow" viewBox="0 0 6 6" refX="5" refY="3" markerWidth="4" markerHeight="4"
+                orient="auto">
+                <path d="M 0 1 L 5 3 L 0 5 z" fill="#4a3c7e" />
+              </marker>
+              <linearGradient id="prob-stream" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#256a4a" stop-opacity="0.04" />
+                <stop offset="100%" stop-color="#4a3c7e" stop-opacity="0.10" />
+              </linearGradient>
+            </defs>
+
+            <!-- Outer Architectural Bounding Frame -->
+            <rect x="2" y="2" width="676" height="176" fill="#ffffff" stroke="#17211d" stroke-width="0.8" />
+            <rect x="5" y="5" width="670" height="170" fill="none" stroke="#eef2ee" stroke-width="0.4" />
+
+            <!-- Registration Crosshairs (+) -->
+            <g stroke="#4a3c7e" stroke-width="0.55">
+              <line x1="2" y1="8" x2="12" y2="8" />
+              <line x1="8" y1="2" x2="8" y2="12" />
+              <line x1="668" y1="8" x2="678" y2="8" />
+              <line x1="672" y1="2" x2="672" y2="12" />
+              <line x1="2" y1="172" x2="12" y2="172" />
+              <line x1="8" y1="168" x2="8" y2="178" />
+              <line x1="668" y1="172" x2="678" y2="172" />
+              <line x1="672" y1="168" x2="672" y2="178" />
+            </g>
+
+            <!-- Top Reference Header -->
+            <text x="16" y="16.5" font-family="'TeX Gyre Heros Cn', sans-serif" font-weight="700" font-size="7"
+              fill="#17211d" letter-spacing="0.06em">FIG. 2 · LA COSTURA</text>
+            <text x="340" y="16.2" font-family="'Noto Sans Mono', monospace" font-size="6" fill="#4a3c7e"
+              text-anchor="middle" letter-spacing="0.08em">CORTAFUEGOS CONTRACTUAL · ADR-0001</text>
+            <text x="664" y="16.2" font-family="'Noto Sans Mono', monospace" font-size="5.8" fill="#55635b"
+              text-anchor="end">models.py ↔ rules_engine.py</text>
+            <line x1="6" y1="23" x2="674" y2="23" stroke="#c9d4ca" stroke-width="0.5" />
+
+            <!-- ==================== LEFT HEMISPHERE: PROBABILÍSTICO ==================== -->
+            <g transform="translate(20, 26)">
+              <!-- Section Labels -->
+              <text x="0" y="15" font-family="'TeX Gyre Heros Cn', sans-serif" font-weight="700" font-size="7.2"
+                fill="#55635b" letter-spacing="0.12em">LADO PROBABILÍSTICO</text>
+              <text x="0" y="32" font-family="'TeX Gyre Heros Cn', sans-serif" font-weight="700" font-size="15"
+                fill="#17211d">Extracción</text>
+              <text x="0" y="44" font-family="'Noto Sans Mono', monospace" font-size="6.2" fill="#8f241b">único espacio
+                con permiso para fallar</text>
+
+              <!-- Visual Flux Streams -->
+              <!-- Digital stream -->
+              <text x="0" y="66" font-family="'TeX Gyre Heros Cn', sans-serif" font-weight="700" font-size="8.2"
+                fill="#256a4a">471 digitales</text>
+              <text x="0" y="75" font-family="'Noto Sans Mono', monospace" font-size="5.8" fill="#55635b">PyMuPDF +
+                regex · 0,00 $</text>
+              <path d="M 105 68 C 170 68, 210 95, 255 95" fill="none" stroke="#256a4a" stroke-width="1.6"
+                stroke-dasharray="4 2" />
+              <circle cx="105" cy="68" r="3" fill="#256a4a" />
+
+              <!-- Scanned stream -->
+              <text x="0" y="112" font-family="'TeX Gyre Heros Cn', sans-serif" font-weight="700" font-size="8.2"
+                fill="#9c6512">29 escaneados</text>
+              <text x="0" y="121" font-family="'Noto Sans Mono', monospace" font-size="5.8" fill="#55635b">Vision LLM +
+                caché SHA-256</text>
+              <path d="M 105 114 C 170 114, 210 95, 255 95" fill="none" stroke="#9c6512" stroke-width="1.6"
+                stroke-dasharray="3 2" />
+              <circle cx="105" cy="114" r="3" fill="#9c6512" />
+
+              <!-- Converged arrow into the Seam -->
+              <line x1="255" y1="95" x2="265" y2="95" stroke="#4a3c7e" stroke-width="1.6"
+                marker-end="url(#seam-arrow)" />
+            </g>
+
+            <!-- ==================== CENTRAL SEAM: LA COSTURA ==================== -->
+            <g transform="translate(340, 24)">
+              <!-- Seam Panel Background -->
+              <rect x="-44" y="0" width="88" height="151" fill="#eef2ec" stroke="#4a3c7e" stroke-width="0.8" />
+
+              <!-- Top Label (clean, without any vertical line cutting through it) -->
+              <text x="0" y="14" font-family="'TeX Gyre Heros Cn', sans-serif" font-weight="700" font-size="6.4"
+                fill="#4a3c7e" text-anchor="middle" letter-spacing="0.14em">LA COSTURA</text>
+              <text x="0" y="23" font-family="'Noto Sans Mono', monospace" font-size="5.2" fill="#55635b"
+                text-anchor="middle">cortafuegos</text>
+
+              <!-- Central Monolith: InvoiceData -->
+              <rect x="-38" y="32" width="76" height="28" rx="2" fill="#ffffff" stroke="#4a3c7e" stroke-width="1.2" />
+              <text x="0" y="47" font-family="'Noto Sans Mono', monospace" font-weight="700" font-size="9.5"
+                fill="#4a3c7e" text-anchor="middle">InvoiceData</text>
+              <text x="0" y="56" font-family="'TeX Gyre Heros Cn', sans-serif" font-weight="700" font-size="5.4"
+                fill="#55635b" text-anchor="middle" letter-spacing="0.08em">7 CAMPOS NORMALIZADOS</text>
+
+              <!-- Suture Line: starts ONLY from the bottom of InvoiceData downwards (no line above) -->
+              <line x1="0" y1="60" x2="0" y2="146" stroke="#4a3c7e" stroke-width="1.4" />
+
+              <!-- Schema Fields Listed Cleanly with Ticks -->
+              <g transform="translate(0, 68)" font-family="'Noto Sans Mono', monospace" font-size="5.6" fill="#17211d">
+                <!-- 1 nif -->
+                <line x1="-32" y1="7" x2="32" y2="7" stroke="#4a3c7e" stroke-width="0.5" stroke-dasharray="1 2" />
+                <circle cx="0" cy="7" r="1.5" fill="#4a3c7e" />
+                <text x="-36" y="9.5" text-anchor="end" fill="#4a3c7e">1 nif</text>
+
+                <!-- 2 iban -->
+                <line x1="-32" y1="18" x2="32" y2="18" stroke="#4a3c7e" stroke-width="0.5" stroke-dasharray="1 2" />
+                <circle cx="0" cy="18" r="1.5" fill="#4a3c7e" />
+                <text x="36" y="20.5" text-anchor="start" fill="#4a3c7e">2 iban</text>
+
+                <!-- 3 factura -->
+                <line x1="-32" y1="29" x2="32" y2="29" stroke="#4a3c7e" stroke-width="0.5" stroke-dasharray="1 2" />
+                <circle cx="0" cy="29" r="1.5" fill="#4a3c7e" />
+                <text x="-36" y="31.5" text-anchor="end" fill="#4a3c7e">3 num</text>
+
+                <!-- 4 fecha -->
+                <line x1="-32" y1="40" x2="32" y2="40" stroke="#4a3c7e" stroke-width="0.5" stroke-dasharray="1 2" />
+                <circle cx="0" cy="40" r="1.5" fill="#4a3c7e" />
+                <text x="36" y="42.5" text-anchor="start" fill="#4a3c7e">4 fecha</text>
+
+                <!-- 5 base -->
+                <line x1="-32" y1="51" x2="32" y2="51" stroke="#4a3c7e" stroke-width="0.5" stroke-dasharray="1 2" />
+                <circle cx="0" cy="51" r="1.5" fill="#4a3c7e" />
+                <text x="-36" y="53.5" text-anchor="end" fill="#4a3c7e">5 base</text>
+
+                <!-- 6 iva -->
+                <line x1="-32" y1="62" x2="32" y2="62" stroke="#4a3c7e" stroke-width="0.5" stroke-dasharray="1 2" />
+                <circle cx="0" cy="62" r="1.5" fill="#4a3c7e" />
+                <text x="36" y="64.5" text-anchor="start" fill="#4a3c7e">6 iva</text>
+
+                <!-- 7 total -->
+                <line x1="-32" y1="73" x2="32" y2="73" stroke="#4a3c7e" stroke-width="0.5" stroke-dasharray="1 2" />
+                <circle cx="0" cy="73" r="1.5" fill="#4a3c7e" />
+                <text x="0" y="79.5" text-anchor="middle" fill="#4a3c7e">7 total (±0,01 €)</text>
+              </g>
+            </g>
+
+            <!-- ==================== RIGHT HEMISPHERE: DETERMINISTA ==================== -->
+            <g transform="translate(398, 26)">
+              <!-- Section Labels -->
+              <text x="12" y="15" font-family="'TeX Gyre Heros Cn', sans-serif" font-weight="700" font-size="7.2"
+                fill="#256a4a" letter-spacing="0.12em">LADO DETERMINISTA</text>
+              <text x="12" y="32" font-family="'TeX Gyre Heros Cn', sans-serif" font-weight="700" font-size="15"
+                fill="#17211d">Decisión</text>
+              <text x="12" y="44" font-family="'Noto Sans Mono', monospace" font-size="6.2" fill="#256a4a">función pura
+                · norma v3 · 0 % alucinación</text>
+
+              <!-- 6 Gates Sieve Pipeline -->
+              <g transform="translate(12, 70)">
+                <!-- Main pipeline backbone line -->
+                <line x1="-12" y1="25" x2="152" y2="25" stroke="#17211d" stroke-width="1.6" />
+
+                <!-- Gate 1: NIF -->
+                <circle cx="16" cy="25" r="7" fill="#ffffff" stroke="#4a3c7e" stroke-width="1.3" />
+                <text x="16" y="27.8" font-family="'Noto Sans Mono', monospace" font-size="6.6" font-weight="700"
+                  fill="#4a3c7e" text-anchor="middle">1</text>
+                <text x="16" y="42" font-family="'Noto Sans Mono', monospace" font-size="5.2" fill="#55635b"
+                  text-anchor="middle">NIF</text>
+
+                <!-- Gate 2: IBAN -->
+                <circle cx="42" cy="25" r="7" fill="#ffffff" stroke="#4a3c7e" stroke-width="1.3" />
+                <text x="42" y="27.8" font-family="'Noto Sans Mono', monospace" font-size="6.6" font-weight="700"
+                  fill="#4a3c7e" text-anchor="middle">2</text>
+                <text x="42" y="42" font-family="'Noto Sans Mono', monospace" font-size="5.2" fill="#55635b"
+                  text-anchor="middle">IBAN</text>
+
+                <!-- Gate 3: FECHA -->
+                <circle cx="68" cy="25" r="7" fill="#ffffff" stroke="#4a3c7e" stroke-width="1.3" />
+                <text x="68" y="27.8" font-family="'Noto Sans Mono', monospace" font-size="6.6" font-weight="700"
+                  fill="#4a3c7e" text-anchor="middle">3</text>
+                <text x="68" y="42" font-family="'Noto Sans Mono', monospace" font-size="5.2" fill="#55635b"
+                  text-anchor="middle">FECHA</text>
+
+                <!-- Gate 4: IVA -->
+                <circle cx="94" cy="25" r="7" fill="#ffffff" stroke="#4a3c7e" stroke-width="1.3" />
+                <text x="94" y="27.8" font-family="'Noto Sans Mono', monospace" font-size="6.6" font-weight="700"
+                  fill="#4a3c7e" text-anchor="middle">4</text>
+                <text x="94" y="42" font-family="'Noto Sans Mono', monospace" font-size="5.2" fill="#55635b"
+                  text-anchor="middle">IVA</text>
+
+                <!-- Gate 5: PO -->
+                <circle cx="120" cy="25" r="7" fill="#ffffff" stroke="#4a3c7e" stroke-width="1.3" />
+                <text x="120" y="27.8" font-family="'Noto Sans Mono', monospace" font-size="6.6" font-weight="700"
+                  fill="#4a3c7e" text-anchor="middle">5</text>
+                <text x="120" y="42" font-family="'Noto Sans Mono', monospace" font-size="5.2" fill="#55635b"
+                  text-anchor="middle">PO</text>
+
+                <!-- Gate 6: ERP -->
+                <circle cx="146" cy="25" r="7" fill="#ffffff" stroke="#4a3c7e" stroke-width="1.3" />
+                <text x="146" y="27.8" font-family="'Noto Sans Mono', monospace" font-size="6.6" font-weight="700"
+                  fill="#4a3c7e" text-anchor="middle">6</text>
+                <text x="146" y="42" font-family="'Noto Sans Mono', monospace" font-size="5.2" fill="#55635b"
+                  text-anchor="middle">ERP</text>
+
+                <!-- 3 Verdict Outlets -->
+                <!-- PAGAR (top) -->
+                <path d="M 152 25 C 172 25, 180 5, 194 5" fill="none" stroke="#256a4a" stroke-width="1.6" />
+                <circle cx="198" cy="5" r="3.5" fill="#256a4a" />
+                <text x="206" y="7.5" font-family="'TeX Gyre Heros Cn', sans-serif" font-weight="700" font-size="8.8"
+                  fill="#256a4a">452 PAGAR</text>
+                <text x="206" y="15.5" font-family="'Noto Sans Mono', monospace" font-size="5.8" fill="#55635b">90,4
+                  %</text>
+
+                <!-- NO_PAGAR (middle) -->
+                <line x1="152" y1="25" x2="194" y2="25" stroke="#8f241b" stroke-width="1.6" />
+                <circle cx="198" cy="25" r="3.5" fill="#8f241b" />
+                <text x="206" y="27.5" font-family="'TeX Gyre Heros Cn', sans-serif" font-weight="700" font-size="8.8"
+                  fill="#8f241b">11 NO_PAGAR</text>
+                <text x="206" y="35.5" font-family="'Noto Sans Mono', monospace" font-size="5.8" fill="#55635b">2,2
+                  %</text>
+
+                <!-- ESCALAR (bottom) -->
+                <path d="M 152 25 C 172 25, 180 45, 194 45" fill="none" stroke="#9c6512" stroke-width="1.6" />
+                <circle cx="198" cy="45" r="3.5" fill="#9c6512" />
+                <text x="206" y="47.5" font-family="'TeX Gyre Heros Cn', sans-serif" font-weight="700" font-size="8.8"
+                  fill="#9c6512">37 ESCALAR</text>
+                <text x="206" y="55.5" font-family="'Noto Sans Mono', monospace" font-size="5.8" fill="#55635b">7,4
+                  %</text>
+              </g>
+            </g>
+          </svg>
+        </div>
+        <p>Con esto, la pregunta que importa cuando algo sale mal es: ¿leímos mal el
+          documento o aplicamos mal la norma? Y es que son dos capas con dos arreglos distintos</p>
+      </div>
+      <div class="col ancho-d">
+        <h3>2.1 Las etapas</h3>
+        <ol class="etapas">
+          <li>
+            <span class="e">0</span>
+            <span class="nombre">Datos de referencia<span class="fuente">business_data<br>erp_snapshot</span></span>
+            <span class="que">Limpia el Excel (11 proveedores, 516 pedidos) y baja el ERP entero una
+              vez: 516 asientos en 26 páginas. <span class="deja">DEJA</span>la foto del ERP en SQLite,
+              con fecha y reintentos. Sin foto, el lote no arranca.</span>
+          </li>
+          <li>
+            <span class="e">1</span>
+            <span class="nombre">Ingesta<span class="fuente">pipeline._collect_files</span></span>
+            <span class="que">Lista la carpeta y descarta repetidos por nombre y por hash del
+              contenido. <span class="deja">DEJA</span>la lista del lote con el SHA-256 de cada archivo.</span>
+          </li>
+          <li>
+            <span class="e">2</span>
+            <span class="nombre">Extracción<span class="fuente">HybridExtractor</span></span>
+            <span class="que">Texto incrustado si lo hay; visión si no; línea base si el extractor
+              revienta. <span class="deja">DEJA</span>los campos, el método, la latencia, el coste y el
+              fragmento de página del que sale cada campo.</span>
+          </li>
+          <li>
+            <span class="e">3</span>
+            <span class="nombre">Decisión<span class="fuente">rules_engine</span></span>
+            <span class="que">Aplica la norma versionada y busca pedidos repetidos en este lote y en
+              los anteriores. <span class="deja">DEJA</span>veredicto, motivo, todos los hallazgos, las
+              13 comprobaciones y su evidencia.</span>
+          </li>
+          <li>
+            <span class="e">4</span>
+            <span class="nombre">Estado y entregable<span class="fuente">state · deliverables</span></span>
+            <span class="que">Guarda la decisión vigente y la histórica. Escribe el JSONL en un
+              temporal y lo renombra: o está entero o no está.
+              <span class="deja">DEJA</span>tres tablas de estado y <code>outcomes.jsonl</code>.</span>
+          </li>
+          <li>
+            <span class="e">5</span>
+            <span class="nombre">Consola<span class="fuente">web/ · Next.js</span></span>
+            <span class="que">Cola de revisión, expediente de cada archivo y política editable.
+              <span class="deja">DEJA</span>nada propio: lee y escribe a través de la capa de Python.
+              Si se cae, el lote sigue funcionando solo.</span>
+          </li>
+        </ol>
+        <p>Las etapas 0 a 4 son una orden de terminal y dos ficheros SQLite. Ni cola de mensajes ni
+          servicio encendido: quinientos archivos no lo necesitan. Lo que sí necesitan es poder
+          repetirse y explicarse. Lo que cambiaría con otro volumen está en las páginas 6 y 7.</p>
+      </div>
+    </div>
+
+    <div class="pie"><span>Elequipo · albertitos_plan.pdf</span><span class="folio">3</span></div>
+  </section>
+
+  <!-- ==================== 4 · ESTADO, REPARTO Y NORMA ==================== -->
+  <section class="hoja">
+    <div class="cabecera"><span><b>Otrebla</b> · albertitos_plan</span><span>2.2 · Estado y reparto · 2.3 · La
+        norma v3</span></div>
+
+    <div class="cuerpo">
+      <div class="col ancho-d">
+        <h2><span class="num">2.2</span>Estado y reparto del trabajo<span class="ref">state.py</span></h2>
+        <p class="entrada">El estado vive en SQLite. El JSONL es el formato de entrega, no la
+          verdad. Esa distinción permite reprocesar sin duplicar.</p>
+        <p>Bastan tres tablas. <code>decisions</code> guarda la decisión vigente de cada archivo,
+          una por <code>file_id</code>: reprocesar la sustituye, nunca la duplica.
+          <code>decision_history</code> guarda todas las anteriores, inmutables y con su lote, para
+          ver qué cambió al cambiar la norma o el ERP. <code>runs</code> guarda cada ejecución:
+          recuentos, segundos, archivos por segundo y coste. La foto del ERP vive al lado, con la
+          fecha de cada descarga.
+        </p>
+      </div>
+      <div class="col ancho-d">
+        <div class="reparto">
+          <div>
+            <h4>Código determinista</h4>
+            <span class="cuota">500 de 500 decisiones</span>
+            <p>Lee los 471 PDFs con texto y decide las 500 facturas.</p>
+            <p>No interpreta imágenes. Si el PDF no trae texto, no lo intenta.</p>
+          </div>
+          <div>
+            <h4>Modelo de visión</h4>
+            <span class="cuota">29 de 500 extracciones</span>
+            <p>Convierte 29 escaneos en campos, validados contra el esquema.</p>
+            <p>No decide. Su salida entra en las mismas reglas que todo lo demás.</p>
+          </div>
+          <div>
+            <h4>Persona</h4>
+            <span class="cuota">37 de 500 revisiones</span>
+            <p>Resuelve los escalados, corrige campos con una anulación firmada y ajusta la política.</p>
+            <p>No mira los 452 que cuadran. Ese es el trabajo que se ahorra.</p>
+          </div>
+        </div>
+        <p>Las correcciones humanas se declaran en un fichero atado al SHA-256 exacto del PDF. Si el
+          documento cambia, la corrección caduca sola y el archivo vuelve a escalar. En el lote 1 hay
+          una (<span class="id">scan_021.pdf</span>), anotada como <code>+human-override</code>.</p>
+      </div>
+      <div class="col ancho-d">
+        <h2 class="segunda"><span class="num">2.3</span>La norma v3, regla a regla<span
+            class="ref">rules_engine.py</span></h2>
+        <p class="entrada">La norma vive en código como seis reglas y trece comprobaciones. Cada
+          comprobación tiene un código, y cada código un veredicto por defecto que Alberto puede
+          cambiar sin que nadie toque el motor.</p>
+        <table class="compacta">
+          <thead>
+            <tr>
+              <th class="e"></th>
+              <th style="width:32mm">Regla</th>
+              <th>Contra qué se compara</th>
+              <th style="width:48mm">Códigos y veredicto por defecto</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="e">0</td>
+              <td><strong>Extracción completa</strong></td>
+              <td>Los campos necesarios para aplicar las reglas.</td>
+              <td><code>incomplete_extraction</code> <span class="v v-escalar">ESCALAR</span></td>
+            </tr>
+            <tr class="banda">
+              <td class="e">1</td>
+              <td><strong>Proveedor e IBAN</strong></td>
+              <td>Maestro de proveedores del Excel, por NIF.</td>
+              <td><code>supplier_not_in_master</code>, <code>iban_mismatch</code> <span
+                  class="v v-escalar">ESCALAR</span></td>
+            </tr>
+            <tr>
+              <td class="e">2</td>
+              <td><strong>Pedido e importe</strong></td>
+              <td>Hoja de pedidos: que exista, que sea de ese proveedor y que el total cuadre.</td>
+              <td><code>pedido_not_found</code>, <code>pedido_supplier_mismatch</code>, <code>amount_mismatch</code>
+                <span class="v v-escalar">ESCALAR</span>
+              </td>
+            </tr>
+            <tr class="banda">
+              <td class="e">3</td>
+              <td><strong>Aritmética del IVA</strong></td>
+              <td>La propia factura: base más IVA, y base por tipo.</td>
+              <td><code>total_not_base_plus_iva</code>, <code>iva_miscalculated</code> <span
+                  class="v v-escalar">ESCALAR</span></td>
+            </tr>
+            <tr>
+              <td class="e">4</td>
+              <td><strong>Fecha</strong></td>
+              <td>La fecha de referencia de la ejecución.</td>
+              <td><code>invalid_date</code>, <code>future_date</code> <span class="v v-escalar">ESCALAR</span></td>
+            </tr>
+            <tr class="banda">
+              <td class="e">5</td>
+              <td><strong>ERP y duplicados</strong></td>
+              <td>El asiento del ERP, el resto del lote y los lotes anteriores.</td>
+              <td><code>already_paid</code>, <code>duplicate_pedido</code> <span class="v v-nopagar">NO_PAGAR</span>; el
+                resto <span class="v v-escalar">ESCALAR</span></td>
+            </tr>
+          </tbody>
+        </table>
+        <p>La tolerancia de importes es de un céntimo. Cuando varios hallazgos apuntan a sitios
+          distintos, la precedencia es <span class="v v-escalar">ESCALAR</span> &gt;
+          <span class="v v-nopagar">NO_PAGAR</span> &gt; <span class="v v-pagar">PAGAR</span>. El mapa
+          de los 18 códigos a veredictos es un fichero de política editable desde la consola: si
+          Alberto decide que un IBAN distinto es rechazo y no revisión, cambia configuración, no
+          código, y el cambio queda registrado en la ejecución. Los códigos que no se disparan en este
+          lote están cubiertos por las pruebas del motor.
+        </p>
+      </div>
+    </div>
+
+    <div class="pie"><span>Elequipo · albertitos_plan.pdf</span><span class="folio">4</span></div>
+  </section>
+
+  <!-- ==================== 5 · SEGUIR UNA DECISIÓN ==================== -->
+  <section class="hoja">
+    <div class="cabecera"><span><b>Otrebla</b> · albertitos_plan</span><span>2.4 · Seguir una decisión</span>
+    </div>
+
+    <div class="cuerpo">
+      <div class="col ancho-d">
+        <h2><span class="num">2.4</span>Seguir una decisión</h2>
+        <p class="entrada">Esto es lo que el sistema guarda de
+          <span class="id">2026-0811-B_catering.pdf</span>: una factura de Catering Hermanos Pico por
+          2.920,10 € contra un pedido de 2.795,10 €, decidida en 4,85 ms. No es un resumen escrito
+          para este documento: son las trece comprobaciones tal como salen del motor, cada una con el
+          valor observado, el esperado y la fuente del esperado.
+        </p>
+        <table class="traza">
+          <thead>
+            <tr>
+              <th class="regla">R</th>
+              <th style="width:28mm">Comprobación</th>
+              <th class="est">Resultado</th>
+              <th style="width:36mm">Observado</th>
+              <th>Esperado, y de dónde sale</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="regla">0</td>
+              <td>Extracción completa</td>
+              <td class="est ok">pasa</td>
+              <td class="cmp">texto incrustado</td>
+              <td class="cmp">campos suficientes<span class="src">Factura</span></td>
+            </tr>
+            <tr>
+              <td class="regla">1</td>
+              <td>Proveedor registrado</td>
+              <td class="est ok">pasa</td>
+              <td class="cmp">B96233419<span class="src">Factura</span></td>
+              <td class="cmp">B96233419<span class="src">Excel · Proveedores · P005</span></td>
+            </tr>
+            <tr>
+              <td class="regla">1</td>
+              <td>IBAN del proveedor</td>
+              <td class="est ok">pasa</td>
+              <td class="cmp">ES1800815290070001234567<span class="src">Factura</span></td>
+              <td class="cmp">ES1800815290070001234567<span class="src">Excel · Proveedores · P005</span></td>
+            </tr>
+            <tr>
+              <td class="regla">2</td>
+              <td>Pedido existente</td>
+              <td class="est ok">pasa</td>
+              <td class="cmp">PO-2026-0707<span class="src">Factura</span></td>
+              <td class="cmp">PO-2026-0707<span class="src">Excel · Pedidos_2026</span></td>
+            </tr>
+            <tr>
+              <td class="regla">2</td>
+              <td>Proveedor del pedido</td>
+              <td class="est ok">pasa</td>
+              <td class="cmp">P005<span class="src">Factura y maestro</span></td>
+              <td class="cmp">P005<span class="src">Excel · Pedidos_2026 · PO-2026-0707</span></td>
+            </tr>
+            <tr class="falla">
+              <td class="regla">2</td>
+              <td>Total frente al pedido</td>
+              <td class="est no">no pasa</td>
+              <td class="cmp">2.920,10 €<span class="src">Factura</span></td>
+              <td class="cmp">2.795,10 €<span class="src">Excel · Pedidos_2026 · PO-2026-0707</span></td>
+            </tr>
+            <tr class="falla">
+              <td class="regla">3</td>
+              <td>Base más IVA</td>
+              <td class="est no">no pasa</td>
+              <td class="cmp">2.920,10 €<span class="src">Factura</span></td>
+              <td class="cmp">2.795,10 €<span class="src">Cálculo: 2.310,00 + 485,10</span></td>
+            </tr>
+            <tr>
+              <td class="regla">3</td>
+              <td>Cálculo del IVA</td>
+              <td class="est ok">pasa</td>
+              <td class="cmp">485,10 €<span class="src">Factura</span></td>
+              <td class="cmp">485,1000 €<span class="src">Cálculo: 2.310,00 × 21 %</span></td>
+            </tr>
+            <tr>
+              <td class="regla">4</td>
+              <td>Fecha no futura</td>
+              <td class="est ok">pasa</td>
+              <td class="cmp">2026-05-26<span class="src">Factura</span></td>
+              <td class="cmp">≤ 2026-09-19<span class="src">Fecha de referencia de la ejecución</span></td>
+            </tr>
+            <tr>
+              <td class="regla">5</td>
+              <td>Asiento en el ERP</td>
+              <td class="est ok">pasa</td>
+              <td class="cmp">PO-2026-0707<span class="src">Factura</span></td>
+              <td class="cmp">PO-2026-0707<span class="src">ERP · AS-70006</span></td>
+            </tr>
+            <tr class="falla">
+              <td class="regla">5</td>
+              <td>Total frente al ERP</td>
+              <td class="est no">no pasa</td>
+              <td class="cmp">2.920,10 €<span class="src">Factura</span></td>
+              <td class="cmp">2.795,10 €<span class="src">ERP · AS-70006</span></td>
+            </tr>
+            <tr>
+              <td class="regla">5</td>
+              <td>Estado de pago</td>
+              <td class="est ok">pasa</td>
+              <td class="cmp">PENDIENTE<span class="src">ERP · AS-70006</span></td>
+              <td class="cmp">PENDIENTE<span class="src">Norma de pagos v3</span></td>
+            </tr>
+            <tr>
+              <td class="regla">5</td>
+              <td>Pedido único en el lote</td>
+              <td class="est ok">pasa</td>
+              <td class="cmp">1 aparición</td>
+              <td class="cmp">1<span class="src">Lote 1 y lotes anteriores</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="col ancho-d">
+        <h3>Y lo que acompaña al veredicto<span class="ref">decisions</span></h3>
+        <p>Junto a las trece filas queda el veredicto con su motivo principal
+          (<span class="v v-escalar">ESCALAR</span> · <code>amount_mismatch</code>), los tres
+          hallazgos completos, la evidencia (P005 · PO-2026-0707 · AS-70006 · PENDIENTE), cómo se leyó
+          el PDF (<code>embedded_text</code>, plantilla <code>narrative</code>), la norma aplicada
+          (<code>norma-v3</code>), la latencia (4,85 ms), el coste (0,00 $) y la hora de ejecución,
+          <code>2026-09-19T11:20:35Z</code>, con la foto del ERP de esa misma mañana.
+        </p>
+      </div>
+      <div class="col ancho-d">
+        <h3>Las señales en directo</h3>
+        <p>El proceso emite una línea JSON por suceso: <code>run_start</code>,
+          <code>extracted</code>, <code>decided</code>, <code>override_skipped</code>,
+          <code>data_error</code>, <code>data_warnings</code> y <code>run_done</code> con el resumen.
+          La consola consume ese mismo flujo: lo que Alberto ve en pantalla es lo que se guarda en la
+          base de datos. No hay dos caminos.
+        </p>
+        <p>El trabajo pendiente no es una métrica aparte: es la consulta
+          <code>result = 'ESCALAR'</code>. Hoy devuelve 37 filas y 144.119,95 €.
+        </p>
+      </div>
+    </div>
+
+    <div class="pie"><span>Elequipo · albertitos_plan.pdf</span><span class="folio">5</span></div>
+  </section>
+
+  <!-- ==================== 6 · ESCALA Y COSTE ==================== -->
+  <section class="hoja">
+    <div class="cabecera"><span><b>Otrebla</b> · albertitos_plan</span><span>2.5 · Escala y coste</span></div>
+
+    <div class="cuerpo">
+      <div class="col ancho-d">
+        <h2><span class="num">2.5</span>Escala y coste<span class="ref">runs</span></h2>
+        <p class="entrada">Esta página separa dos cosas: lo que medimos en una ejecución real y lo
+          que estimamos a partir de esas medidas. Lo segundo va marcado como estimación.</p>
+        <table class="compacta">
+          <thead>
+            <tr>
+              <th style="width:52mm">Medida</th>
+              <th class="n" style="width:24mm">Valor</th>
+              <th>De dónde sale</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Lote 1 completo, de carpeta a JSONL</td>
+              <td class="n">2,055 s</td>
+              <td>Columna <code>elapsed_s</code> de la ejecución.</td>
+            </tr>
+            <tr class="banda">
+              <td>Rendimiento</td>
+              <td class="n">243,3 arch./s</td>
+              <td>Columna <code>files_per_s</code>, con los 29 escaneos ya en caché.</td>
+            </tr>
+            <tr>
+              <td>Extracción por archivo con texto</td>
+              <td class="n">4,1 ms</td>
+              <td>Media de 500 filas; mínimo 0,83 ms, máximo 16,64 ms.</td>
+            </tr>
+            <tr class="banda">
+              <td>Extracción por visión, en frío</td>
+              <td class="n">5,74 s</td>
+              <td>Media de los 29 escaneos; mediana 5,22 s, rango de 4,36 a 8,60 s.</td>
+            </tr>
+            <tr>
+              <td>Descarga completa del ERP</td>
+              <td class="n">3,489 s</td>
+              <td>516 asientos, 26 páginas, 30 peticiones, 3 reintentos.</td>
+            </tr>
+            <tr class="banda">
+              <td>Coste en modelos de la ejecución</td>
+              <td class="n">0,00 $</td>
+              <td>471 archivos no llaman a ningún modelo; los 29 restantes salieron de caché.</td>
+            </tr>
+          </tbody>
+        </table>
+        <p>Todo en un portátil: Intel Core i5-12500H, 16 GB, Debian 13, Python 3.13, un solo
+          proceso.</p>
+      </div>
+      <div class="col ancho-d">
+        <h3>Coste por lote</h3>
+        <div class="formula">
+          coste_lote = n_escaneos_nuevos × precio_visión<br>
+          <b>471 digitales × 0 $ + 29 escaneos × 0,0003 $ ≈ 0,0087 $ por los 500 archivos</b><br>
+          precio_visión ≈ 0,0003 $/página (0,15 $/M tokens de entrada, 0,60 $/M de salida)
+        </div>
+        <p>El término que falta es el que importa: <strong>los documentos con texto no aparecen en la
+            fórmula</strong>, porque nunca llaman a un modelo. El coste no crece con el número de
+          facturas; crece con el número de <em>escaneos nuevos</em>. Y como la caché indexa por
+          contenido, reejecutar un lote entero cuesta cero.</p>
+      </div>
+      <div class="col ancho-d">
+        <h3>A 100.000 facturas</h3>
+        <p>Con la misma proporción de escaneos (5,8 %), <em>estimamos</em> 5.800 llamadas de visión
+          y unos 1,74 $ en modelos. A esa escala el coste dominante no es el modelo: es el tiempo.</p>
+        <p>Las 94.200 facturas con texto tardan unos 6,5 minutos en un solo proceso (94.200 ÷ 243).
+          Es trabajo por archivo sin estado compartido: con 8 procesos baja de un minuto. Los 5.800
+          escaneos son el cuello de botella real: 9,2 horas en serie, 35 minutos con 16 llamadas en
+          paralelo. El techo lo pone la cuota del proveedor, no la máquina. Decidir las 100.000 tarda
+          menos de un minuto: es una función pura en memoria contra dos índices.</p>
+        <p>Escalar este sistema no es escalar la decisión. Es administrar la cuota de visión y
+          repartir la extracción entre procesos. Las dos cosas viven aisladas en la etapa 2.</p>
+      </div>
+    </div>
+
+    <div class="pie"><span>Elequipo · albertitos_plan.pdf</span><span class="folio">6</span></div>
+  </section>
+
+  <!-- ==================== 7 · LO QUE AGUANTA ==================== -->
+  <section class="hoja">
+    <div class="cabecera"><span><b>Otrebla</b> · albertitos_plan</span><span>2.6 · Lo que aguanta y lo que
+        no</span></div>
+
+    <div class="cuerpo">
+      <div class="col ancho-d">
+        <h2><span class="num">2.6</span>Lo que aguanta y lo que no</h2>
+        <p class="entrada">Estos son los límites del diseño actual y lo que haríamos en cada caso.
+          Ninguno es una sorpresa: son el precio de elegir lo más pequeño que resolvía el problema.</p>
+        <ul class="definida">
+          <li><b>SQLite admite un solo escritor.</b> Aparece con más de un proceso escribiendo. La
+            capa de estado es un módulo aislado: se cambia por Postgres sin tocar reglas ni extractores.</li>
+          <li><b>El ERP tolera 10 peticiones/s y la sesión caduca a los 15 minutos o 300 usos.</b>
+            Ya lo esquivamos: una foto completa en 30 peticiones, y las 500 decisiones leen de SQLite.
+            Sin esa foto serían 500 llamadas y una sesión caducada a mitad del lote.</li>
+          <li><b>El Excel se carga entero en memoria.</b> Con 516 pedidos da igual. Con millones,
+            pasa a ser una tabla indexada del mismo almacén de estado.</li>
+          <li><b>La cuota del proveedor de visión es el techo del paralelismo.</b> Se reparte entre
+            varios proveedores, y la caché absorbe las reejecuciones.</li>
+        </ul>
+      </div>
+      <div class="col ancho-d">
+        <h3>Añadir un tipo de archivo nuevo</h3>
+        <p>El punto de extensión es el contrato <code>InvoiceData</code>: un extractor nuevo es una
+          función que devuelve ese objeto, y las reglas no se enteran. Ya existen tres caminos además
+          del PDF (XML de FacturaE y UBL, correos, y texto u hojas de cálculo), detrás de un
+          interruptor de política que hoy acepta sólo <code>.pdf</code>. Aceptar correos en producción
+          es activar ese interruptor y escribir las pruebas del extractor. Ni una línea de la lógica
+          de pago cambia. Eso es lo que compra la costura de la página 3.</p>
+      </div>
+      <div class="col ancho-d">
+        <h3>Idempotencia</h3>
+        <ul>
+          <li>La clave es el <code>file_id</code>: reprocesar sustituye la decisión, no añade otra.</li>
+          <li>La ingesta descarta repetidos por nombre y por hash; la visión se cachea por ese mismo hash.</li>
+          <li>Los pedidos de lotes anteriores se leen del historial: una factura repetida entre lotes se ve.</li>
+          <li>El JSONL se escribe en un temporal y se renombra: o está entero o no está.</li>
+        </ul>
+      </div>
+      <div class="col ancho-d">
+        <h3>Lo que cubren las pruebas<span class="ref">tests/ · 44 pruebas</span></h3>
+        <p>44 pruebas en 2,34 s cubren las ramas del motor, el aislamiento entre lotes, el contrato
+          del JSONL, las anulaciones atadas al hash, la degradación sin visión y el bloqueo de una
+          norma no implementada. El motor se prueba sin abrir un PDF.</p>
+        <p>La precisión de lectura se comprobó a mano sobre 45 documentos: 98,4 % de campos
+          correctos, 100 % en los 30 digitales y 95,2 % en los 15 escaneados. Los dos documentos con
+          algún campo mal son escaneos degradados a propósito, y los dos acabaron escalados. Ningún
+          error de lectura produjo un <span class="v v-pagar">PAGAR</span> indebido.</p>
+      </div>
+    </div>
+
+    <div class="pie"><span>Elequipo · albertitos_plan.pdf</span><span class="folio">7</span></div>
+  </section>
+
+  <!-- ==================== 8 · RESILIENCIA Y LOTE 2 ==================== -->
+  <section class="hoja">
+    <div class="cabecera"><span><b>Otrebla</b> · albertitos_plan</span><span>2.7 · Resiliencia y lote 2</span>
+    </div>
+
+    <div class="cuerpo">
+      <div class="col ancho-d">
+        <h2><span class="num">2.7</span>Resiliencia y recuperación</h2>
+        <p class="entrada">Ningún fallo puede convertirse en un pago. Cuando el sistema no sabe,
+          escala; cuando no puede, se para. Nunca rellena el hueco con algo plausible.</p>
+        <dl class="fallos">
+          <dt>El proveedor de visión no responde</dt>
+          <dd>Tres intentos con espera creciente (0, 1 y 2 s) y salto a los modelos alternativos.
+            Los 471 digitales y los escaneos en caché no se enteran. Al relanzar, sólo se reintentan
+            los escaneos sin resolver.</dd>
+
+          <dt>Caen todos los proveedores</dt>
+          <dd>La extracción se marca como no disponible y la regla 0 no pasa. Esos archivos salen
+            como <span class="v v-escalar">ESCALAR</span> y aparecen en la cola. El resto del lote se
+            decide con normalidad. Se corta la clave en directo y esto es lo que se ve.</dd>
+
+          <dt>El modelo devuelve algo que no es una factura</dt>
+          <dd>La salida se valida contra el esquema y se rechaza. Si el extractor revienta, cae a la
+            línea base y lo anota en el método. Nada contaminado entra en las reglas, y un archivo
+            malo no interrumpe el lote: se reintenta y, si insiste, escala.</dd>
+
+          <dt>El ERP falla como suele fallar</dt>
+          <dd><code>ORA-00600</code>: reintenta la misma llamada, hasta 6 veces. <code>401</code>:
+            vuelve a autenticarse. <code>429</code>: espera lo que diga la cabecera, y de salida no
+            pasamos de 8,3 peticiones/s sobre un techo de 10. Medido: 3 reintentos en 30 peticiones,
+            sin intervención.</dd>
+
+          <dt>El ERP no está</dt>
+          <dd>El lote no arranca. Queda la foto anterior con su fecha, pero decidir con una foto
+            vieja tiene que ser una elección, no un accidente.</dd>
+
+          <dt>Se interrumpe el proceso</dt>
+          <dd>Las decisiones ya guardadas y la caché de visión se conservan; el JSONL anterior queda
+            intacto porque se escribe aparte y se renombra al final. Se relanza y los hashes evitan
+            pagar dos veces por lo ya leído.</dd>
+
+          <dt>Se pide una norma que no existe</dt>
+          <dd>Error inmediato. No cae a la versión anterior: decidir con la norma equivocada es peor
+            que no decidir.</dd>
+        </dl>
+      </div>
+      <div class="col ancho-d">
+        <h3>Qué pasa cuando llega el lote 2</h3>
+        <p>El lote 2 no es una ejecución especial: es otro valor de <code>--batch</code>, con su
+          carpeta, su norma y su salida. Las 40 facturas nuevas se procesan solas; el lote 1 no se
+          toca. La norma v4 se aplica en su propio evaluador y la v3 sigue existiendo, así que el lote
+          1 continúa siendo reproducible. El ERP actualizado se baja como foto nueva, y el lote 2 se
+          niega a arrancar si esa foto no declara la actualización cargada. Si una factura repite un
+          pedido del lote 1, el historial la detecta y sale como <span class="v v-nopagar">NO_PAGAR</span>.
+          Y si Alberto cambia un dato de la Caja el domingo, se relanza el lote afectado y «qué cambió y
+          por qué» es una comparación entre dos filas del historial, no una reconstrucción.</p>
+        <div class="caja">
+          <h4>Un ejemplo concreto, con la factura de la página 5</h4>
+          <p>Si el asiento <span class="id">AS-70006</span> pasara a <code>PAGADA</code>, la regla 5
+            fallaría por <code>already_paid</code> y el veredicto seguiría siendo
+            <span class="v v-escalar">ESCALAR</span>: hay una duda de importe que un pago duplicado no
+            resuelve. Si además cuadrara el importe, pasaría a
+            <span class="v v-nopagar">NO_PAGAR</span>.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div class="pie"><span>Elequipo · albertitos_plan.pdf</span><span class="folio">8</span></div>
+  </section>
+
+  <!-- ==================== 9 · ADR 1 y 2 ==================== -->
+  <section class="hoja">
+    <div class="cabecera"><span><b>Otrebla</b> · albertitos_plan</span><span>3 · ADRs y trade-offs</span></div>
+
+    <div class="cuerpo">
+      <div class="col ancho-d">
+        <h2><span class="num">3</span>ADRs y trade-offs</h2>
+        <p class="entrada">De estas tres decisiones depende todo lo anterior. Cada una lleva lo que
+          renunciamos a tener, no sólo lo que ganamos.</p>
+      </div>
+      <div class="col ancho-d">
+        <div class="adr">
+          <div class="rotulo">ADR-01 · aceptada</div>
+          <h3>Separar la lectura del documento de la decisión de pago</h3>
+          <dl>
+            <dt>Contexto</dt>
+            <dd>Las facturas llegan en seis plantillas y algunas son sólo imagen: leerlas exige
+              modelos probabilísticos. Decidir un pago, en cambio, tiene que ser reproducible y
+              defendible ante una norma escrita.</dd>
+
+            <dt>Alternativas</dt>
+            <dd>
+              <ol>
+                <li>Un modelo lee la factura y dicta el veredicto en la misma llamada.</li>
+                <li>Sólo expresiones regulares, para leer y para decidir.</li>
+                <li>Normalizar todo a un esquema y decidir después con un motor determinista.</li>
+              </ol>
+            </dd>
+
+            <dt>Decisión</dt>
+            <dd>La tercera. La extracción produce <code>InvoiceData</code>; el motor de reglas
+              consume <code>InvoiceData</code> y no sabe qué es un PDF. Sólo la extracción tiene
+              permiso para ser probabilística.</dd>
+
+            <dt>Consecuencias</dt>
+            <dd>Mantener un esquema canónico cuesta coordinación: cambiarlo toca extractores,
+              persistencia y reglas a la vez. Y una lectura equivocada pero plausible sigue pudiendo
+              arrastrar la decisión, así que la evidencia de origen y el escalado siguen siendo
+              necesarios. Aceptamos las dos cosas.</dd>
+
+            <dt>Evidencia</dt>
+            <dd>El motor se prueba sin abrir un PDF. La traza de la página 5 dice, para cada
+              comprobación, si el valor discutido viene de la factura, del Excel o del ERP. Ésa es la
+              pregunta que esta separación deja contestar.</dd>
+          </dl>
+        </div>
+      </div>
+      <div class="col ancho-d">
+        <div class="adr">
+          <div class="rotulo">ADR-02 · aceptada</div>
+          <h3>Escalar la duda, y reservar el «no» para lo demostrado</h3>
+          <dl>
+            <dt>Contexto</dt>
+            <dd>Pagar una factura dudosa cuesta dinero. Rechazar toda anomalía bloquea pagos
+              legítimos y desgasta la confianza en el sistema. La norma pide revisión humana cuando
+              hay duda razonable.</dd>
+
+            <dt>Alternativas</dt>
+            <dd>
+              <ol>
+                <li>Toda comprobación fallida es <span class="v v-nopagar">NO_PAGAR</span>.</li>
+                <li>Un modelo resuelve los casos ambiguos.</li>
+                <li><span class="v v-escalar">ESCALAR</span> para la duda, y
+                  <span class="v v-nopagar">NO_PAGAR</span> sólo para el pago duplicado demostrable.
+                </li>
+              </ol>
+            </dd>
+
+            <dt>Decisión</dt>
+            <dd>La tercera, con precedencia <span class="v v-escalar">ESCALAR</span> &gt;
+              <span class="v v-nopagar">NO_PAGAR</span> &gt; <span class="v v-pagar">PAGAR</span> y un
+              mapa de códigos a veredictos configurable. Descartamos la segunda a propósito: un modelo
+              que adjudica casos límite es justo la parte que no podríamos defender ante un auditor.
+            </dd>
+
+            <dt>Consecuencias</dt>
+            <dd>La cola de revisión es más larga de lo estrictamente necesario, y la precedencia
+              puede devolver <span class="v v-escalar">ESCALAR</span> aunque otro hallazgo, por sí
+              solo, ya diga que no se pague. Sale a cuenta si la consola enseña el desajuste exacto.
+              Por eso la consola no es un adorno: es la contrapartida de esta decisión.</dd>
+
+            <dt>Evidencia</dt>
+            <dd>37 escalados frente a 11 rechazos en el lote 1. Los 11 se apoyan en un estado
+              <code>PAGADA</code> del ERP o en un pedido repetido dentro del lote, no en una
+              valoración. Y ningún error de lectura detectado en la revisión manual produjo un
+              <span class="v v-pagar">PAGAR</span> indebido.
+            </dd>
+          </dl>
+        </div>
+      </div>
+    </div>
+
+    <div class="pie"><span>Elequipo · albertitos_plan.pdf</span><span class="folio">9</span></div>
+  </section>
+
+  <!-- ==================== 10 · ADR 4 ==================== -->
+  <section class="hoja">
+    <div class="cabecera"><span><b>Otrebla</b> · albertitos_plan</span><span>3 · ADRs y trade-offs</span></div>
+
+    <div class="cuerpo">
+      <div class="col ancho-d">
+        <div class="adr" style="border-top:0;padding-top:0">
+          <div class="rotulo">ADR-04 · aceptada</div>
+          <h3>Guardar el estado en SQLite, y tratar el JSONL como entrega y no como verdad</h3>
+          <dl>
+            <dt>Contexto</dt>
+            <dd>Hay que saber la decisión vigente de cada archivo, conservar las métricas de cada
+              ejecución y reprocesar cuando cambien la norma o los datos. La consola y el proceso por
+              lotes tienen que ver lo mismo, sin montar infraestructura para un fin de semana.</dd>
+
+            <dt>Alternativas</dt>
+            <dd>
+              <ol>
+                <li>Sólo los ficheros JSONL generados.</li>
+                <li>Ficheros JSON sueltos, uno por archivo.</li>
+                <li>Una base de datos gestionada, con su despliegue.</li>
+                <li>SQLite local, propiedad exclusiva de la capa de Python.</li>
+              </ol>
+            </dd>
+
+            <dt>Decisión</dt>
+            <dd>La cuarta: <code>runs</code>, <code>decisions</code> con <code>file_id</code> como
+              clave primaria y <code>decision_history</code> inmutable. El JSONL se genera desde ahí.
+              La consola no abre el fichero SQLite: pasa por la misma capa de Python, para que el
+              estado tenga un solo dueño.</dd>
+
+            <dt>Consecuencias</dt>
+            <dd>Un solo escritor: en cuanto haya varios trabajadores hay que migrar. Lo asumimos
+              porque la capa de estado está aislada y la migración es local. La tabla de decisiones
+              vigentes no guarda las versiones anteriores de una factura; de ahí el historial. Y una
+              recuperación más fina a mitad de lote exigiría persistir por archivo antes de terminar,
+              que hoy no hacemos.</dd>
+
+            <dt>Evidencia</dt>
+            <dd>Las métricas de la página 6 son columnas de la tabla <code>runs</code>, no un cálculo
+              hecho para este documento. La cola de revisión es una consulta. El «qué cambió» entre
+              normas es una comparación entre dos filas del historial.</dd>
+          </dl>
+        </div>
+      </div>
+    </div>
+
+    <div class="pie"><span>Elequipo · albertitos_plan.pdf</span><span class="folio">10</span></div>
+  </section>
+
+  <!-- ==================== 11 · LÍMITES Y MEJORA ==================== -->
+  <section class="hoja">
+    <div class="cabecera"><span><b>Otrebla</b> · albertitos_plan</span><span>4 · Lo que no podemos demostrar · 5
+        · La consola</span></div>
+
+    <div class="cuerpo">
+      <div class="col ancho-d">
+        <h2><span class="num">4</span>Lo que no podemos demostrar</h2>
+        <ul class="definida">
+          <li><b>Los datos son sintéticos y no tenemos la referencia privada.</b> Podemos demostrar
+            que cada decisión es consistente con la norma y con sus fuentes. No podemos demostrar que
+            coincide con la clave del jurado.</li>
+          <li><b>La precisión de lectura sale de 45 documentos etiquetados por una persona.</b> Es
+            una comprobación por muestreo, no una prueba. El 98,4 % hay que leerlo con ese tamaño de
+            muestra delante.</li>
+          <li><b>Un solo nodo y un solo escritor.</b> Sobra para 500 y aguanta 100.000 en un rato.
+            No sirve para varios trabajadores en paralelo sin migrar el almacén.</li>
+          <li><b>El coste de visión es precio de lista.</b> La ejecución medida costó 0,00 $ por
+            caché y cuota gratuita. La fórmula sirve; el precio unitario es una estimación.</li>
+          <li><b>La recuperación es por lote, no por archivo.</b> Relanzar cuesta segundos y cero
+            dólares, así que no hemos invertido en un reanudado más fino. A otra escala sería lo
+            primero que arreglaríamos.</li>
+        </ul>
+      </div>
+      <div class="col ancho-d">
+        <h2 class="segunda"><span class="num">5</span>La consola de revisión</h2>
+        <p class="entrada">El proceso por lotes ya cumple el encargo: 500 veredictos con su
+          expediente. La mejora que presentamos aparte es lo que pasa <em>después</em> del veredicto,
+          que es el trabajo que de verdad ocupa a Alberto.</p>
+        <ul class="definida">
+          <li><b>La cola de revisión con el PDF al lado.</b> Abre el documento junto a la comprobación
+            que falló, con el valor observado y el esperado. Un escalado deja de ser un aviso y pasa a
+            ser una tarea que se puede cerrar.</li>
+          <li><b>La política editable.</b> Cambiar la tolerancia, la fecha de referencia o el veredicto
+            de un código es un formulario, no un despliegue. Y queda registrado en la ejecución.</li>
+          <li><b>La pantalla de indicadores.</b> Facturas resueltas sin tocar, euros por veredicto,
+            pago doble evitado y proveedores que más escalan. 19.184,92 € y 15 IBANes discrepantes son
+            una conversación con el proveedor, no una métrica.</li>
+          <li><b>El historial y el enlace directo.</b> Cada archivo tiene su URL. «Enséñame la factura
+            2026-0811-B» es un enlace, incluso en mitad de la defensa.</li>
+        </ul>
+        <div class="cierre">
+          <p class="lema">De nada, Alberto. Ahora lo difícil será explicarle a tu jefe por qué antes tardabas tanto.
+            Puedes dejar el Excel abierto para disimular.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="pie"><span>Elequipo · albertitos_plan.pdf · Maisa HackSpain 2026</span><span class="folio">11</span>
+    </div>
+  </section>
+
+</body>
+
+</html>
