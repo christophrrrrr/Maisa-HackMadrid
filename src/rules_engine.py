@@ -217,6 +217,7 @@ def decide_batch(
     *,
     today: date | None = None,
     rules_version: str | None = None,
+    existing_purchase_orders: set[str] | None = None,
 ) -> list[Outcome]:
     """Decide a whole batch, handling cross-invoice duplicate-pedido detection
     (rule 5: never pay the same pedido twice)."""
@@ -227,12 +228,16 @@ def decide_batch(
             f"version {biz.rules_version!r}"
         )
     counts: dict[str, int] = {}
+    existing_purchase_orders = existing_purchase_orders or set()
     for inv in invoices:
         if inv.purchase_order:
             counts[inv.purchase_order] = counts.get(inv.purchase_order, 0) + 1
     return [
         evaluate(inv, biz, erp_by_pedido, today=today,
-                 duplicate=bool(inv.purchase_order and counts.get(inv.purchase_order, 0) > 1),
+                 duplicate=bool(inv.purchase_order and (
+                     counts.get(inv.purchase_order, 0) > 1
+                     or inv.purchase_order in existing_purchase_orders
+                 )),
                  rules_version=version)
         for inv in invoices
     ]

@@ -208,7 +208,15 @@ def run(
                        "file_id": inv.file_id, "ok": inv.extraction_ok, "latency_ms": round(ms, 1)})
 
     # 2) decide (deterministic, cheap) — needs the whole batch for duplicate detection
-    outcomes = decide_batch(invoices, biz, erp, today=today, rules_version=rules_version)
+    previous_purchase_orders = state.purchase_orders_from_other_batches(batch, db_path)
+    outcomes = decide_batch(
+        invoices,
+        biz,
+        erp,
+        today=today,
+        rules_version=rules_version,
+        existing_purchase_orders=previous_purchase_orders,
+    )
 
     # 3) persist + emit each decision
     if replace_state:
@@ -234,6 +242,7 @@ def run(
         "avg_latency_ms": round(sum(latencies.values()) / len(latencies), 1) if latencies else 0,
         "n_vision": n_vision,
         "n_manual_overrides": manual_override_count,
+        "prior_purchase_orders_checked": len(previous_purchase_orders),
         "cost_usd": total_cost,
     }
     state.finish_run(conn, run_id, elapsed_s=elapsed, cost_usd=total_cost, stats=stats)

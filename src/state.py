@@ -257,6 +257,31 @@ def run_decisions(run_id: str, db_path: Path = DEFAULT_DB) -> list[dict]:
         conn.close()
 
 
+def purchase_orders_from_other_batches(batch: str, db_path: Path = DEFAULT_DB) -> set[str]:
+    """Purchase orders already seen outside the batch being evaluated."""
+    conn = connect(db_path)
+    try:
+        rows = conn.execute(
+            """SELECT h.extracted FROM decision_history h
+               JOIN runs r ON r.run_id = h.run_id
+               WHERE h.batch != ? AND r.status = 'done'""",
+            (batch,),
+        ).fetchall()
+    finally:
+        conn.close()
+
+    purchase_orders: set[str] = set()
+    for row in rows:
+        try:
+            extracted = json.loads(row[0]) if row[0] else {}
+        except (json.JSONDecodeError, TypeError):
+            continue
+        purchase_order = extracted.get("purchase_order") if isinstance(extracted, dict) else None
+        if isinstance(purchase_order, str) and purchase_order:
+            purchase_orders.add(purchase_order)
+    return purchase_orders
+
+
 def clear(db_path: Path = DEFAULT_DB) -> dict:
     """wipe runs + decisions so the console can start from a blank board."""
     conn = connect(db_path)
