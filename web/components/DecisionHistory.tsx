@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import type { Decision } from "@/lib/types";
 import DecisionModal from "./DecisionModal";
+import { reasonLabel } from "@/lib/reasons";
 
 const PAGE_SIZE = 20;
 
@@ -117,7 +118,7 @@ export default function DecisionHistory({ decisions }: { decisions: Decision[] }
                   <td className="muted">{fmtWhen(d.updated_at) || dash(null)}</td>
                   <td className="mono hist-file">{d.file_id}</td>
                   <td><span className={`pill ${d.result}`}>{d.result}</span></td>
-                  <td className="mono">{dash(d.reason)}</td>
+                  <td>{dash(reasonLabel(d.reason))}</td>
                   <td className="mono">{dash(field(d, "invoice_number"))}</td>
                   <td className="mono">{dash(field(d, "purchase_order"))}</td>
                   <td className="mono">{dash(field(d, "supplier_tax_id"))}</td>
@@ -134,7 +135,7 @@ export default function DecisionHistory({ decisions }: { decisions: Decision[] }
                     {d.findings && d.findings.length > 0 ? (
                       <div className="findings hist-findings">
                         {d.findings.slice(0, 2).map((f) => (
-                          <span key={f} className="finding">{f}</span>
+                          <span key={f} className="finding">{reasonLabel(f)}</span>
                         ))}
                         {d.findings.length > 2 && (
                           <span className="chip">+{d.findings.length - 2}</span>
