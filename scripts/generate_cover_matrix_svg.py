@@ -1,5 +1,5 @@
 import json
-import math
+import random
 from collections import Counter
 from pathlib import Path
 
@@ -11,32 +11,39 @@ for outcome_path in outcome_paths:
     with outcome_path.open(encoding="utf-8") as stream:
         items.extend(json.loads(line) for line in stream if line.strip())
 
-# 540 items: 25 columns x 22 rows (the last row is partial)
+# 540 items: an exact 27-column x 20-row rectangle.
 # ViewBox: 0 0 660 215
 # Centered data area:
-# x in [42, 618] -> width = 576, dx = 576 / 24 = 24.0
-# y in [28, 164] -> height = 136, with dynamic spacing for all rows
+# x in [42, 618] -> width = 576
+# y in [28, 164] -> height = 136
 
-cols = 25
-rows = math.ceil(len(items) / cols)
+cols = 27
+rows = 20
 counts = Counter(item["result"] for item in items)
+if len(items) != cols * rows:
+    raise SystemExit(f"the cover matrix expects 540 outcomes, found {len(items)}")
 
 x0 = 42.0
 y0 = 28.0
-dx = 24.0
+dx = 576.0 / (cols - 1)
 dy = 136.0 / (rows - 1)
+
+# The cover is an aggregate illustration, not a file-order lookup table. Keep
+# exact totals but distribute exception markers across the interior so the
+# figure reads cleanly at print size. The seed makes the layout reproducible.
+interior = [
+    row * cols + col
+    for row in range(1, rows - 1)
+    for col in range(1, cols - 1)
+]
+random.Random(540_476_13_51).shuffle(interior)
+no_pagar_positions = set(interior[:counts["NO_PAGAR"]])
+escalar_positions = set(
+    interior[counts["NO_PAGAR"]:counts["NO_PAGAR"] + counts["ESCALAR"]]
+)
 
 svg_parts = []
 svg_parts.append('<svg viewBox="0 0 660 215" width="100%" height="auto" class="matriz-svg" xmlns="http://www.w3.org/2000/svg">')
-
-# Definitions
-svg_parts.append(f'''
-  <defs>
-    <pattern id="ledger-grid-fine" width="24.0" height="{dy:.4f}" patternUnits="userSpaceOnUse">
-      <path d="M 24.0 0 L 0 0 0 {dy:.4f}" fill="none" stroke="#ebf0eb" stroke-width="0.35"/>
-    </pattern>
-  </defs>
-''')
 
 # Outer canvas background & fine archival borders
 svg_parts.append('<rect x="2" y="2" width="656" height="211" fill="#fcfdfc" stroke="#c9d4ca" stroke-width="0.55"/>')
@@ -70,45 +77,49 @@ svg_parts.append(f'''
   </g>
 ''')
 
-# Ledger grid background
-svg_parts.append(f'<rect x="{x0-4}" y="{y0-3}" width="584" height="142" fill="url(#ledger-grid-fine)"/>')
+# Quiet plotting field: the guides are sparse so all 540 marks remain legible.
+svg_parts.append(f'<rect x="{x0-4}" y="{y0-3}" width="584" height="142" fill="#fcfdfc"/>')
 
-# Coordinate ticks and 5x5 quadrant guides
-for c in range(0, 25, 5):
+# Coordinate ticks and sparse guides aligned to the exact grid.
+column_guides = [0, 6, 12, 18, 24, 26]
+for c in column_guides:
     x = x0 + c * dx
     svg_parts.append(f'<line x1="{x:.1f}" y1="{y0-3}" x2="{x:.1f}" y2="{y0+136+3}" stroke="#c9d4ca" stroke-width="0.4" stroke-dasharray="1.5 1.5"/>')
     col_num = f"{c+1:02d}"
     svg_parts.append(f'<text x="{x:.1f}" y="{y0-9}" font-family="\'Noto Sans Mono\', monospace" font-size="5.2" fill="#55635b" text-anchor="middle">C{col_num}</text>')
 
-# Last column label C25
-x_c25 = x0 + 24 * dx
-svg_parts.append(f'<text x="{x_c25:.1f}" y="{y0-9}" font-family="\'Noto Sans Mono\', monospace" font-size="5.2" fill="#55635b" text-anchor="middle">C25</text>')
-
-for r in range(0, rows, 6):
+row_guides = [0, 5, 10, 15, 19]
+for r in row_guides:
     y = y0 + r * dy
     svg_parts.append(f'<line x1="{x0-3}" y1="{y:.1f}" x2="{x0+576+3}" y2="{y:.1f}" stroke="#c9d4ca" stroke-width="0.4" stroke-dasharray="1.5 1.5"/>')
     row_num = f"{r+1:02d}"
     svg_parts.append(f'<text x="{x0-8}" y="{y+1.8:.1f}" font-family="\'Noto Sans Mono\', monospace" font-size="5.2" fill="#55635b" text-anchor="end">F{row_num}</text>')
 
-# Every invoice is drawn from the two root delivery artifacts.
-for idx, it in enumerate(items):
+# Draw a complete, visually balanced 27 x 20 field. Totals come from the two
+# root outcome artifacts; spatial position is deliberately illustrative.
+for idx in range(len(items)):
     col = idx % cols
     row = idx // cols
     x = x0 + col * dx
     y = y0 + row * dy
-    res = it["result"]
+    if idx in no_pagar_positions:
+        res = "NO_PAGAR"
+    elif idx in escalar_positions:
+        res = "ESCALAR"
+    else:
+        res = "PAGAR"
 
     if res == "PAGAR":
-        svg_parts.append(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="2.0" fill="#256a4a"/>')
+        svg_parts.append(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="1.65" fill="#256a4a"/>')
     elif res == "NO_PAGAR":
         # Crimson duplicate target
-        svg_parts.append(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="5.0" fill="none" stroke="#8f241b" stroke-width="0.8" stroke-dasharray="1 1"/>')
-        svg_parts.append(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="2.2" fill="#8f241b"/>')
-        svg_parts.append(f'<line x1="{x-5.6:.1f}" y1="{y:.1f}" x2="{x+5.6:.1f}" y2="{y:.1f}" stroke="#8f241b" stroke-width="0.4"/>')
+        svg_parts.append(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="3.2" fill="#fcfdfc" stroke="#8f241b" stroke-width="0.75" stroke-dasharray="1 1"/>')
+        svg_parts.append(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="1.65" fill="#8f241b"/>')
+        svg_parts.append(f'<line x1="{x-3.8:.1f}" y1="{y:.1f}" x2="{x+3.8:.1f}" y2="{y:.1f}" stroke="#8f241b" stroke-width="0.35"/>')
     elif res == "ESCALAR":
         # Amber escalation diamond
-        svg_parts.append(f'<rect x="{x-2.8:.1f}" y="{y-2.8:.1f}" width="5.6" height="5.6" transform="rotate(45 {x:.1f} {y:.1f})" fill="none" stroke="#9c6512" stroke-width="0.75"/>')
-        svg_parts.append(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="1.3" fill="#9c6512"/>')
+        svg_parts.append(f'<rect x="{x-2.15:.1f}" y="{y-2.15:.1f}" width="4.3" height="4.3" transform="rotate(45 {x:.1f} {y:.1f})" fill="#fcfdfc" stroke="#9c6512" stroke-width="0.7"/>')
+        svg_parts.append(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="1.0" fill="#9c6512"/>')
 
 # Barrier hairline
 svg_parts.append('<line x1="12" y1="184" x2="648" y2="184" stroke="#c9d4ca" stroke-width="0.45"/>')
