@@ -457,7 +457,7 @@
       font-size: 76pt;
       line-height: .84;
       letter-spacing: -.035em;
-      margin: 0 0 3mm;
+      margin: 0 0 5mm;
       font-weight: 700;
       color: var(--tinta);
     }
@@ -467,32 +467,18 @@
     }
 
     .portada .lema-wrap {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-end;
-      gap: 6mm;
       border-bottom: .4pt solid var(--pauta);
-      padding-bottom: 2.4mm;
+      padding-bottom: 3.2mm;
     }
 
     .portada .lema {
       font-family: var(--forma);
       font-size: 13pt;
       font-weight: 700;
-      color: var(--tinta);
+      color: var(--tinta-suave);
       letter-spacing: -.01em;
       margin: 0;
       white-space: nowrap;
-    }
-
-    .portada .tesis {
-      font-family: var(--lectura);
-      font-size: 8.4pt;
-      line-height: 1.36;
-      color: var(--tinta-suave);
-      margin: 0;
-      max-width: 88mm;
-      text-align: right;
     }
 
     .portada-matriz-box {
@@ -534,6 +520,14 @@
     .portada-balance {
       flex: 0 0 auto;
       margin-top: 1.5mm;
+    }
+
+    .balance-kicker {
+      font-family: var(--dato);
+      font-size: 6.3pt;
+      color: var(--sello);
+      letter-spacing: .08em;
+      margin-bottom: 1mm;
     }
 
     .portada-barra {
@@ -637,7 +631,7 @@
       padding-top: 2mm;
       margin-top: auto;
       display: flex;
-      justify-content: space-between;
+      justify-content: center;
       align-items: center;
       font-family: var(--forma);
       font-size: 7pt;
@@ -647,7 +641,9 @@
 
     .portada-pie .telemetria {
       display: flex;
-      gap: 5mm;
+      justify-content: center;
+      gap: 12mm;
+      width: 100%;
       font-family: var(--dato);
       font-size: 6.7pt;
       color: var(--tinta);
@@ -656,10 +652,6 @@
     .portada-pie .telemetria span b {
       color: var(--sello);
       font-weight: 400;
-    }
-
-    .portada-pie .colofon {
-      letter-spacing: .02em;
     }
 
     /* ---------- figura de la costura (Arquitectura Forense) ---------- */
@@ -1013,15 +1005,13 @@
       <h1>Otrebla<span class="punto">.</span></h1>
       <div class="lema-wrap">
         <p class="lema">Qué facturas pagar, y por qué.</p>
-        <p class="tesis">Un mismo sistema para dos entregas: 500 facturas iniciales y 40 de sorpresa,
-          con nuevos proveedores, formatos, foto del ERP y norma versionada; cada veredicto conserva el porqué.</p>
       </div>
     </div>
 
     <div class="portada-matriz-box">
       <div class="matriz-header">
-        <span><b>FIG. 1 · MATRIZ DETERMINISTA DEL LOTE 1</b> (500 facturas en retícula 25 × 20)</span>
-        <span class="gate-info">2,06 s · 0,00 $ MODELOS · 100 % DETERMINISTA</span>
+        <span><b>FIG. 1 · MATRIZ DETERMINISTA · DOS LOTES · 540 FACTURAS</b></span>
+        <span class="gate-info">471 PAGAR · 12 NO_PAGAR · 57 ESCALAR</span>
       </div>
       <svg viewBox="0 0 660 215" width="100%" height="auto" class="matriz-svg" xmlns="http://www.w3.org/2000/svg">
 
@@ -1056,7 +1046,7 @@
             </textPath>
           </text>
           <text x="530" y="92" font-family="'TeX Gyre Heros Cn', sans-serif" font-weight="700" font-size="8"
-            fill="#4a3c7e" text-anchor="middle" letter-spacing="0.4">500</text>
+            fill="#4a3c7e" text-anchor="middle" letter-spacing="0.4">540</text>
           <text x="530" y="101" font-family="'Noto Sans Mono', monospace" font-size="4.5" fill="#4a3c7e"
             text-anchor="middle" letter-spacing="0.3">FACTURAS</text>
           <text x="530" y="108" font-family="'Noto Sans Mono', monospace" font-size="3.8" fill="#4a3c7e"
@@ -1694,20 +1684,21 @@
         <rect x="615.2" y="161.2" width="5.6" height="5.6" transform="rotate(45 618.0 164.0)" fill="none"
           stroke="#9c6512" stroke-width="0.75" />
         <circle cx="618.0" cy="164.0" r="1.3" fill="#9c6512" />
+
         <line x1="12" y1="184" x2="648" y2="184" stroke="#c9d4ca" stroke-width="0.45" />
 
         <g transform="translate(18, 198)">
           <!-- PAGAR glyph -->
           <circle cx="4" cy="-1.5" r="2.2" fill="#256a4a" />
           <text x="11" y="1.2" font-family="'TeX Gyre Heros Cn', sans-serif" font-weight="700" font-size="6.4"
-            fill="#256a4a">452 PAGAR</text>
-          <text x="56" y="1.2" font-family="'Noto Sans Mono', monospace" font-size="5.4" fill="#55635b">(90,4 %)</text>
+            fill="#256a4a">471 PAGAR</text>
+          <text x="56" y="1.2" font-family="'Noto Sans Mono', monospace" font-size="5.4" fill="#55635b">(87,2 %)</text>
 
           <!-- NO_PAGAR glyph -->
           <circle cx="120" cy="-1.5" r="4.2" fill="none" stroke="#8f241b" stroke-width="0.75" stroke-dasharray="1 1" />
           <circle cx="120" cy="-1.5" r="1.8" fill="#8f241b" />
           <text x="129" y="1.2" font-family="'TeX Gyre Heros Cn', sans-serif" font-weight="700" font-size="6.4"
-            fill="#8f241b">11 NO_PAGAR</text>
+            fill="#8f241b">12 NO_PAGAR</text>
           <text x="180" y="1.2" font-family="'Noto Sans Mono', monospace" font-size="5.4" fill="#55635b">(2,2 %)</text>
 
           <!-- ESCALAR glyph -->
@@ -1715,8 +1706,8 @@
             stroke-width="0.75" />
           <circle cx="240.3" cy="-1.5" r="1.2" fill="#9c6512" />
           <text x="249" y="1.2" font-family="'TeX Gyre Heros Cn', sans-serif" font-weight="700" font-size="6.4"
-            fill="#9c6512">37 ESCALAR</text>
-          <text x="298" y="1.2" font-family="'Noto Sans Mono', monospace" font-size="5.4" fill="#55635b">(7,4 %)</text>
+            fill="#9c6512">57 ESCALAR</text>
+          <text x="298" y="1.2" font-family="'Noto Sans Mono', monospace" font-size="5.4" fill="#55635b">(10,6 %)</text>
 
           <!-- FILTERS BAR -->
           <text x="368" y="1.2" font-family="'Noto Sans Mono', monospace" font-size="5.2" fill="#4a3c7e"
@@ -1729,29 +1720,30 @@
     </div>
 
     <div class="portada-balance">
+      <div class="balance-kicker">BALANCE ACUMULADO · LOTE 1 + LOTE 2 · 540 FACTURAS</div>
       <div class="portada-barra">
-        <span class="b-pagar" style="flex:452"></span>
-        <span class="b-nopagar" style="flex:11"></span>
-        <span class="b-escalar" style="flex:37"></span>
+        <span class="b-pagar" style="flex:471"></span>
+        <span class="b-nopagar" style="flex:12"></span>
+        <span class="b-escalar" style="flex:57"></span>
       </div>
 
       <div class="portada-tripartito">
         <div>
-          <div class="cifra-fila"><span class="cifra">452</span><span class="pct">90,4 %</span></div>
+          <div class="cifra-fila"><span class="cifra">471</span><span class="pct">87,2 %</span></div>
           <span class="v v-pagar">PAGAR</span>
-          <span class="euros">2.450.391,46 €</span>
+          <span class="euros">2.537.521,14 €</span>
           <p class="glosa">Las seis reglas pasan limpiamente. Se abonan de forma desatendida sin riesgo operativo.</p>
         </div>
         <div>
-          <div class="cifra-fila"><span class="cifra">11</span><span class="pct">2,2 %</span></div>
+          <div class="cifra-fila"><span class="cifra">12</span><span class="pct">2,2 %</span></div>
           <span class="v v-nopagar">NO_PAGAR</span>
-          <span class="euros">19.184,92 €</span>
+          <span class="euros">20.136,81 €</span>
           <p class="glosa">Duplicidad probada frente al ERP o dentro del lote. Capital protegido de inmediato.</p>
         </div>
         <div>
-          <div class="cifra-fila"><span class="cifra">37</span><span class="pct">7,4 %</span></div>
+          <div class="cifra-fila"><span class="cifra">57</span><span class="pct">10,6 %</span></div>
           <span class="v v-escalar">ESCALAR</span>
-          <span class="euros">144.119,95 €</span>
+          <span class="euros">1.110.966,15 €</span>
           <p class="glosa">Discrepancias en IBAN, NIF, fecha o pedido. Expediente aislado con el dato que no cuadra ya
             señalado.</p>
         </div>
@@ -1765,7 +1757,6 @@
         <span><b>8</b> hilos de extracción</span>
         <span><b>58</b> pruebas automáticas</span>
       </div>
-      <span class="colofon">Elequipo · albertitos_plan · 11 páginas de especificación</span>
     </div>
   </section>
 
@@ -1790,40 +1781,41 @@
 
         <div class="veredictos">
           <div>
-            <span class="cifra">452</span>
-            <span class="v v-pagar">PAGAR · 90,4 %</span>
-            <span class="euros">2.450.391,46 €</span>
+            <span class="cifra">471</span>
+            <span class="v v-pagar">PAGAR · 87,2 %</span>
+            <span class="euros">2.537.521,14 €</span>
             <span class="rotulo">Las seis reglas pasan. Se paga sin que nadie las mire.</span>
           </div>
           <div>
-            <span class="cifra">11</span>
+            <span class="cifra">12</span>
             <span class="v v-nopagar">NO_PAGAR · 2,2 %</span>
-            <span class="euros">19.184,92 €</span>
+            <span class="euros">20.136,81 €</span>
             <span class="rotulo">Pago duplicado demostrado. No es una duda: es un no.</span>
           </div>
           <div>
-            <span class="cifra">37</span>
-            <span class="v v-escalar">ESCALAR · 7,4 %</span>
-            <span class="euros">144.119,95 €</span>
+            <span class="cifra">57</span>
+            <span class="v v-escalar">ESCALAR · 10,6 %</span>
+            <span class="euros">1.110.966,15 €</span>
             <span class="rotulo">Hace falta una persona o un dato corregido.</span>
           </div>
         </div>
       </div>
       <div class="col ancho-d">
-        <h3>Lo que el sistema evita<span class="ref">outcomes.jsonl</span></h3>
-        <p>Los once <span class="v v-nopagar">NO_PAGAR</span> son dinero concreto. Nueve son facturas
-          cuyo asiento en el ERP ya está en <code>PAGADA</code>: pagarlas sería pagar dos veces. Los
-          otros dos son el mismo pedido (<span class="id">PO-2026-0492</span>) facturado dos veces
-          dentro del propio lote, algo que sólo se ve mirando el lote entero y no factura a factura.</p>
+        <h3>Lo que el sistema evita<span class="ref">outcomes*.jsonl</span></h3>
+        <p>Los doce <span class="v v-nopagar">NO_PAGAR</span> de ambos lotes son dinero concreto:
+          20.136,81 €. Diez tienen un asiento <code>PAGADA</code> en el ERP y tres repiten pedido;
+          una factura del lote 2 reúne ambas pruebas. No es una sospecha: son pagos duplicados
+          demostrables contra el ERP, el lote actual o el historial.</p>
       </div>
       <div class="col ancho-d">
-        <h3>Por qué escalan las 37</h3>
-        <p>Quince traen un IBAN distinto del registrado: cambio de banco o fraude, 40.063,85 € en
+        <h3>Qué queda para revisión</h3>
+        <p>En el lote 1 escalan 37. Quince traen un IBAN distinto del registrado: 40.063,85 € en
           juego. Trece facturan un total que no coincide con el pedido ni con el ERP: 69.486,40 €.
           Seis vienen de un NIF que no está en el maestro de proveedores: 24.623,50 €. Tres tienen una
           fecha de emisión ilegible o imposible: 9.946,20 €.</p>
-        <p>El motivo visible es el primero por precedencia, pero el expediente guarda todos los
-          hallazgos. La factura de la página 5 arrastra tres.</p>
+        <p>El lote 2 añade 20 expedientes y 966.846,20 € a la cola. En total son 57 facturas y
+          1.110.966,15 €. El motivo visible es el primero por precedencia, pero el expediente conserva
+          todos los hallazgos; la factura de la página 5 arrastra tres.</p>
       </div>
       <div class="col ancho-d">
         <h3>El sábado dejó de ser una hipótesis<span class="ref">outcomes_lote2.jsonl</span></h3>
@@ -1831,7 +1823,10 @@
           proveedores internacionales. Llegan plantillas nuevas, idiomas distintos y 17 documentos
           que necesitan visión. Se ejecutan con <code>--batch lote2</code>, se contrastan también con
           los pedidos ya vistos y escriben un artefacto propio sin tocar <code>outcomes.jsonl</code>.
-          La misma consola permite procesar el lote, seguirlo y cerrar sus excepciones.
+          El resultado: 19 <span class="v v-pagar">PAGAR</span>, 1
+          <span class="v v-nopagar">NO_PAGAR</span> y 20
+          <span class="v v-escalar">ESCALAR</span>. La misma consola permite procesarlo, seguirlo y
+          cerrar sus excepciones.
         </p>
       </div>
     </div>
@@ -1902,7 +1897,7 @@
               <!-- Visual Flux Streams -->
               <!-- Digital stream -->
               <text x="0" y="66" font-family="'TeX Gyre Heros Cn', sans-serif" font-weight="700" font-size="8.2"
-                fill="#256a4a">471 digitales</text>
+                fill="#256a4a">494 por texto</text>
               <text x="0" y="75" font-family="'Noto Sans Mono', monospace" font-size="5.8" fill="#55635b">PyMuPDF +
                 regex · 0,00 $</text>
               <path d="M 105 68 C 170 68, 210 95, 255 95" fill="none" stroke="#256a4a" stroke-width="1.6"
@@ -1911,7 +1906,7 @@
 
               <!-- Scanned stream -->
               <text x="0" y="112" font-family="'TeX Gyre Heros Cn', sans-serif" font-weight="700" font-size="8.2"
-                fill="#9c6512">29 escaneados</text>
+                fill="#9c6512">46 rutas visuales</text>
               <text x="0" y="121" font-family="'Noto Sans Mono', monospace" font-size="5.8" fill="#55635b">Vision LLM +
                 caché SHA-256</text>
               <path d="M 105 114 C 170 114, 210 95, 255 95" fill="none" stroke="#9c6512" stroke-width="1.6"
@@ -2045,15 +2040,15 @@
                 <path d="M 152 25 C 172 25, 180 5, 194 5" fill="none" stroke="#256a4a" stroke-width="1.6" />
                 <circle cx="198" cy="5" r="3.5" fill="#256a4a" />
                 <text x="206" y="7.5" font-family="'TeX Gyre Heros Cn', sans-serif" font-weight="700" font-size="8.8"
-                  fill="#256a4a">452 PAGAR</text>
-                <text x="206" y="15.5" font-family="'Noto Sans Mono', monospace" font-size="5.8" fill="#55635b">90,4
+                  fill="#256a4a">471 PAGAR</text>
+                <text x="206" y="15.5" font-family="'Noto Sans Mono', monospace" font-size="5.8" fill="#55635b">87,2
                   %</text>
 
                 <!-- NO_PAGAR (middle) -->
                 <line x1="152" y1="25" x2="194" y2="25" stroke="#8f241b" stroke-width="1.6" />
                 <circle cx="198" cy="25" r="3.5" fill="#8f241b" />
                 <text x="206" y="27.5" font-family="'TeX Gyre Heros Cn', sans-serif" font-weight="700" font-size="8.8"
-                  fill="#8f241b">11 NO_PAGAR</text>
+                  fill="#8f241b">12 NO_PAGAR</text>
                 <text x="206" y="35.5" font-family="'Noto Sans Mono', monospace" font-size="5.8" fill="#55635b">2,2
                   %</text>
 
@@ -2061,8 +2056,8 @@
                 <path d="M 152 25 C 172 25, 180 45, 194 45" fill="none" stroke="#9c6512" stroke-width="1.6" />
                 <circle cx="198" cy="45" r="3.5" fill="#9c6512" />
                 <text x="206" y="47.5" font-family="'TeX Gyre Heros Cn', sans-serif" font-weight="700" font-size="8.8"
-                  fill="#9c6512">37 ESCALAR</text>
-                <text x="206" y="55.5" font-family="'Noto Sans Mono', monospace" font-size="5.8" fill="#55635b">7,4
+                  fill="#9c6512">57 ESCALAR</text>
+                <text x="206" y="55.5" font-family="'Noto Sans Mono', monospace" font-size="5.8" fill="#55635b">10,6
                   %</text>
               </g>
             </g>
@@ -2380,7 +2375,8 @@
           base de datos. No hay dos caminos.
         </p>
         <p>El trabajo pendiente no es una métrica aparte: es la consulta
-          <code>result = 'ESCALAR'</code>. Hoy devuelve 37 filas y 144.119,95 €.
+          <code>result = 'ESCALAR'</code>. En los dos artefactos devuelve 57 filas y
+          1.110.966,15 €.
         </p>
       </div>
     </div>
@@ -2601,7 +2597,7 @@
     <div class="cuerpo">
       <div class="col ancho-d">
         <h2><span class="num">3</span>ADRs y trade-offs</h2>
-        <p class="entrada">De estas tres decisiones depende todo lo anterior. Cada una lleva lo que
+        <p class="entrada">De estas cuatro decisiones depende todo lo anterior. Cada una lleva lo que
           renunciamos a tener, no sólo lo que ganamos.</p>
       </div>
       <div class="col ancho-d">
@@ -2689,13 +2685,49 @@
     <div class="pie"><span>Elequipo · albertitos_plan.pdf</span><span class="folio">9</span></div>
   </section>
 
-  <!-- ==================== 10 · ADR 4 ==================== -->
+  <!-- ==================== 10 · ADR 3 + ADR 4 ==================== -->
   <section class="hoja">
     <div class="cabecera"><span><b>Otrebla</b> · albertitos_plan</span><span>3 · ADRs y trade-offs</span></div>
 
     <div class="cuerpo">
       <div class="col ancho-d">
         <div class="adr" style="border-top:0;padding-top:0">
+          <div class="rotulo">ADR-03 · aceptada</div>
+          <h3>Paralelizar la espera, no la decisión</h3>
+          <dl>
+            <dt>Contexto</dt>
+            <dd>La visión tarda segundos y espera red; las reglas tardan milisegundos, necesitan ver
+              el lote completo para detectar duplicados y terminan en un único artefacto auditable.
+              Procesarlo todo en serie desperdicia tiempo, pero paralelizarlo todo introduce carreras.</dd>
+
+            <dt>Alternativas</dt>
+            <dd>
+              <ol>
+                <li>Una factura detrás de otra, de lectura a escritura.</li>
+                <li>Un trabajador independiente decide y persiste cada factura.</li>
+                <li>Extraer en paralelo; reunir en orden; decidir y escribir una sola vez.</li>
+              </ol>
+            </dd>
+
+            <dt>Decisión</dt>
+            <dd>La tercera. Un <code>ThreadPoolExecutor</code> reparte la extracción entre ocho hilos,
+              con un extractor aislado por hilo. Después se recupera el orden de entrada y el motor
+              decide el lote completo en memoria; SQLite y el JSONL conservan un solo escritor.</dd>
+
+            <dt>Consecuencias</dt>
+            <dd>Solapamos la latencia de visión sin compartir método, coste ni evidencia entre
+              facturas, y la salida sigue siendo reproducible. Aceptamos que la decisión no escale
+              horizontalmente y que la cuota del proveedor limite el número útil de hilos.</dd>
+
+            <dt>Evidencia</dt>
+            <dd>Los dos lotes pasan por la misma ruta: 540 decisiones recuperan su orden estable y
+              46 documentos toman la vía visual. <code>--workers</code> permite reducir concurrencia
+              ante cuotas agresivas; 58 pruebas cubren orden, aislamiento, caché y artefactos.</dd>
+          </dl>
+        </div>
+      </div>
+      <div class="col ancho-d">
+        <div class="adr">
           <div class="rotulo">ADR-04 · aceptada</div>
           <h3>Guardar el estado en SQLite, y tratar el JSONL como entrega y no como verdad</h3>
           <dl>
