@@ -1,13 +1,18 @@
 %% simplified pitch diagram: llm extracts, rules decide
+%%{init: {
+    "flowchart": {"nodeSpacing": 90, "rankSpacing": 70, "diagramPadding": 20},
+    "themeVariables": {"fontSize": "32px"},
+    "themeCSS": ".nodeLabel p, .edgeLabel p { font-size: 32px !important; line-height: 1.25; } .cluster-label span { font-size: 30px !important; }"
+}}%%
 flowchart LR
     invoices[/"Facturas"/]
 
     subgraph extract ["1. Extraccion"]
         direction TB
         hybrid{"Hibrido"}
-        digital["PDF digital"]
-        vision["Vision LLM"]
-        invoice["InvoiceData"]
+        digital["PDF<br/>digital"]
+        vision["Vision<br/>LLM"]
+        invoice["Invoice<br/>Data"]
         hybrid -->|"Gratis"| digital
         hybrid -->|"Escaneado"| vision
         digital --> invoice
@@ -16,17 +21,17 @@ flowchart LR
 
     subgraph refs ["Datos de referencia"]
         direction TB
-        excel["Excel maestros"]
-        erp[("Snapshot ERP")]
-        biz["Pedidos y norma"]
+        excel["Excel<br/>maestros"]
+        erp[("Snapshot<br/>ERP")]
+        biz["Pedidos<br/>y norma"]
         excel --> biz
         erp --> biz
     end
 
     subgraph decide ["2. Decision"]
         direction TB
-        rules["Motor Norma v3"]
-        checks["6 checks auditables"]
+        rules["Motor<br/>Norma v3"]
+        checks["6 checks<br/>auditables"]
         result{"PAGAR / NO_PAGAR / ESCALAR"}
         rules --> checks
         checks --> result
@@ -35,8 +40,8 @@ flowchart LR
     subgraph emit ["3. Entregable"]
         direction TB
         state[("SQLite")]
-        jsonl[/"outcomes.jsonl"/]
-        ui["Consola de revision"]
+        jsonl[/"outcomes.<br/>jsonl"/]
+        ui["Consola de<br/>revision"]
         state --> ui
         jsonl --> ui
     end
